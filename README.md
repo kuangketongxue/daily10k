@@ -2,6 +2,8 @@
 
 每天只讲一个 GitHub 万星前沿项目的中文深读日报。每天北京时间 5:30 自动更新，当天内容当天清，只保留一篇。
 
+**线上地址**：https://kuangketongxue.github.io/daily10k/
+
 ## 怎么运作
 
 - `scripts/generate.mjs`（零依赖，Node 18+）：
@@ -19,15 +21,10 @@ AI_API_KEY=你的key AI_BASE_URL=https://token.sensenova.cn/v1 AI_MODEL=sensenov
 
 （也可以把配置直接写在 `scripts/config.json`，不要把它提交到公开仓库。）
 
-## 首次上线（GitHub Pages）
+## 线上配置（已完成）
 
-1. 把整个目录推到一个 GitHub 仓库；
-2. 仓库 Settings → Secrets and variables → Actions，添加：
-   - `AI_API_KEY`：你的 LLM API Key
-   - `AI_BASE_URL`：`https://token.sensenova.cn/v1`
-   - `AI_MODEL`：`sensenova-6.8-flash-lite`
-3. Settings → Pages → Source 选 **GitHub Actions**；
-4. 在 Actions 页手动 Run 一次 `daily-report` 验证，之后每天 5:30 自动更新。
+仓库：`kuangketongxue/daily10k`（公开），Pages 源已设为 GitHub Actions，Secrets 已配好
+（`AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL`）。想立刻出新一期：Actions → daily-report → Run workflow。
 
 ## 目录
 
