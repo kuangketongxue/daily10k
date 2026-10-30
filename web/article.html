@@ -12,6 +12,7 @@
 <meta property="og:title" content="万星日报">
 <meta property="og:description" content="每天只讲一个 GitHub 万星前沿项目。">
 <meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://kuangketongxue.github.io/daily10k/article.html">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -22,7 +23,8 @@
 </header>
 
 <main class="wrap article-wrap" id="article">
-  <div class="loading" id="loading">加载中…</div>
+  <div class="loading" id="loading" role="status">加载中…</div>
+  <noscript><p class="empty">本站需要启用 JavaScript 才能加载日报正文。</p></noscript>
 </main>
 
 <footer class="foot">
@@ -40,8 +42,8 @@ else loadLatest();
 
 // 没带 d 参数时回落到今日索引，而不是去请求 posts/null.json
 function loadLatest() {
-  fetch('data/index.json')
-    .then(r => r.json())
+  fetch('data/index.json', { cache: 'no-cache' })
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(idx => {
       const latest = idx.issues && idx.issues[0] && idx.issues[0].date;
       if (!latest) throw new Error('empty');
@@ -52,7 +54,7 @@ function loadLatest() {
 }
 
 function load(date) {
-  fetch('data/posts/' + date + '.json')
+  fetch('data/posts/' + encodeURIComponent(date) + '.json', { cache: 'no-cache' })
     .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(render)
     .catch(fail);
@@ -60,6 +62,7 @@ function load(date) {
 
 function fail() {
   document.title = '没有找到这一期的日报 · 万星日报';
+  setMeta('robots', 'noindex');
   article.innerHTML = `
     <div class="empty">
       <p>没有找到这一期的日报。</p>
@@ -77,8 +80,23 @@ function setMeta(key, content, attr = 'name') {
   el.setAttribute('content', content || '');
 }
 
+function setCanonical(href) {
+  let el = document.head.querySelector('link[rel="canonical"]');
+  if (!el) {
+    el = document.createElement('link');
+    el.rel = 'canonical';
+    document.head.appendChild(el);
+  }
+  el.href = href;
+}
+
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function fmtNum(n) {
+  const v = Number(n);
+  return Number.isFinite(v) ? v.toLocaleString('zh-CN') : esc(n);
 }
 
 function render(p) {
@@ -88,21 +106,24 @@ function render(p) {
   setMeta('og:title', title + ' · 万星日报', 'property');
   setMeta('og:description', p.oneLiner, 'property');
   setMeta('og:url', location.href, 'property');
+  setCanonical(location.origin + location.pathname + (p.date ? '?d=' + encodeURIComponent(p.date) : ''));
 
   const m = p.meta || {};
+  const stats = p.stats || {};
   let html = `<a class="back" href="index.html">← 回首页</a>
     <h1 class="a-title">${esc(title)}</h1>
     <div class="a-summary">
       <p class="a-oneliner"><strong>一句话：</strong>${esc(p.oneLiner)}</p>
       <div class="a-metas">
+        ${p.date ? `<span>${esc(p.date)}</span>` : ''}
         <span>${esc(p.category || '')}</span>
         ${m.license ? `<span>${esc(m.license)}</span>` : ''}
         ${m.language ? `<span>${esc(m.language)}</span>` : ''}
-        ${m.stars ? `<span>GitHub 星数 ${esc(m.stars)}</span>` : ''}
+        ${m.stars ? `<span>GitHub 星数 ${fmtNum(m.stars)}</span>` : ''}
         ${m.lastCommit ? `<span>最近提交 ${esc(m.lastCommit)}</span>` : ''}
-        ${m.openIssues != null ? `<span>未关闭 Issue/PR ${esc(m.openIssues)}</span>` : ''}
+        ${m.openIssues != null ? `<span>未关闭 Issue/PR ${fmtNum(m.openIssues)}</span>` : ''}
         ${m.version ? `<span>${esc(m.version)}</span>` : ''}
-        ${p.readMinutes ? `<span>阅读约 ${p.readMinutes} 分钟</span>` : ''}
+        ${stats.minutes ? `<span>阅读约 ${esc(stats.minutes)} 分钟</span>` : ''}
       </div>
     </div>`;
 
@@ -135,20 +156,29 @@ function render(p) {
     </div>`;
   }
 
-  const st = p.stats;
-  if (st) {
+  if (stats.chars != null) {
     html += `
-    <p class="a-stats">字数自检：正文汉字 ${st.chars} 字 · 命令块 ${st.codeBlocks} 个 · 阅读约 ${st.minutes} 分钟 · 材料截至 ${esc(st.asOf)}。</p>`;
+    <p class="a-stats">字数自检：正文汉字 ${fmtNum(stats.chars)} 字 · 命令块 ${fmtNum(stats.codeBlocks)} 个 · 阅读约 ${esc(stats.minutes)} 分钟 · 材料截至 ${esc(stats.asOf)}。</p>`;
   }
 
   article.innerHTML = html;
 }
 
+// 先摘出行内代码和 URL，再整体转义，避免 URL 吞掉后续中文/标点
 function inline(s) {
-  return esc(s)
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.+?)`/g, '<code class="ic">$1</code>')
-    .replace(/(https?:\/\/[^\s，。；、）)]+)/g, '<a class="src-link" href="$1" target="_blank" rel="noopener">$1</a>');
+  const slots = [];
+  const stash = (html) => {
+    slots.push(html);
+    return '\u0000' + (slots.length - 1) + '\u0000';
+  };
+  let text = String(s ?? '');
+  text = text.replace(/`([^`]+)`/g, (_, code) => stash(`<code class="ic">${esc(code)}</code>`));
+  text = text.replace(/https?:\/\/[^\s<>"'`*\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]+/g, (url) => {
+    const clean = url.replace(/[.,;:!?]+$/, '');
+    return stash(`<a class="src-link" href="${esc(clean)}" target="_blank" rel="noopener">${esc(clean)}</a>`) + url.slice(clean.length);
+  });
+  text = esc(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  return text.replace(/\u0000(\d+)\u0000/g, (_, i) => slots[+i]);
 }
 </script>
 </body>

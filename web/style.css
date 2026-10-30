@@ -242,4 +242,7 @@ blockquote {
   .a-title { font-size: 24px; margin-top: 14px; }
   .back { margin-top: 24px; }
   .masthead-inner { padding: 26px 22px 20px; }
+  .today { margin: 30px 0 22px; padding: 22px 18px; }
+  .a-summary { padding: 16px 18px; }
+  .a-sec { margin-top: 34px; }
 }

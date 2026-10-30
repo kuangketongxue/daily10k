@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
  * 万星日报 · 每日生成管线
- * 1. GitHub Search API 找「近 N 个月创建、已破万星」的前沿项目，排除写过的
+ * 1. GitHub Search API 按星数档位找前沿项目（同档按星数与创建时间新鲜度打分），排除写过的与归档/派生仓库
  * 2. 取星数最高的一个作为当日核心，抓仓库事实（星数/issue/release/许可证）与 README
- * 3. 再抓 1-2 个同类替代项目的事实
+ * 3. 再抓 1-2 个真正同类的替代项目的事实
  * 4. 调用 LLM 按固定 8 栏写正式深读稿
  * 5. 输出 web/data/posts/<date>.json 并重建 index.json（只保留当天）
  *
@@ -70,24 +70,72 @@ function candidateScore(r) {
   return Math.log10(Math.max(1, r.stargazers_count)) + freshness;
 }
 
+// 跳过硬凑星数的清单/资料书类仓库，优先有编程语言的真项目
+const LISTISH = /awesome|curated|\blists? of\b|roadmap|interview|tutorial|handbook|ebook|cheat ?sheet|\bbook\b|指南|教程|笔记|电子书|清单|资料/i;
+const LIST_TOPICS = new Set([
+  'awesome', 'awesome-list', 'curated-list', 'list', 'lists', 'resources',
+  'tutorial', 'tutorials', 'tutorial-code', 'tutorial-exercises',
+  'roadmap', 'interview', 'interview-questions', 'cheat-sheet', 'cheatsheet',
+  'books', 'book', 'ebook', 'free-programming-books',
+]);
+const isListRepo = (r) =>
+  !r.language ||
+  r.language === 'Markdown' ||
+  (r.topics || []).some(t => LIST_TOPICS.has(t)) ||
+  LISTISH.test(`${r.name} ${r.description || ''}`);
+
+// 替代方案相关性：泛化 topic（ai/mcp/cli/语言）不构成「同类」，具体 topic 才算
+const GENERIC_TOPICS = new Set([
+  'ai', 'ai-agent', 'ai-agents', 'ai-tools', 'aiagent', 'agent', 'agents', 'agent-skills',
+  'agentic-ai', 'autonomous-agents', 'llm', 'mcp', 'mcp-server', 'modelcontextprotocol',
+  'model-context-protocol', 'claude', 'claude-code', 'codex', 'cursor', 'cli',
+  'developer-tools', 'open-source', 'productivity', 'tools', 'tool', 'framework',
+  'typescript', 'javascript', 'python', 'java', 'go', 'rust', 'nodejs', 'node-js',
+]);
+const AGENT_TOPICS = new Set([
+  'mcp', 'mcp-server', 'modelcontextprotocol', 'model-context-protocol', 'llm',
+  'ai', 'ai-agent', 'ai-agents', 'aiagent', 'agent', 'agents', 'agent-skills',
+  'agentic-ai', 'autonomous-agents', 'claude', 'claude-code', 'codex', 'cursor', 'ai-tools',
+]);
+const GENERIC_WORDS = new Set([
+  'based', 'using', 'built', 'with', 'from', 'that', 'this', 'your', 'into', 'over', 'under',
+  'open', 'source', 'project', 'tool', 'tools', 'app', 'apps', 'application', 'applications',
+  'framework', 'platform', 'system', 'systems', 'support', 'supports', 'powered', 'local',
+  'first', 'fast', 'simple', 'modern', 'anything', 'models', 'model', 'language', 'languages',
+  'workspace', 'work', 'team', 'teams', 'manage', 'management', 'create', 'build', 'building',
+]);
+
+function keywordsOf(text) {
+  const words = String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !GENERIC_WORDS.has(w))
+    .map(w => w.replace(/(ing|ed|s)$/, ''));
+  return new Set(words);
+}
+
+function isAgentish(r) {
+  return (r.topics || []).some(t => AGENT_TOPICS.has(t)) ||
+    /\bmcp\b|ai-powered|\bagents?\b|\bllm\b/i.test(r.description || '');
+}
+
+function relevance(core, r) {
+  const coreTopics = new Set(core.topics || []);
+  const topics = r.topics || [];
+  const specific = topics.filter(t => coreTopics.has(t) && !GENERIC_TOPICS.has(t)).length;
+  const generic = topics.filter(t => coreTopics.has(t) && GENERIC_TOPICS.has(t)).length;
+  const coreWords = keywordsOf(`${core.name} ${core.description || ''}`);
+  const candWords = keywordsOf(`${r.name} ${r.description || ''} ${topics.join(' ')}`);
+  const words = [...coreWords].filter(w => candWords.has(w)).length;
+  return specific * 3 + generic + words;
+}
+
 async function findCandidate() {
   const history = new Set(existsSync(HISTORY_FILE) ? JSON.parse(readFileSync(HISTORY_FILE, 'utf8')) : []);
-  // 跳过硬凑星数的清单/资料书类仓库，优先有编程语言的真项目
-  const listish = /awesome|curated|\blists? of\b|roadmap|interview|tutorial|handbook|ebook|cheat ?sheet|\bbook\b|指南|教程|笔记|电子书|清单|资料/i;
-  const listTopics = new Set([
-    'awesome', 'awesome-list', 'curated-list', 'list', 'lists', 'resources',
-    'tutorial', 'tutorials', 'tutorial-code', 'tutorial-exercises',
-    'roadmap', 'interview', 'interview-questions', 'cheat-sheet', 'cheatsheet',
-    'books', 'book', 'ebook', 'free-programming-books',
-  ]);
-  const isList = (r) =>
-    !r.language ||
-    r.language === 'Markdown' ||
-    (r.topics || []).some(t => listTopics.has(t)) ||
-    listish.test(`${r.name} ${r.description || ''}`);
 
   for (const tier of STAR_TIERS) {
-    const q = tier.max ? `stars:${tier.min}..${tier.max}` : `stars:>=${tier.min}`;
+    const q = `${tier.max ? `stars:${tier.min}..${tier.max}` : `stars:>=${tier.min}`} archived:false fork:false`;
     let best = null;
     let bestScore = -Infinity;
     let scanned = 0;
@@ -102,7 +150,8 @@ async function findCandidate() {
       scanned += items.length;
       for (const r of items) {
         if (history.has(r.full_name)) { written++; continue; }
-        if (isList(r)) { skippedLists++; continue; }
+        if (r.archived || r.fork || r.disabled) continue;
+        if (isListRepo(r)) { skippedLists++; continue; }
         const score = candidateScore(r);
         if (score > bestScore) { bestScore = score; best = r; }
       }
@@ -137,33 +186,31 @@ async function fetchLatestRelease(fullName) {
 }
 
 async function searchRepos(q) {
-  const data = await gh(`/search/repositories?q=${encodeURIComponent(q)}&sort=stars&order=desc&per_page=10`);
+  const data = await gh(`/search/repositories?q=${encodeURIComponent(q)}&sort=stars&order=desc&per_page=100`);
   return data.items || [];
 }
 
 async function findAlternatives(repo) {
-  const lang = repo.language ? ` language:${repo.language}` : '';
-  const topic = (repo.topics || [])[0];
-  const queries = [];
-  if (topic) queries.push(`topic:${topic}${lang} stars:>500`);
-  // 描述关键词兜底：取描述里较长的英文词做 name/description 搜
-  const words = (repo.description || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, ' ')
-    .split(/\s+/)
-    .filter(w => w.length > 4 && !['based', 'using', 'built', 'project', 'open', 'source'].includes(w))
-    .slice(0, 3);
-  if (words.length) queries.push(`${words.join(' ')} in:name,description stars:>1000`);
-  queries.push(`${repo.name} in:name,description stars:>500`);
+  const specificTopics = (repo.topics || []).filter(t => !GENERIC_TOPICS.has(t)).slice(0, 3);
+  const keywords = [...keywordsOf(repo.description || '')].slice(0, 2);
+  const wantsAgent = isAgentish(repo);
+  const queries = [
+    ...specificTopics.map(t => `topic:${t} archived:false fork:false stars:>500`),
+    ...(keywords.length === 2 ? [`${keywords.join(' ')} in:name,description archived:false fork:false stars:>500`] : []),
+  ];
 
   const seen = new Set([repo.full_name]);
   const picks = [];
   for (const q of queries) {
     try {
       for (const r of await searchRepos(q)) {
-        if (seen.has(r.full_name) || r.archived || r.fork) continue;
+        if (seen.has(r.full_name) || r.archived || r.fork || r.disabled) continue;
         // 同名仓库基本都是转存/复制品，不能算「替代方案」
-        if (r.name.toLowerCase() === repo.name.toLowerCase()) continue;
+        if (isListRepo(r) || r.name.toLowerCase() === repo.name.toLowerCase()) continue;
+        // 核心项目是 MCP/agent 工具时，候选也必须具备同类交付方式
+        if (wantsAgent && !isAgentish(r)) continue;
+        const score = relevance(repo, r);
+        if (score < 3) continue;
         seen.add(r.full_name);
         picks.push({
           repo: r.full_name,
@@ -172,12 +219,13 @@ async function findAlternatives(repo) {
           language: r.language || '多语言',
           pushed: (r.pushed_at || '').slice(0, 10),
           description: r.description || '',
+          score,
         });
       }
     } catch { /* 单个查询失败不影响整体 */ }
-    if (picks.length >= 2) break;
   }
-  return picks.slice(0, 2);
+  picks.sort((a, b) => b.score - a.score || b.stars - a.stars);
+  return picks.slice(0, 4).map(({ score, ...rest }) => rest);
 }
 
 const SYSTEM_PROMPT = `你是《万星日报》的主笔，一名严谨的中文科技分析师。读者是开发者与技术决策者。文章风格：正式、专业、克制——用事实和数字说话，给出可执行的判断，不做营销式吹捧。禁止使用"赋能""颠覆""革命性"这类词。
@@ -235,7 +283,7 @@ const PART_B = `本次只写文章的后 4 个 section。输出 JSON：
 
 各栏要求：
 - 5 局限与风险：必须给具体事实——未关闭 Issue 与 PR 数量、最近提交时间、是否开发者预览/频繁破坏性变更、README 里提到的限制或安全要求、是否借开源推广商业产品。每条都写清"所以你要注意什么"。用 list。
-- 6 替代方案：先判断每个「替代候选」是否真的解决同一类问题，只把确实同类的写进来（1-2 个），用 sub + kv 写清：仓库、星数、许可证、最近更新、适用场景；最后用 p 给出选择判据（"项目是 X 就选 A，需要 Y 就选本项目"）。若没有真正同类的候选：只写一个 p，内容为"按 GitHub 同类搜索暂未找到成熟的同类项目"，并补一句基于本项目的选择判据；绝对不要为了凑栏目把不相关的项目写成替代方案，也不要伪造 kv 字段或编造项目。
+- 6 替代方案：先判断每个「替代候选」是否真的解决同一类问题，只把确实同类的写进来（1-2 个），候选多于两个时优先星数更高、最近仍有推送的；用 sub + kv 写清：仓库、星数、许可证、最近更新、适用场景；最后用 p 给出选择判据（"项目是 X 就选 A，需要 Y 就选本项目"）。若没有真正同类的候选：只写一个 p，内容为"按 GitHub 同类搜索暂未找到成熟的同类项目"，并补一句基于本项目的选择判据；绝对不要为了凑栏目把不相关的项目写成替代方案，也不要伪造 kv 字段或编造项目。
 - 7 谁该用，谁别用：两个 list，各 2-3 条，判断必须能从前面事实推出，不写万能套话。
 - 8 出处与日期：list 列出本次引用的全部来源链接（仓库首页、README、Release、Issues 页面）；最后必须有一个 p，写明"材料截至 {今天日期}。文中命令与输出均取自官方文档和样例，未在本机运行。"
 这 4 栏正文合计不少于 800 个汉字。`;
@@ -263,7 +311,7 @@ function factsBlock(repo, release, alternatives) {
     `Releases 页面: https://github.com/${repo.full_name}/releases`,
   ];
   if (alternatives.length) {
-    lines.push('', '替代候选（GitHub 搜索同类项目所得，事实如下）：');
+    lines.push('', '替代候选（GitHub 搜索同类项目所得，按同类 topic 与关键词筛出；只能从中挑确实同类的 1-2 个，优先星数更高、最近仍有推送的）：');
     for (const a of alternatives) {
       lines.push(`- ${a.repo} ★${a.stars}，${a.license}，${a.language}，最近推送 ${a.pushed}：${a.description}（https://github.com/${a.repo}）`);
     }
@@ -296,6 +344,26 @@ async function callLLM(messages) {
   return extractJson(content);
 }
 
+const BLOCK_TYPES = new Set(['p', 'sub', 'kv', 'code', 'list', 'quote']);
+
+function validateBlocks(part) {
+  for (const sec of part.sections) {
+    if (!Array.isArray(sec.blocks) || !sec.blocks.length) throw new Error(`「${sec.heading}」没有内容`);
+    for (const b of sec.blocks) {
+      if (!b || !BLOCK_TYPES.has(b.type)) throw new Error(`未知 block 类型：${b && b.type}`);
+      if (b.type === 'p' || b.type === 'sub' || b.type === 'quote') {
+        if (!String(b.text || '').trim()) throw new Error(`空的 ${b.type} block`);
+      } else if (b.type === 'kv') {
+        if (!b.k || !b.v) throw new Error('kv block 缺少 k 或 v');
+      } else if (b.type === 'code') {
+        if (!String(b.code || '').trim()) throw new Error('code block 为空');
+      } else if (b.type === 'list') {
+        if (!Array.isArray(b.items) || !b.items.length) throw new Error('list block 为空');
+      }
+    }
+  }
+}
+
 async function genPart(partPrompt, expect, facts, readme) {
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
@@ -314,6 +382,7 @@ async function genPart(partPrompt, expect, facts, readme) {
       const badIdx = expect.findIndex((name, idx) => !String(part.sections[idx]?.heading || '').includes(name));
       if (badIdx !== -1) throw new Error(`第 ${badIdx + 1} 栏应为「${expect[badIdx]}」，实得「${part.sections[badIdx]?.heading ?? '空'}」`);
       part.sections = part.sections.slice(0, 4);
+      validateBlocks(part);
       return part;
     } catch (e) {
       lastErr = e;
@@ -322,6 +391,15 @@ async function genPart(partPrompt, expect, facts, readme) {
     }
   }
   throw lastErr;
+}
+
+// 出处栏必须以截至日期收尾；模型漏写时补上，不因一句话整篇失败
+function ensureAsOf(post, date) {
+  const last = post.sections[post.sections.length - 1];
+  if (!last) return;
+  if (!Array.isArray(last.blocks)) last.blocks = [];
+  if (last.blocks.some(b => /材料截至/.test(textOf(b)))) return;
+  last.blocks.push({ type: 'p', text: `材料截至 ${date}。文中命令与输出均取自官方文档和样例，未在本机运行。` });
 }
 
 async function writeArticle(repo, readme, release, alternatives) {
@@ -336,6 +414,7 @@ async function writeArticle(repo, readme, release, alternatives) {
     sections: [...partA.sections, ...partB.sections],
   };
   if (!post.title || !post.oneLiner || !post.category) throw new Error('标题信息缺失');
+  ensureAsOf(post, today());
 
   const st = computeStats(post);
   if (st.chars < 1600) throw new Error(`正文过短（${st.chars} 字）`);

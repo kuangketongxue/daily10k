@@ -25,13 +25,14 @@
 </header>
 
 <main class="wrap">
-  <div class="loading" id="loading">加载今日日报…</div>
+  <div class="loading" id="loading" role="status">加载今日日报…</div>
+  <noscript><p class="loading">本站需要启用 JavaScript 才能加载今日日报。</p></noscript>
   <div class="today" id="today" hidden>
     <div class="today-meta">
       <span class="issue-date" id="t-date"></span>
       <span class="today-stars" id="t-stars"></span>
     </div>
-    <h2 class="today-title" id="t-title"></h2>
+    <h1 class="today-title" id="t-title"></h1>
     <p class="today-oneliner" id="t-oneliner"></p>
     <div class="today-tags" id="t-category"></div>
     <a class="read-btn" id="t-link" href="#">阅读全文 →</a>
@@ -48,8 +49,8 @@
 </footer>
 
 <script>
-fetch('data/index.json')
-  .then(r => r.json())
+fetch('data/index.json', { cache: 'no-cache' })
+  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .then(idx => {
     const it = idx.issues && idx.issues[0];
     if (!it) { show('empty'); return; }
@@ -59,10 +60,12 @@ fetch('data/index.json')
     document.getElementById('t-title').textContent = it.title;
     document.getElementById('t-oneliner').textContent = it.oneLiner;
     document.getElementById('t-category').textContent = it.category;
-    document.getElementById('t-link').href = 'article.html?d=' + it.date;
+    document.getElementById('t-link').href = 'article.html?d=' + encodeURIComponent(it.date);
     show('today');
   })
-  .catch(() => show('empty'));
+  .catch(() => {
+    document.getElementById('loading').textContent = '今日日报加载失败，请检查网络后刷新重试。';
+  });
 
 function show(id) {
   document.getElementById('loading').hidden = true;
