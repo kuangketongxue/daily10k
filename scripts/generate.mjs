@@ -337,7 +337,14 @@ async function callLLM(messages) {
       response_format: { type: 'json_object' },
     }),
   });
-  if (!res.ok) throw new Error(`LLM ${res.status}: ${await res.text().catch(() => '')}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    const err = new Error(`LLM ${res.status}: ${body}`);
+    err.status = res.status;
+    const retryAfter = Number(res.headers.get('retry-after'));
+    if (Number.isFinite(retryAfter) && retryAfter > 0) err.retryAfterMs = retryAfter * 1000;
+    throw err;
+  }
   const data = await res.json();
   const choice = data.choices?.[0];
   const content = choice?.message?.content;
@@ -387,8 +394,9 @@ async function genPart(partPrompt, expect, facts, readme) {
       return part;
     } catch (e) {
       lastErr = e;
-      log(`写稿第 ${attempt} 次失败：${e.message}`);
-      await sleep(3000);
+      const wait = Math.max(e.status === 429 ? 15000 : 3000, e.retryAfterMs || 0);
+      log(`写稿第 ${attempt} 次失败：${e.message}（${Math.round(wait / 1000)}s 后重试）`);
+      await sleep(wait);
     }
   }
   throw lastErr;
