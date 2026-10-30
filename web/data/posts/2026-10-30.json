@@ -1,8 +1,8 @@
 {
   "date": "2026-10-30",
-  "title": "DeepSeek Harness：一切皆插件，Agent 能力即插即用",
-  "oneLiner": "DeepSeek 开源的 AI Agent 运行时框架，一切皆插件，适合想快速搭建可扩展 Agent 的开发者。",
-  "category": "AI · Agent 框架 · 插件化 · 开发者工具",
+  "title": "ponytail：把“最懒的资深工程师”装进 AI 代理",
+  "oneLiner": "一个给 AI 编程代理用的技能包，教它像最懒的资深工程师一样思考：只写任务真正需要的代码，不写多余的。",
+  "category": "AI · 开发工具 · 提示工程",
   "readMinutes": 8,
   "sections": [
     {
@@ -10,27 +10,15 @@
       "blocks": [
         {
           "type": "p",
-          "text": "你接手一个 AI Agent 项目，想给它加一个“读 PDF”的能力。打开代码，发现工具注册散落在三个文件里，状态管理混在业务逻辑中，加一个能力要动四处。更麻烦的是，你想把之前写的“查网页”能力复用到另一个项目，对方框架的插件接口和你用的完全不同——复制、改、再调试，半天没了。"
+          "text": "你让 AI 给前端加一个日期选择器。没有 Ponytail 时，它会安装一个日期选择器库，或者干脆手写一个完整的日历组件：**335 行**。有了 Ponytail，它先看看仓库里有什么——`Input` 组件已经存在，浏览器自带日期选择器——于是把两者拼起来：**10 行**。"
         },
         {
           "type": "p",
-          "text": "这是 AI Agent 开发者的日常。Agent 的“能力”——读文件、跑命令、查网页、调 API——本应是可组合的积木，但每个框架都自己定义一套插件机制，接口不通用，组合靠复制粘贴。DeepSeek Harness（`dsh`）想解决的是这件事：把 Agent 的每个能力都做成标准插件，用统一的机制组装起来。"
-        },
-        {
-          "type": "sub",
-          "text": "核心主张 · 一切皆插件"
-        },
-        {
-          "type": "p",
-          "text": "README 的第一行就是这句话：**Everything is a Plugin**。`dsh` 不是又一个 Agent 框架，而是一个“Agent 运行时”（agent harness）——它管 Agent 的生命周期、工具调用、上下文和插件加载，但不替你决定 Agent 怎么想。能力由插件提供，框架只负责组装。"
+          "text": "这就是 Ponytail 想解决的问题：AI 代理写代码时，习惯性多写。多写意味着更多代码要维护、更多 token 要花钱、更多时间要等待。而 Ponytail 的做法，是往 AI 代理里装一个“最懒的资深工程师”——那个在公司待得比版本控制系统还久、看五十行代码、沉默不语、然后换成一行的人。"
         },
         {
           "type": "quote",
-          "text": "DeepSeek Harness (`dsh`) is an open-source agent harness developed by DeepSeek AI. It is built on an everything-is-a-plugin architecture and powered by Cordis."
-        },
-        {
-          "type": "p",
-          "text": "换句话说，你不再需要为每个 Agent 重写一遍插件系统。`dsh` 把插件机制标准化，你写一个插件，就能在任何用 `dsh` 的项目里复用。仓库目前 26.6 万星，MIT 许可证，TypeScript 编写，处于开发者预览阶段——README 明确警告会有破坏性变更。"
+          "text": "He says nothing. He writes one line. It works."
         }
       ]
     },
@@ -39,63 +27,76 @@
       "blocks": [
         {
           "type": "sub",
-          "text": "用途一 · 本地起一个 Agent Web UI"
+          "text": "用途一 · 写代码：先看仓库里有什么"
         },
         {
           "type": "kv",
           "k": "你给它：",
-          "v": "`npx @deepseek-ai/dsh web`"
+          "v": "一个任务，比如“给前端加日期选择器”"
         },
         {
           "type": "kv",
           "k": "它还你：",
-          "v": "本地 Web UI，默认地址 `http://127.0.0.1:3080`，自动打开浏览器"
+          "v": "10 行代码，复用已有 `Input` 组件和浏览器原生日期选择器，而不是 335 行手写日历"
         },
         {
           "type": "code",
-          "code": "npx @deepseek-ai/dsh web",
-          "caption": "官方 README 的启动命令"
+          "code": "你：给前端加一个日期选择器\n\n没有 Ponytail：\n335 行，手写日历 + 日期选择器\n\n有 Ponytail：\n一个 10 行文件，复用仓库里的 Input 组件，\n浏览器自带日历",
+          "caption": "README 中的 before/after 示例"
+        },
+        {
+          "type": "sub",
+          "text": "用途二 · /ponytail-review：像被呼叫的资深工程师一样审查"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个变更（diff）"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "审查结果——每个发现都说明代码做了什么、哪里会出错、怎么修、不修会怎样"
         },
         {
           "type": "p",
-          "text": "不想自动开浏览器，加 `--no-open`；SSH 远程启动时只打印主机 URL，因为本地转发地址归 SSH 客户端管。"
+          "text": "`/ponytail-review` 不再只找可以删的代码。它读你变更触及的代码，而不只是 diff，检查 bug、安全、真实负载、缺失测试、速度，以及可以删什么。基准测试中，它找到了 **100%** 的植入问题（无技能时 87%），**100%** 的 diff 外问题（无技能时 78%）。"
         },
         {
           "type": "sub",
-          "text": "用途二 · 从源码构建开发环境"
+          "text": "用途三 · /ponytail-audit：整个仓库排个优先级"
         },
         {
           "type": "kv",
           "k": "你给它：",
-          "v": "`git clone` + `pnpm install` + `pnpm run build`"
+          "v": "整个仓库"
         },
         {
           "type": "kv",
           "k": "它还你：",
-          "v": "`pnpm dsh web` 直接用构建产物启动，不用每次重新构建"
+          "v": "按严重程度排序的发现清单，告诉你先修什么"
         },
         {
-          "type": "code",
-          "code": "git clone https://github.com/deepseek-ai/deepseek-harness.git\ncd deepseek-harness\npnpm install\npnpm run build\npnpm dsh web",
-          "caption": "源码运行方式（来自 README）"
+          "type": "p",
+          "text": "`/ponytail-audit` 先映射代码：入口点、数据如何流动、项目预期负载。然后对发现排序，给出“先修这个”的结论。基准测试中的一个真实例子：1 必须修——办公室批次 1,200 个完全失败；2 必须修——导入静默跳过坏行；3 必须修——办公室批次中打错的 SKU 被静默忽略；4 应该修——风险代码路径没有测试；5 可以修——API 在 body 不是对象时崩溃。结论：先修 1。"
         },
         {
           "type": "sub",
-          "text": "用途三 · 写自己的插件，让社区发现你"
+          "text": "用途四 · 5.3 的 band：成本可见"
         },
         {
           "type": "kv",
           "k": "你给它：",
-          "v": "一个符合 `dsh` 接口的插件仓库，打上 `dsh-plugin` 话题"
+          "v": "一个 Claude Code 会话"
         },
         {
           "type": "kv",
           "k": "它还你：",
-          "v": "被 `dsh` 加载、被社区检索到"
+          "v": "提示框上方的 band——当前任务花了多少钱、多少 token、多少代理时间、复用了多少已有代码、最后一次变更后测试是否通过"
         },
         {
-          "type": "quote",
-          "text": "Add the `dsh-plugin` topic to your plugin repository for discoverability."
+          "type": "p",
+          "text": "band 的按钮可以切换详细/紧凑模式、运行 `/ponytail-review` 或 `/ponytail-audit`、把任务复制为 Markdown。不需要时，`/ponytail band` 隐藏它。需要 Claude Code 2.1.290 或更高版本，在终端或桌面应用中可用。"
         }
       ]
     },
@@ -104,23 +105,24 @@
       "blocks": [
         {
           "type": "p",
-          "text": "`dsh` 的核心是“一切皆插件”，但真正让这个架构成立的是它底下的 **Cordis**。Cordis 是一个依赖注入和组合框架，`dsh` 用它来声明插件之间的依赖、生命周期和加载顺序。"
+          "text": "Ponytail 的核心规则不是“最少 token”。它写的是：**只写任务需要的，但绝不砍掉验证、错误处理、安全或可访问性**。代码之所以小，是因为必要，而不是因为“高尔夫”——把代码压到最短。成本和延迟的降低是副作用。"
         },
         {
           "type": "p",
-          "text": "打个比方：插件是乐高积木，Cordis 是底板。每块积木（插件）声明自己需要什么接口、提供什么接口，Cordis 在启动时按依赖图把积木拼起来。拼错了——比如插件 A 需要插件 B 的接口但 B 没装——Cordis 会在启动时报错，而不是运行时才炸。"
+          "text": "它是怎么做到的？先映射代码。`/ponytail-audit` 会先画出仓库的地图：入口点在哪、数据怎么流动、项目预期承受什么负载。然后才做检查。`/ponytail-review` 读的是你变更触及的代码，而不只是 diff——因为 bug 常常藏在没改的文件里。基准测试里有个真实发现：一次重命名字段的变更，让未改动的 `src/routes/feed.js` 崩溃了。"
         },
         {
           "type": "p",
-          "text": "Cordis 的设计来自一篇 arXiv 论文，标题是《A Programming Paradigm for Spatiotemporal Composability》——“时空组合性”。空间维度指插件可以在不同位置替换、组合；时间维度指插件的生命周期（初始化、运行、销毁）可以被框架统一编排。这正是 Agent 场景需要的：工具、记忆、模型客户端这些能力，在空间上可插拔，在时间上按序启动。"
+          "text": "Ponytail 5 是推倒重来的版本。在 Claude Code 里用同一个代理做基准测试：39 个任务，包括一个真实的 FastAPI + React 仓库，Opus 5.5，每个任务跑 5 轮。结果：代码量 **-53%**，时间 **-41%**，成本 **-26%**，token **-45%**。"
         },
         {
-          "type": "quote",
-          "text": "powered by Cordis, whose design is described in _A Programming Paradigm for Spatiotemporal Composability_"
-        },
-        {
-          "type": "p",
-          "text": "所以 `dsh` 的架构可以概括为：**插件定义能力，Cordis 负责组装，框架负责运行时**。你写 Agent 逻辑，不用关心插件怎么被加载；你写插件，不用关心 Agent 怎么用你。"
+          "type": "list",
+          "items": [
+            "98% 的风险逻辑带着测试发布（无技能时 68%）",
+            "代理自己的测试抓到 66% 的注入 bug（无技能时 46%）",
+            "6 个安全任务（SQL 注入、路径遍历、伪造 token、限流、畸形 CSV 行、缓存）全部 30 轮通过",
+            "盲测中，Ponytail 5 的回答以 110 比 67 胜过上一版"
+          ]
         }
       ]
     },
@@ -128,43 +130,31 @@
       "heading": "4 怎么上手",
       "blocks": [
         {
-          "type": "p",
-          "text": "最快跑起来的方式，是装好 Node.js 后直接："
+          "type": "code",
+          "code": "npm install -g @dietrichgebert/ponytail\n# 或者，在 Claude Code 中：\n/plugin install @dietrichgebert/ponytail",
+          "caption": "安装（npm 包名来自 README 徽章）"
         },
         {
           "type": "code",
-          "code": "npx @deepseek-ai/dsh web",
-          "caption": "npm 一行命令启动"
-        },
-        {
-          "type": "p",
-          "text": "想改源码或调试，走仓库方式："
-        },
-        {
-          "type": "code",
-          "code": "git clone https://github.com/deepseek-ai/deepseek-harness.git\ncd deepseek-harness\npnpm install\npnpm run build\npnpm dsh web",
-          "caption": "源码构建启动"
-        },
-        {
-          "type": "p",
-          "text": "注意事项："
+          "code": "你：给前端加一个日期选择器\n\nPonytail 5 的回答：\n> 仓库里已有 Input 组件，浏览器自带日期选择器。\n> 新建一个 10 行文件，复用 Input 并设置 type=\"date\"。\n> 浏览器会带来日历。",
+          "caption": "最小上手示例：一个任务，10 行"
         },
         {
           "type": "list",
           "items": [
-            "**开发者预览阶段**：README 明确写着 “THERE WILL BE COMPATIBILITY-BREAKING CHANGES”，升级前留意变更日志。",
-            "**先看安全提示**：运行前读 `SAFETY.md`，Agent 会执行代码和命令，权限边界要自己设。",
-            "**插件可发现性**：给插件仓库加 `dsh-plugin` 话题，社区才能搜到你。"
+            "band 功能需要 Claude Code 2.1.290 或更高版本，且在终端或桌面应用中可用——VS Code 聊天面板、云会话和 `claude -p` 中不显示",
+            "Ponytail 声称与 20 个代理兼容（README 徽章），但 band 目前是 Claude Code 专属",
+            "基准测试在 Claude Code 中进行，其他代理的效果可能不同"
           ]
         }
       ]
     }
   ],
   "meta": {
-    "repo": "deepseek-ai/deepseek-harness",
-    "stars": 266073,
-    "language": "TypeScript",
+    "repo": "DietrichGebert/ponytail",
+    "stars": 180370,
+    "language": "JavaScript",
     "license": "MIT",
-    "lastCommit": "2026-10-30"
+    "lastCommit": "2026-10-29"
   }
 }

@@ -3,10 +3,10 @@
   "issues": [
     {
       "date": "2026-10-30",
-      "title": "DeepSeek Harness：一切皆插件，Agent 能力即插即用",
-      "oneLiner": "DeepSeek 开源的 AI Agent 运行时框架，一切皆插件，适合想快速搭建可扩展 Agent 的开发者。",
-      "category": "AI · Agent 框架 · 插件化 · 开发者工具",
-      "stars": 266073
+      "title": "ponytail：把“最懒的资深工程师”装进 AI 代理",
+      "oneLiner": "一个给 AI 编程代理用的技能包，教它像最懒的资深工程师一样思考：只写任务真正需要的代码，不写多余的。",
+      "category": "AI · 开发工具 · 提示工程",
+      "stars": 180370
     }
   ]
 }
