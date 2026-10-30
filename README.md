@@ -28,6 +28,9 @@ AI_API_KEY=你的key AI_BASE_URL=https://token.sensenova.cn/v1 AI_MODEL=sensenov
 仓库：`kuangketongxue/daily10k`（公开），Pages 源已设为 GitHub Actions，Secrets 已配好
 （`AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL`）。想立刻出新一期：Actions → daily-report → Run workflow。
 
+想先验证密钥和整条链路、但不出新一期：同样在 Actions → daily-report → Run workflow 里勾选
+`dry_run`。它会完整跑选品、抓取、写稿与校验，但不写入 `web/data`、不提交。
+
 ## 目录
 
 ```

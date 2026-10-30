@@ -4,7 +4,12 @@ on:
   schedule:
     # UTC 21:30 = 北京时间每天 5:30
     - cron: "30 21 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 只验证选品与写稿，不写入数据、不提交
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -16,7 +21,7 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v5
 
@@ -31,9 +36,17 @@ jobs:
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
           AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
           AI_MODEL: ${{ secrets.AI_MODEL }}
-        run: node scripts/generate.mjs
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          for i in 1 2 3; do
+            if node scripts/generate.mjs; then exit 0; fi
+            echo "第 $i 次生成失败，30 秒后重试"
+            sleep 30
+          done
+          exit 1
 
       - name: 提交数据变更
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != true }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

@@ -25,6 +25,7 @@ const AI_KEY = process.env.AI_API_KEY || cfg.apiKey;
 const AI_BASE = (process.env.AI_BASE_URL || cfg.baseUrl || '').replace(/\/+$/, '');
 const AI_MODEL = process.env.AI_MODEL || cfg.model;
 const GH_TOKEN = process.env.GITHUB_TOKEN || cfg.githubToken || '';
+const DRY_RUN = /^(1|true)$/i.test(String(process.env.DRY_RUN || ''));
 if (!AI_KEY || !AI_BASE || !AI_MODEL) {
   console.error('缺少 AI 配置（config.json 或 AI_API_KEY/AI_BASE_URL/AI_MODEL）');
   process.exit(1);
@@ -497,6 +498,13 @@ export async function main() {
     },
     stats: computeStats(article),
   };
+
+  if (DRY_RUN) {
+    log(`DRY_RUN 校验通过：${post.title}`);
+    log(`8 栏：${post.sections.map(s => s.heading).join(' / ')}`);
+    log(`核心项目 ${repo.full_name} ★${repo.stargazers_count}；正文 ${post.stats.chars} 字，命令块 ${post.stats.codeBlocks} 个；替代候选 ${alternatives.map(a => a.repo).join('、') || '无'}；未写入任何文件。`);
+    return;
+  }
 
   mkdirSync(POSTS_DIR, { recursive: true });
   writeFileSync(join(POSTS_DIR, `${date}.json`), JSON.stringify(post, null, 2));
