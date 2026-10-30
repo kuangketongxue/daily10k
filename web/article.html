@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>万星日报</title>
+<meta name="description" content="万星日报：每天只讲一个 GitHub 万星前沿项目。">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0d0d0d">
+<meta property="og:site_name" content="万星日报">
+<meta property="og:type" content="article">
+<meta property="og:title" content="万星日报">
+<meta property="og:description" content="每天只讲一个 GitHub 万星前沿项目。">
+<meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -24,26 +32,66 @@
 </footer>
 
 <script>
-const params = new URLSearchParams(location.search);
-const date = params.get('d');
+const article = document.getElementById('article');
+const rawDate = new URLSearchParams(location.search).get('d') || '';
 
-fetch('data/posts/' + date + '.json')
-  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(render)
-  .catch(() => {
-    document.getElementById('loading').textContent = '没有找到这一期的日报。';
-  });
+if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) load(rawDate);
+else loadLatest();
+
+// 没带 d 参数时回落到今日索引，而不是去请求 posts/null.json
+function loadLatest() {
+  fetch('data/index.json')
+    .then(r => r.json())
+    .then(idx => {
+      const latest = idx.issues && idx.issues[0] && idx.issues[0].date;
+      if (!latest) throw new Error('empty');
+      history.replaceState(null, '', 'article.html?d=' + latest);
+      load(latest);
+    })
+    .catch(fail);
+}
+
+function load(date) {
+  fetch('data/posts/' + date + '.json')
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(render)
+    .catch(fail);
+}
+
+function fail() {
+  document.title = '没有找到这一期的日报 · 万星日报';
+  article.innerHTML = `
+    <div class="empty">
+      <p>没有找到这一期的日报。</p>
+      <p class="empty-hint">本站每天只保留当天一篇，往期链接会失效。<a href="index.html">回首页看今天的</a></p>
+    </div>`;
+}
+
+function setMeta(key, content, attr = 'name') {
+  let el = document.head.querySelector(`meta[${attr}="${key}"]`);
+  if (!el) {
+    el = document.createElement('meta');
+    el.setAttribute(attr, key);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('content', content || '');
+}
 
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 function render(p) {
-  document.title = p.title + ' · 万星日报';
+  const title = p.title || '万星日报';
+  document.title = title + ' · 万星日报';
+  setMeta('description', p.oneLiner);
+  setMeta('og:title', title + ' · 万星日报', 'property');
+  setMeta('og:description', p.oneLiner, 'property');
+  setMeta('og:url', location.href, 'property');
+
   const m = p.meta || {};
-  const el = document.getElementById('article');
-  let html = `
-    <h1 class="a-title">${esc(p.title)}</h1>
+  let html = `<a class="back" href="index.html">← 回首页</a>
+    <h1 class="a-title">${esc(title)}</h1>
     <div class="a-summary">
       <p class="a-oneliner"><strong>一句话：</strong>${esc(p.oneLiner)}</p>
       <div class="a-metas">
@@ -79,11 +127,13 @@ function render(p) {
     html += '</section>';
   }
 
-  html += `
+  if (m.repo) {
+    html += `
     <div class="a-repo">
       <p>想自己试试？项目地址：</p>
       <p><a class="repo-link" href="https://github.com/${esc(m.repo)}" target="_blank" rel="noopener">github.com/${esc(m.repo)}</a></p>
     </div>`;
+  }
 
   const st = p.stats;
   if (st) {
@@ -91,7 +141,7 @@ function render(p) {
     <p class="a-stats">字数自检：正文汉字 ${st.chars} 字 · 命令块 ${st.codeBlocks} 个 · 阅读约 ${st.minutes} 分钟 · 材料截至 ${esc(st.asOf)}。</p>`;
   }
 
-  el.innerHTML = html;
+  article.innerHTML = html;
 }
 
 function inline(s) {

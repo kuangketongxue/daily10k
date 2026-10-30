@@ -16,6 +16,7 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -25,6 +26,8 @@ jobs:
 
       - name: 生成今日日报
         env:
+          # 不带 token 时 GitHub API 只有 60 次/小时且按共享 IP 计，搜索接口极易 403
+          GITHUB_TOKEN: ${{ github.token }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
           AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
           AI_MODEL: ${{ secrets.AI_MODEL }}
@@ -35,5 +38,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add web/data scripts/history.json
-          git diff --cached --quiet && echo "无变更，跳过提交" || git commit -m "daily report $(date -u +%F)"
+          if git diff --cached --quiet; then
+            echo "无变更，跳过提交"
+            exit 0
+          fi
+          git commit -m "daily report $(date -u +%F)"
+          git pull --rebase
           git push

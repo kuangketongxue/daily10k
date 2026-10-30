@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>万星日报 · 每天 GitHub 万星前沿项目，AI 替你读懂</title>
 <meta name="description" content="每天只讲一个 GitHub 万星前沿项目：它解决什么问题、能用来干嘛、怎么上手。AI 生成的高质量中文深读日报，每天 5:30 更新。">
+<link rel="canonical" href="https://kuangketongxue.github.io/daily10k/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0d0d0d">
+<meta property="og:site_name" content="万星日报">
+<meta property="og:type" content="website">
+<meta property="og:title" content="万星日报 · 每天 GitHub 万星前沿项目，AI 替你读懂">
+<meta property="og:description" content="每天只讲一个 GitHub 万星前沿项目：它解决什么问题、能用来干嘛、怎么上手。">
+<meta property="og:url" content="https://kuangketongxue.github.io/daily10k/">
+<meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -44,8 +53,9 @@ fetch('data/index.json')
   .then(idx => {
     const it = idx.issues && idx.issues[0];
     if (!it) { show('empty'); return; }
+    const stars = Number(it.stars);
     document.getElementById('t-date').textContent = it.date;
-    document.getElementById('t-stars').textContent = '★ ' + it.stars;
+    document.getElementById('t-stars').textContent = Number.isFinite(stars) && stars > 0 ? '★ ' + stars.toLocaleString('zh-CN') : '';
     document.getElementById('t-title').textContent = it.title;
     document.getElementById('t-oneliner').textContent = it.oneLiner;
     document.getElementById('t-category').textContent = it.category;

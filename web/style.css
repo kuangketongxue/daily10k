@@ -1,11 +1,12 @@
 :root {
+  color-scheme: dark;
   --bg: #0d0d0d;
   --bg-soft: #141414;
   --card: #171717;
   --line: #262626;
   --text: #e9e7e2;
   --muted: #9a9892;
-  --dim: #6f6d68;
+  --dim: #87847d;
   --accent: #ffb454;
   --code-bg: #1a1a1a;
   --max: 720px;
@@ -25,6 +26,11 @@ body {
 
 .wrap { max-width: var(--max); margin: 0 auto; padding: 0 22px; }
 a { color: inherit; }
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
 
 /* ---------- masthead ---------- */
 .masthead {
@@ -92,16 +98,35 @@ a { color: inherit; }
   text-align: center;
   color: var(--dim);
 }
+.empty a { color: var(--accent); text-decoration: none; }
+.empty a:hover { text-decoration: underline; }
+.empty-hint { margin-top: 10px; font-size: 13.5px; }
+.empty-code {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--line);
+  margin-bottom: 8px;
+}
 
 /* ---------- article ---------- */
 .article-wrap { padding-bottom: 30px; }
 .loading { padding: 80px 0; text-align: center; color: var(--dim); }
 
+.back {
+  display: inline-block;
+  margin-top: 34px;
+  font-size: 13.5px;
+  color: var(--dim);
+  text-decoration: none;
+}
+.back:hover { color: var(--accent); }
+
 .a-title {
   font-size: 30px;
   font-weight: 800;
   line-height: 1.4;
-  margin: 46px 0 22px;
+  margin: 18px 0 22px;
 }
 
 .a-summary {
@@ -191,7 +216,7 @@ blockquote {
 .a-stats {
   margin-top: 18px;
   font-size: 12px;
-  color: #55534e;
+  color: var(--dim);
   letter-spacing: .5px;
 }
 
@@ -214,6 +239,7 @@ blockquote {
 .foot a { color: var(--dim); }
 
 @media (max-width: 600px) {
-  .a-title { font-size: 24px; margin-top: 32px; }
+  .a-title { font-size: 24px; margin-top: 14px; }
+  .back { margin-top: 24px; }
   .masthead-inner { padding: 26px 22px 20px; }
 }

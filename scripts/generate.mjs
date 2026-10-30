@@ -34,7 +34,7 @@ const log = (...a) => console.log('[万星日报]', ...a);
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
 
-async function gh(path, raw = false) {
+async function gh(path, raw = false, attempt = 1) {
   const res = await fetch('https://api.github.com' + path, {
     headers: {
       'User-Agent': 'daily10k',
@@ -42,21 +42,81 @@ async function gh(path, raw = false) {
       ...(GH_TOKEN ? { Authorization: `Bearer ${GH_TOKEN}` } : {}),
     },
   });
-  if (!res.ok) throw new Error(`GitHub ${res.status}: ${path} ${await res.text().catch(() => '')}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    // 403/429 多为限流，5xx 为瞬时故障，都值得再试
+    const retryable = res.status === 403 || res.status === 429 || res.status >= 500;
+    if (retryable && attempt < 3) {
+      log(`GitHub ${res.status}，${attempt * 2}s 后重试：${path}`);
+      await sleep(attempt * 2000);
+      return gh(path, raw, attempt + 1);
+    }
+    throw new Error(`GitHub ${res.status}: ${path} ${body}`);
+  }
   return raw ? res.text() : res.json();
 }
 
-async function findCandidate(days = 180, minStars = 10000) {
-  const since = new Date(Date.now() - days * 86400e3).toISOString().slice(0, 10);
-  const q = `created:>${since} stars:>${minStars}`;
-  const data = await gh(`/search/repositories?q=${encodeURIComponent(q)}&sort=stars&order=desc&per_page=30`);
-  const history = existsSync(HISTORY_FILE) ? JSON.parse(readFileSync(HISTORY_FILE, 'utf8')) : [];
-  const items = (data.items || []).filter(r => !history.includes(r.full_name));
-  if (!items.length) throw new Error(`近 ${days} 天没有新的万星项目（或都已写过）`);
+// 星数档位，从高往低扫：上一档全部写完才降档
+const STAR_TIERS = [
+  { label: '百万星', min: 1000000, max: null },
+  { label: '十万星', min: 100000, max: 999999 },
+  { label: '万星', min: 10000, max: 99999 },
+];
+
+// 档内排序：星数取对数（压住量级差）+ 创建时间新鲜度（一年内线性衰减到 0）
+function candidateScore(r) {
+  const ageDays = (Date.now() - Date.parse(r.created_at)) / 86400e3;
+  const freshness = Math.max(0, Math.min(1, 1 - ageDays / 365));
+  return Math.log10(Math.max(1, r.stargazers_count)) + freshness;
+}
+
+async function findCandidate() {
+  const history = new Set(existsSync(HISTORY_FILE) ? JSON.parse(readFileSync(HISTORY_FILE, 'utf8')) : []);
   // 跳过硬凑星数的清单/资料书类仓库，优先有编程语言的真项目
-  const listish = /awesome|curated list|roadmap|interview|tutorial|handbook|ebook|\bbook\b|指南|教程|笔记|电子书|清单/i;
-  const isList = (r) => listish.test(`${r.name} ${r.description || ''}`) || !r.language;
-  return items.find(r => !isList(r)) || items[0];
+  const listish = /awesome|curated|\blists? of\b|roadmap|interview|tutorial|handbook|ebook|cheat ?sheet|\bbook\b|指南|教程|笔记|电子书|清单|资料/i;
+  const listTopics = new Set([
+    'awesome', 'awesome-list', 'curated-list', 'list', 'lists', 'resources',
+    'tutorial', 'tutorials', 'tutorial-code', 'tutorial-exercises',
+    'roadmap', 'interview', 'interview-questions', 'cheat-sheet', 'cheatsheet',
+    'books', 'book', 'ebook', 'free-programming-books',
+  ]);
+  const isList = (r) =>
+    !r.language ||
+    r.language === 'Markdown' ||
+    (r.topics || []).some(t => listTopics.has(t)) ||
+    listish.test(`${r.name} ${r.description || ''}`);
+
+  for (const tier of STAR_TIERS) {
+    const q = tier.max ? `stars:${tier.min}..${tier.max}` : `stars:>=${tier.min}`;
+    let best = null;
+    let bestScore = -Infinity;
+    let scanned = 0;
+    let written = 0;
+    let skippedLists = 0;
+    let total = 0;
+    // 搜索接口最多返回 1000 条，按星数降序翻到最后一页才能确认这一档已扫完
+    for (let page = 1; page <= 10; page++) {
+      const data = await gh(`/search/repositories?q=${encodeURIComponent(q)}&sort=stars&order=desc&per_page=100&page=${page}`);
+      const items = data.items || [];
+      total = data.total_count || total;
+      scanned += items.length;
+      for (const r of items) {
+        if (history.has(r.full_name)) { written++; continue; }
+        if (isList(r)) { skippedLists++; continue; }
+        const score = candidateScore(r);
+        if (score > bestScore) { bestScore = score; best = r; }
+      }
+      if (items.length < 100) break;
+    }
+    if (best) {
+      log(`${tier.label}档命中：${best.full_name} ★${best.stargazers_count}，创建于 ${best.created_at.slice(0, 10)}` +
+        `（该档共 ${total} 个，本次扫描 ${scanned}：已写过 ${written}，跳过清单类 ${skippedLists}）`);
+      return best;
+    }
+    const capped = total > scanned ? `，接口上限只覆盖前 ${scanned} 个` : '';
+    log(`${tier.label}档无可写项目（共 ${total} 个，扫描 ${scanned}：已写过 ${written}，跳过清单类 ${skippedLists}${capped}），降到下一档`);
+  }
+  throw new Error('百万/十万/万三个档位都已写完，没有可写的项目了');
 }
 
 async function fetchReadme(fullName) {
@@ -101,7 +161,9 @@ async function findAlternatives(repo) {
   for (const q of queries) {
     try {
       for (const r of await searchRepos(q)) {
-        if (seen.has(r.full_name) || r.archived) continue;
+        if (seen.has(r.full_name) || r.archived || r.fork) continue;
+        // 同名仓库基本都是转存/复制品，不能算「替代方案」
+        if (r.name.toLowerCase() === repo.name.toLowerCase()) continue;
         seen.add(r.full_name);
         picks.push({
           repo: r.full_name,
@@ -135,6 +197,13 @@ block 类型：
 - 所有数字（星数、issue 数、版本号、日期）只能使用我提供的事实，不得推测或编造；缺失就写"官方未披露"。
 - 链接只能使用我提供的 URL 或 README 中明确出现的 URL。
 - code 块里的命令与输出必须来自 README，并标注来源。`;
+
+const HEADINGS = [
+  '它解决什么问题', '能用来干嘛', '它是怎么做的', '怎么上手',
+  '局限与风险', '替代方案', '谁该用', '出处与日期',
+];
+const HEADINGS_A = HEADINGS.slice(0, 4);
+const HEADINGS_B = HEADINGS.slice(4);
 
 const PART_A = `本次只写文章的前 4 个 section，并给出标题信息。输出 JSON：
 {
@@ -227,7 +296,7 @@ async function callLLM(messages) {
   return extractJson(content);
 }
 
-async function genPart(partPrompt, facts, readme) {
+async function genPart(partPrompt, expect, facts, readme) {
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
     {
@@ -242,6 +311,9 @@ async function genPart(partPrompt, facts, readme) {
       if (!Array.isArray(part.sections) || part.sections.length < 4) {
         throw new Error(`栏目不足（${part.sections?.length ?? 0}/4）`);
       }
+      const badIdx = expect.findIndex((name, idx) => !String(part.sections[idx]?.heading || '').includes(name));
+      if (badIdx !== -1) throw new Error(`第 ${badIdx + 1} 栏应为「${expect[badIdx]}」，实得「${part.sections[badIdx]?.heading ?? '空'}」`);
+      part.sections = part.sections.slice(0, 4);
       return part;
     } catch (e) {
       lastErr = e;
@@ -254,8 +326,8 @@ async function genPart(partPrompt, facts, readme) {
 
 async function writeArticle(repo, readme, release, alternatives) {
   const facts = factsBlock(repo, release, alternatives);
-  const partA = await genPart(PART_A, facts, readme);
-  const partB = await genPart(PART_B, facts, readme);
+  const partA = await genPart(PART_A, HEADINGS_A, facts, readme);
+  const partB = await genPart(PART_B, HEADINGS_B, facts, readme);
 
   const post = {
     title: partA.title,
@@ -264,11 +336,6 @@ async function writeArticle(repo, readme, release, alternatives) {
     sections: [...partA.sections, ...partB.sections],
   };
   if (!post.title || !post.oneLiner || !post.category) throw new Error('标题信息缺失');
-
-  const expect = ['它解决什么问题', '能用来干嘛', '它是怎么做的', '怎么上手', '局限与风险', '替代方案', '谁该用', '出处与日期'];
-  post.sections.forEach((s, i) => {
-    if (!String(s.heading || '').includes(expect[i])) log(`警告：第 ${i + 1} 栏标题异常「${s.heading}」`);
-  });
 
   const st = computeStats(post);
   if (st.chars < 1600) throw new Error(`正文过短（${st.chars} 字）`);

@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
     paths: [web/**]
+  # daily-report 用默认 GITHUB_TOKEN 提交，这类推送不会触发上面的 push 事件
+  # （GitHub 防递归机制），所以要在它跑完后显式发布一次
+  workflow_run:
+    workflows: [daily-report]
+    types: [completed]
   workflow_dispatch: {}
 
 permissions:
@@ -17,6 +22,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
