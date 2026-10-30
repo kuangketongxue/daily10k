@@ -1,27 +1,27 @@
 {
   "date": "2026-10-30",
-  "title": "gods-eye-view：把公开信号装进一个浏览器里的 3D 地球",
-  "oneLiner": "一个开源的实时空间情报模拟器，将航班、船舶、卫星、地震等公开数据源汇聚在可交互的 3D 地球上，供开发者和分析人员探索与扩展。",
-  "category": "GIS · 空间情报 · 实时数据可视化 · WebGL",
+  "title": "rea：让 AI 逆向一切，从应用行为到原生二进制",
+  "oneLiner": "rea 是一个 MCP 服务，让 AI 代理通过本地工具链逆向分析应用、二进制与运行时行为，并附带证据。",
+  "category": "逆向工程 · AI 代理 · MCP · 开发者工具",
   "sections": [
     {
       "heading": "1 它解决什么问题",
       "blocks": [
         {
           "type": "p",
-          "text": "航班应答机、船舶信标、轨道根数、地震仪和公共摄像头，这些公开信号每天都在产生海量数据，但它们散落在不同的网站、接口和格式里。想同时看一架飞机、它附近的船、以及地面摄像头拍到的画面，通常要开五六个标签页，手动对齐时间与坐标。"
+          "text": "开发者常遇到这样的场景：看到某个应用里有一个想要的功能，但拿不到源码，无法直接理解其实现细节。传统做法是手动打开反汇编器、跟踪调用链、逐条阅读汇编，耗时且门槛高。rea 把这个过程交给 AI 代理：你只需描述目标，代理通过 MCP 调用 rea 提供的分析工具，就能拿到带证据的结论。"
+        },
+        {
+          "type": "quote",
+          "text": "See a feature in an app that you want in your own product? Ask your agent to investigate it with REA. It can inspect the app without its source code, explain how the feature works, show the evidence, and build a version for your project."
         },
         {
           "type": "p",
-          "text": "God's Eye View 把这些信号放进同一个可交互的 3D 地球。你可以在全球视角和单个目标之间连续缩放，从一架飞机的座舱视角，一路切换到它下方的地形。项目 README 的核心主张是：**“Half the magic is that it looks like a forbidden cockpit. The other half is that every line of code is inspectable.”** 它把“看起来像机密系统”和“代码完全可查”这两件事放在了一起。"
+          "text": "rea 的核心主张是**让代理不仅能看，还能看懂**。它把逆向分析拆成可组合的工具集：代理先问“这个功能怎么实现的”，rea 返回代码片段、引用关系与未知项，代理再基于这些证据追问、解释，甚至直接编写并测试自己的实现。"
         },
         {
           "type": "p",
-          "text": "对开发者而言，这意味着一个可审计的 OSINT 工具：数据源是公开的，代码是开源的，运行在本地浏览器里。你可以检查每一层数据从哪来、怎么解析、如何渲染，然后按自己的需求扩展。"
-        },
-        {
-          "type": "p",
-          "text": "项目创建于 2026 年 6 月，截至 2026 年 10 月已获得 61,238 颗星和 11,970 次 fork，登上过 GitHub Trending 日榜和周榜第一。活跃度也反映在 issue 上：目前有 441 个未关闭的 issue 与 PR，说明社区参与度高，但同时也意味着维护压力不小。"
+          "text": "与同类项目相比，rea 的差异在于**覆盖面与证据链**。GitHub 上热度相近的 paperclip（★108766）聚焦于代理工作流管理，open-design（★104933）面向设计协作，而 rea 专注于逆向工程这一特定技术领域，且明确要求分析结果包含证据和限制说明。截至 2026-10-30，rea 已获 409201 星、102485 fork，未关闭 Issue 与 PR 共 1315 个，社区活跃度可见一斑。"
         }
       ]
     },
@@ -30,60 +30,62 @@
       "blocks": [
         {
           "type": "sub",
-          "text": "实时态势感知与目标跟踪"
+          "text": "用途一：理解并复刻应用功能"
+        },
+        {
+          "type": "p",
+          "text": "这是 rea 最典型的场景。代理先分析目标应用，再基于证据实现类似功能。"
         },
         {
           "type": "kv",
-          "k": "你给它",
-          "v": "一个目标（航班、船舶、卫星、火灾等），或直接在地球上点击"
+          "k": "你给它：",
+          "v": "一个本地应用目录或二进制文件，以及一句自然语言问题，如“搜索功能怎么实现的”"
         },
         {
           "type": "kv",
-          "k": "它还你",
-          "v": "锁定视角、渐隐轨迹、完整元数据，以及附近 250 公里范围内的所有活动目标列表；点击任意一个即可切换跟踪"
+          "k": "它还你：",
+          "v": "相关代码片段、调用链、引用关系，以及每项结论对应的证据与限制说明"
         },
         {
           "type": "code",
-          "code": "// 从 README 的“What This Thing Does”章节\n// 点击跟踪：相机锁定，绘制渐隐轨迹，显示完整元数据\n// 跟踪的火灾或船只可一键切换到最近的实时摄像头",
-          "caption": "来源：README · What This Thing Does"
+          "code": "npx -y rea-agents@latest analyze-javascript-application /absolute/path/to/app --json",
+          "caption": "来源：README「Use the terminal」节"
         },
         {
           "type": "sub",
-          "text": "语音控制与分析师问答"
+          "text": "用途二：静态分析各类二进制与产物"
+        },
+        {
+          "type": "p",
+          "text": "rea 内置了多种静态解析器，覆盖从 Go 二进制到 Unity IL2CPP 元数据，无需安装对应工具链。"
         },
         {
           "type": "kv",
-          "k": "你给它",
-          "v": "一句自然语言指令，如“下次卫星过境时间”或“统计大坝数量”"
+          "k": "你给它：",
+          "v": "一个 ELF/PE/Mach-O 文件、Godot PCK 包或 GGUF 模型文件"
         },
         {
           "type": "kv",
-          "k": "它还你",
-          "v": "语音驱动的实时 AI 智能体：卫星过境预报、目标计数与筛选、数据源新鲜度提示"
-        },
-        {
-          "type": "code",
-          "code": "// 来自 README 的功能列表\n// 卫星过境：语音询问任何已加载卫星何时再次从你头顶升起，返回升起、峰值和落下时间\n// 分析师问答：按语音统计、筛选和排名卫星、数据中心、大坝、航班、船舶、火灾和地震",
-          "caption": "来源：README · What This Thing Does"
+          "k": "它还你：",
+          "v": "内嵌的编译器版本、模块依赖、符号表、节区布局等结构化信息"
         },
         {
           "type": "sub",
-          "text": "自定义数据层与场景编排"
+          "text": "用途三：在终端里直接做逆向"
+        },
+        {
+          "type": "p",
+          "text": "rea 的 CLI 与 MCP 共享同一套工作流，不依赖代理也能独立使用。"
         },
         {
           "type": "kv",
-          "k": "你给它",
-          "v": "自己的数据源模块，或一个导演场景（相机锚点、移动路径、数据包）"
+          "k": "你给它：",
+          "v": "一条 rea 命令，如 `rea --help`"
         },
         {
           "type": "kv",
-          "k": "它还你",
-          "v": "可导入、预览和分享的场景文件或 bundle；每个图层是独立模块，方便替换和扩展"
-        },
-        {
-          "type": "code",
-          "code": "// README 明确说明：\n// “Start with the included data sources, then add your own. Each layer is a separate module.”",
-          "caption": "来源：README · Why This Exists"
+          "k": "它还你：",
+          "v": "与 MCP 相同的分析结果，支持 JSON 输出与脚本化调用"
         }
       ]
     },
@@ -92,23 +94,19 @@
       "blocks": [
         {
           "type": "p",
-          "text": "God's Eye View 是一个运行在浏览器里的 JavaScript 应用，核心渲染基于 Cesium 的 3D 地球引擎（项目主页与话题标签均明确标注 cesium、webgl）。它没有后端服务器，所有数据拉取与解析都在客户端完成，这保证了“每一行代码都可检查”。"
+          "text": "rea 的架构可以概括为**一个 MCP 服务器，多类分析后端**。代理通过 MCP 协议调用 rea，rea 再根据目标类型分派到不同的分析引擎：原生二进制交给 Hopper、Ghidra、IDA 或 Kuna 等外部工具；JavaScript/Electron 应用走内置的静态分析器；.NET 程序集和网站也有对应路径。"
         },
         {
           "type": "p",
-          "text": "架构上，每个数据源（航班、船舶、卫星、地震、交通、摄像头等）被封装为独立的模块。README 在“Why This Exists”一节中写道：**“Start with the included data sources, then add your own. Each layer is a separate module.”** 这种模块化设计让新增数据源不需要改动核心渲染逻辑。"
+          "text": "关键设计是**分析结果与证据绑定**。README 明确写道：“Analysis runs locally, and results include the evidence and limitations behind each conclusion.”这意味着代理拿到的不是黑盒结论，而是可追溯的代码、引用和未知项。代理可以据此判断结论的可信度，再决定是否追问或直接实现。"
         },
         {
           "type": "p",
-          "text": "渲染层支持多种视觉模式：GLSL 传感器滤镜（CRT、夜视、FLIR/热成像、Noir）、屏幕空间检测框、军用 HUD、以及 3D 飞机模型（787、ATR-72、Citation、Bell 206、MQ-9）。这些效果通过 WebGL shader 实现，与数据层解耦。"
+          "text": "rea 对输入 schema 做了两档设计：默认使用紧凑 schema 以降低上下文开销，设置 `REA_MCP_INPUT_SCHEMA_PROFILE=full` 可获取完整字段说明与嵌套校验细节。输出 schema 默认完整，若客户端对 `tools/list` 帧大小有限制，可切换为 compact 或 off。两种配置都保留服务端规范校验与完整结构化结果。"
         },
         {
           "type": "p",
-          "text": "一个值得注意的细节：部分数据并非实时。README 明确说明交通流量是“沿真实道路的模拟”，摄像头位姿和火箭发射轨迹是“粗略估计”。这意味着如果你要用它做精确分析，需要先确认数据源的新鲜度与精度。"
-        },
-        {
-          "type": "p",
-          "text": "与替代项目对比：CesiumGS/cesium 是底层的 3D 地球库（15,896 星，Apache-2.0），而 God's Eye View 是构建在其上的应用层；uhrichsam4/gods-eye-view 是一个 fork（600 星），增加了约 5,200 个摄像头和地图标签。原版项目在数据源覆盖和功能广度上明显更完整。"
+          "text": "支持的目标类型在 README 中列成表格：桌面安装包、原生二进制、离线 ELF 布局、Go 二进制、GPU 代码对象、模型产物、IL2CPP 元数据、Godot PCK、Rust 二进制等。每个目标都有对应的需求说明与指南文档，例如原生分析需要 Hopper/Ghidra/IDA/Kuna 之一，而静态 JavaScript 分析不需要任何原生引擎。"
         }
       ]
     },
@@ -117,28 +115,37 @@
       "blocks": [
         {
           "type": "p",
-          "text": "官方提供三条安装路径：Pinokio 一键安装、终端手动运行、Docker。最推荐的是终端路径，因为可以直接看到启动日志和依赖安装过程。"
+          "text": "rea 要求 Node.js 22.x（≥22.23.4）、24.x（≥24.22.1）或 26.12.1+，并安装 npm。首次使用只需一条命令："
         },
         {
           "type": "code",
-          "code": "git clone https://github.com/bilawalsidhu/gods-eye-view.git\ncd gods-eye-view\nnpm ci\nnpm run doctor\nnpm run dev\n# 打开 http://localhost:4173",
-          "caption": "来源：README · Quick Start · Path 2"
+          "code": "npx rea-agents setup",
+          "caption": "来源：README「Quick start」节"
         },
         {
           "type": "p",
-          "text": "需要 Node.js 24.x（24.14.0 或更高）或 26.x。Node 25 已 EOL，setup doctor 会给出警告。首次启动后，从面板选择 Live Contacts、Space Missions、Environmental 或 Explore Manually。"
+          "text": "setup 会引导你选择代理（Claude Code、Codex、Cursor、Gemini CLI、Grok Build 等），审查并批准对配置的修改，然后添加 rea 的 MCP 服务器与配套工作流指令，同时备份现有配置。完成后重启代理即可。"
+        },
+        {
+          "type": "p",
+          "text": "最小验证示例：分析一个 JavaScript/Electron 应用目录或 ASAR 包。"
+        },
+        {
+          "type": "code",
+          "code": "npx -y rea-agents@latest analyze-javascript-application /absolute/path/to/app --json",
+          "caption": "来源：README「Use the terminal」节"
+        },
+        {
+          "type": "p",
+          "text": "注意事项："
         },
         {
           "type": "list",
           "items": [
-            "无需 API key 即可开始：Esri 卫星影像、OSM 地形、航班、军事交通、卫星、地震、公共摄像头、无线电和发射数据都是免密钥的。",
-            "要获得照片级 3D 效果，需在 POWER UP 面板添加 Cesium ion token（个人非商业用途）或 Google Maps key（按量计费）。",
-            "如果你之前安装过旧版本，务必更新：旧版本查询公共 OpenStreetMap Overpass 服务器会被拒绝，导致 Traffic、Mapped Installations 和 ALPR 为空。"
+            "在 Linux 上，Ghidra、JADX、固件工具启动以及静态 JavaScript/Electron 分析要求 REA 的 PATH 中存在 procps 兼容的 ps，用于进程所有权检查；恢复步骤见 docs/installation.md 的「Linux owned-process prerequisite」。",
+            "若通过包管理器（如 npx）获取 rea，请保留其缓存条目可用，并从目标项目之外的受信任目录运行包获取。",
+            "原生分析需先配置分析提供方（Hopper、Ghidra、IDA 或 Kuna 之一）；setup 可在批准后可选安装 Hopper。"
           ]
-        },
-        {
-          "type": "p",
-          "text": "Docker 路径同样可用，且无需安装 Node：`docker compose up` 后访问同一端口。容器内保存的数据（.env、.gev-cache/、.gev-logs/）都在克隆目录中，`docker compose down` 不会丢失任何东西。注意 Docker 模式下本地 MCP 服务器和 ChatGPT OAuth 语音不可用，需改用 OpenAI API key。"
         }
       ]
     },
@@ -148,12 +155,12 @@
         {
           "type": "list",
           "items": [
-            "**未关闭 Issue 与 PR 达 441 个**，且项目创建于 2026-06-22，至今不足五个月，说明维护压力集中、响应速度可能跟不上用户反馈。所以你要注意：提交 issue 前先搜索是否已有同类问题，并做好长期得不到回应的准备。",
-            "**最近推送为 2026-10-30**，但最新 Release 为 v0.3.0（2026-10-28），版本号仍为 0.x，属于开发者预览阶段。所以你要注意：API 和功能可能频繁变动，升级前务必阅读 Release Notes，并锁定版本。",
-            "**README 明确要求 Node.js 24.x（24.14.0 或更新）或 26.x**，并警告 Node 25 已停止维护；同时提到旧版本会因公共 OpenStreetMap Overpass 服务器拒绝请求而出现 Traffic、Mapped Installations 和 ALPR 为空的问题。所以你要注意：必须使用受支持的 Node 版本，且及时更新到最新版本。",
-            "**许可证未声明**，尽管 README 提到 Nepal flood scene 的捆绑数据为非商业用途。所以你要注意：在未明确许可证前，不要将其用于商业项目或再分发，尤其涉及捆绑数据时。",
-            "**项目借开源推广商业产品**：主页指向 maptheworld.ai，README 多次提及 YouTube 视频系列和社交媒体影响力。所以你要注意：核心功能虽可无密钥使用，但部分增强功能（如 Cesium ion token、Google Maps key）可能受商业条款限制，需阅读 Provider 条款。",
-            "**README 提到安全要求**：Docker 部署时，若将实例公开分享，会连 Provider Settings 一并暴露；需设置 `GEV_KEY_SETUP_TRUSTED_PEERS=none` 以禁用网关信任。所以你要注意：任何公网部署前必须阅读 SECURITY.md，并严格按文档配置环境变量。"
+            "**未关闭 Issue 与 PR 共 1315 个**，且最新 Release（rea-agents-6.8.0）发布于 2026-10-25，距离材料截止日仅 5 天。项目迭代速度快，但积压问题数量也大——你要注意：新版本可能引入回归，升级前应查看 Release notes 和近期 issue 趋势。",
+            "**README 明确标注 REA 变化快、新版本包含频繁 bug 修复**，并建议用户保持更新。这意味着 API 或 MCP 工具契约可能在不通知的情况下变更，自动化脚本需锁定版本或定期回归测试。",
+            "**原生分析依赖外部工具**：Hopper、Ghidra、IDA 或 Kuna，且 Linux 下部分功能要求 procps-compatible `ps` 在 PATH 上。若你的环境缺少这些依赖，相关能力不可用，且错误信息可能指向安装文档而非自动修复。",
+            "**安全要求明确**：README 警告仅从官方来源（GitHub、rea.tools、npm 包）获取 REA，并指出相似仓库名或复制 README 不代表官方。这是针对供应链攻击的提示——你要注意：安装前校验来源，避免使用来源不明的镜像或 fork。",
+            "**npm 包通过 package runner 获取时，README 要求从目标项目外的可信目录运行**，并保留缓存条目。这暗示包执行可能涉及本地文件写入，需在隔离环境中评估。",
+            "**项目为 MIT 许可证，但未在 README 中披露商业推广**。仓库主页指向 rea.tools，且 README 含 Discord 社区链接，未见明确的商业产品捆绑——你要注意：若后续引入商业组件，许可证兼容性需重新评估。"
           ]
         }
       ]
@@ -163,65 +170,55 @@
       "blocks": [
         {
           "type": "sub",
-          "text": "候选一：CesiumGS/cesium"
+          "text": "候选一：paperclipai/paperclip"
         },
         {
           "type": "kv",
           "k": "仓库",
-          "v": "https://github.com/CesiumGS/cesium"
+          "v": "https://github.com/paperclipai/paperclip"
         },
         {
           "type": "kv",
-          "k": "星数",
-          "v": "15,896"
+          "k": "星数 / 许可证 / 语言",
+          "v": "108766 / MIT / TypeScript"
         },
         {
           "type": "kv",
-          "k": "许可证",
-          "v": "Apache-2.0"
-        },
-        {
-          "type": "kv",
-          "k": "最近更新",
+          "k": "最近推送",
           "v": "2026-10-30"
         },
         {
           "type": "kv",
           "k": "适用场景",
-          "v": "需要构建自定义 3D 地球应用，或希望使用成熟、许可证明确的底层库。"
+          "v": "管理多个 AI agent 的日常工作流，偏协作与调度，不涉及二进制逆向。"
         },
         {
           "type": "sub",
-          "text": "候选二：uhrichsam4/gods-eye-view"
+          "text": "候选二：nexu-io/open-design"
         },
         {
           "type": "kv",
           "k": "仓库",
-          "v": "https://github.com/uhrichsam4/gods-eye-view"
+          "v": "https://github.com/nexu-io/open-design"
         },
         {
           "type": "kv",
-          "k": "星数",
-          "v": "600"
+          "k": "星数 / 许可证 / 语言",
+          "v": "104933 / Apache-2.0 / TypeScript"
         },
         {
           "type": "kv",
-          "k": "许可证",
-          "v": "未声明"
-        },
-        {
-          "type": "kv",
-          "k": "最近更新",
-          "v": "2026-09-01"
+          "k": "最近推送",
+          "v": "2026-10-30"
         },
         {
           "type": "kv",
           "k": "适用场景",
-          "v": "需要更多预置相机数据（约 5,200 个、覆盖 20 国）或生产环境托管，但可接受较少的社区支持。"
+          "v": "本地优先的协作式 AI 设计工作区，适合 UI/原型/动效团队，不涉及代码分析。"
         },
         {
           "type": "p",
-          "text": "选择判据：若你的目标是快速获得一个带实时全球数据的 3D 地球可视化原型，且能接受 0.x 版本的不稳定性，选本项目；若你需要一个许可证明确、长期维护的底层 3D 地球库，选 Cesium；若你需要更多预置相机数据或生产托管，且对星数不敏感，可考虑 uhrichsam4 的分支。"
+          "text": "选择判据：如果你的需求是**逆向工程或运行时行为分析**（二进制、Electron、.NET、网站），REA 是唯一匹配的候选；若你只是需要 agent 编排或设计协作，则选 paperclip 或 open-design。REA 的定位（reverse engineer anything）与这两个候选在功能上不重叠，替代仅在同为 TypeScript/MIT 或 Apache 生态的意义上成立。"
         }
       ]
     },
@@ -229,27 +226,19 @@
       "heading": "7 谁该用，谁别用",
       "blocks": [
         {
-          "type": "sub",
-          "text": "推荐使用"
-        },
-        {
           "type": "list",
           "items": [
-            "需要快速构建地理空间情报演示或原型，且能接受 0.x 版本频繁变更的开发者。",
-            "希望无 API 密钥即可体验实时飞机、船只、卫星、地震和公共相机数据的用户。",
-            "愿意投入时间阅读 README 和 SECURITY.md，并遵守 Node 版本和 Docker 安全配置的部署者。"
+            "**适合**：需要理解闭源应用内部机制、提取功能证据并复现实现的开发者；已有 Hopper/Ghidra/IDA 或 Kuna 环境的逆向工程师；在 Electron/.NET/Go/Rust 项目中做依赖或二进制诊断的团队。",
+            "**适合**：希望将逆向流程接入 Claude Code、Codex、Cursor 等 agent 工作流的用户，因为 REA 通过 MCP 提供结构化结果和证据链。",
+            "**适合**：需要本地运行、不依赖云服务的场景——README 明确说明分析在本地执行，适合对数据出域敏感的环境。"
           ]
         },
         {
-          "type": "sub",
-          "text": "不建议使用"
-        },
-        {
           "type": "list",
           "items": [
-            "需要商业许可或长期稳定 API 的项目——许可证未声明，且版本仍为 0.x。",
-            "无法满足 Node.js 24.x/26.x 要求，或依赖旧版 Node 25 的环境。",
-            "需要公网共享实例但不愿处理密钥暴露风险，或无法设置 `GEV_KEY_SETUP_TRUSTED_PEERS=none` 的团队。"
+            "**别用**：没有 Node.js 22.x/24.x/26.12.1+ 或 npm 的环境，或无法满足 Linux `ps` 前置条件的系统——安装和部分功能会直接失败。",
+            "**别用**：需要稳定 API 且不能接受频繁破坏性变更的生产流水线——README 自述变化快、频繁修复，未承诺语义化版本兼容。",
+            "**别用**：仅需 agent 编排或设计协作，不涉及二进制或应用行为分析——那两个候选项目更贴合，REA 的功能会浪费。"
           ]
         }
       ]
@@ -260,11 +249,13 @@
         {
           "type": "list",
           "items": [
-            "仓库首页：https://github.com/bilawalsidhu/gods-eye-view",
-            "README：https://github.com/bilawalsidhu/gods-eye-view#readme",
-            "Releases 页面：https://github.com/bilawalsidhu/gods-eye-view/releases",
-            "Issues 页面：https://github.com/bilawalsidhu/gods-eye-view/issues",
-            "主页：https://maptheworld.ai/"
+            "仓库首页：https://github.com/morluto/rea",
+            "README：https://github.com/morluto/rea（含多语言链接与快速开始、工作原理、分析范围章节）",
+            "Issues 页面：https://github.com/morluto/rea/issues",
+            "Releases 页面：https://github.com/morluto/rea/releases",
+            "官网：https://rea.tools/",
+            "npm 包：https://www.npmjs.com/package/rea-agents",
+            "候选仓库：https://github.com/paperclipai/paperclip、https://github.com/nexu-io/open-design"
           ]
         },
         {
@@ -275,17 +266,18 @@
     }
   ],
   "meta": {
-    "repo": "bilawalsidhu/gods-eye-view",
-    "stars": 61238,
-    "language": "JavaScript",
+    "repo": "morluto/rea",
+    "stars": 409201,
+    "language": "TypeScript",
+    "license": "MIT",
     "lastCommit": "2026-10-30",
-    "openIssues": 441,
-    "version": "v0.3.0"
+    "openIssues": 1315,
+    "version": "rea-agents-6.8.0"
   },
   "stats": {
-    "chars": 1849,
-    "codeBlocks": 4,
-    "minutes": 7.6,
+    "chars": 1870,
+    "codeBlocks": 3,
+    "minutes": 6.9,
     "asOf": "2026-10-30"
   }
 }
