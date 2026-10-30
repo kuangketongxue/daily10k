@@ -473,6 +473,12 @@ export async function main() {
   const date = today();
   log('开始生成', date, '这一期…');
 
+  // 定时任务有 5:30 / 6:30 两次；当天已生成时第二次直接跳过，手动运行不受影响
+  if (!DRY_RUN && process.env.GITHUB_EVENT_NAME === 'schedule' && existsSync(join(POSTS_DIR, `${date}.json`))) {
+    log(`今日 ${date} 的日报已存在，跳过本次定时兜底`);
+    return;
+  }
+
   const repo = await findCandidate();
   log(`当日核心项目：${repo.full_name} ★${repo.stargazers_count}`);
 
