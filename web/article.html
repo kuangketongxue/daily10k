@@ -52,6 +52,7 @@ function render(p) {
         ${m.language ? `<span>${esc(m.language)}</span>` : ''}
         ${m.stars ? `<span>GitHub 星数 ${esc(m.stars)}</span>` : ''}
         ${m.lastCommit ? `<span>最近提交 ${esc(m.lastCommit)}</span>` : ''}
+        ${m.openIssues != null ? `<span>未关闭 Issue/PR ${esc(m.openIssues)}</span>` : ''}
         ${m.version ? `<span>${esc(m.version)}</span>` : ''}
         ${p.readMinutes ? `<span>阅读约 ${p.readMinutes} 分钟</span>` : ''}
       </div>
@@ -84,11 +85,20 @@ function render(p) {
       <p><a class="repo-link" href="https://github.com/${esc(m.repo)}" target="_blank" rel="noopener">github.com/${esc(m.repo)}</a></p>
     </div>`;
 
+  const st = p.stats;
+  if (st) {
+    html += `
+    <p class="a-stats">字数自检：正文汉字 ${st.chars} 字 · 命令块 ${st.codeBlocks} 个 · 阅读约 ${st.minutes} 分钟 · 材料截至 ${esc(st.asOf)}。</p>`;
+  }
+
   el.innerHTML = html;
 }
 
 function inline(s) {
-  return esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/`(.+?)`/g, '<code class="ic">$1</code>');
+  return esc(s)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.+?)`/g, '<code class="ic">$1</code>')
+    .replace(/(https?:\/\/[^\s，。；、）)]+)/g, '<a class="src-link" href="$1" target="_blank" rel="noopener">$1</a>');
 }
 </script>
 </body>

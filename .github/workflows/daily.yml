@@ -8,25 +8,20 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: daily-generate
   cancel-in-progress: false
 
 jobs:
-  generate-and-deploy:
+  generate:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: 生成今日日报
         env:
@@ -42,12 +37,3 @@ jobs:
           git add web/data scripts/history.json
           git diff --cached --quiet && echo "无变更，跳过提交" || git commit -m "daily report $(date -u +%F)"
           git push
-
-      - name: 上传静态站点
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: web
-
-      - name: 发布到 GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4

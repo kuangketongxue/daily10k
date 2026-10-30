@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 /**
  * 万星日报 · 每日生成管线
- * 1. GitHub Search API 找「近 N 个月创建、已破万星」的前沿项目
- * 2. 排除已写过的，取星数最高的一个作为当日核心
- * 3. 拉 README，调用 LLM 按固定栏目写中文深读稿
- * 4. 输出 web/data/posts/<date>.json 并重建 index.json
+ * 1. GitHub Search API 找「近 N 个月创建、已破万星」的前沿项目，排除写过的
+ * 2. 取星数最高的一个作为当日核心，抓仓库事实（星数/issue/release/许可证）与 README
+ * 3. 再抓 1-2 个同类替代项目的事实
+ * 4. 调用 LLM 按固定 8 栏写正式深读稿
+ * 5. 输出 web/data/posts/<date>.json 并重建 index.json（只保留当天）
  *
  * 零依赖，Node 18+。配置在 scripts/config.json，密钥可用环境变量覆盖：
  *   AI_API_KEY / AI_BASE_URL / AI_MODEL / GITHUB_TOKEN
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = join(ROOT, 'web', 'data');
@@ -31,17 +32,18 @@ if (!AI_KEY || !AI_BASE || !AI_MODEL) {
 
 const log = (...a) => console.log('[万星日报]', ...a);
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
 
-async function gh(path) {
+async function gh(path, raw = false) {
   const res = await fetch('https://api.github.com' + path, {
     headers: {
       'User-Agent': 'daily10k',
-      'Accept': 'application/vnd.github+json',
+      'Accept': raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json',
       ...(GH_TOKEN ? { Authorization: `Bearer ${GH_TOKEN}` } : {}),
     },
   });
   if (!res.ok) throw new Error(`GitHub ${res.status}: ${path} ${await res.text().catch(() => '')}`);
-  return res.json();
+  return raw ? res.text() : res.json();
 }
 
 async function findCandidate(days = 180, minStars = 10000) {
@@ -51,58 +53,123 @@ async function findCandidate(days = 180, minStars = 10000) {
   const history = existsSync(HISTORY_FILE) ? JSON.parse(readFileSync(HISTORY_FILE, 'utf8')) : [];
   const items = (data.items || []).filter(r => !history.includes(r.full_name));
   if (!items.length) throw new Error(`近 ${days} 天没有新的万星项目（或都已写过）`);
-  return items[0];
+  // 跳过硬凑星数的清单/资料书类仓库，优先有编程语言的真项目
+  const listish = /awesome|curated list|roadmap|interview|tutorial|handbook|ebook|\bbook\b|指南|教程|笔记|电子书|清单/i;
+  const isList = (r) => listish.test(`${r.name} ${r.description || ''}`) || !r.language;
+  return items.find(r => !isList(r)) || items[0];
 }
 
 async function fetchReadme(fullName) {
-  const res = await fetch(`https://api.github.com/repos/${fullName}/readme`, {
-    headers: {
-      'User-Agent': 'daily10k',
-      'Accept': 'application/vnd.github.raw+json',
-      ...(GH_TOKEN ? { Authorization: `Bearer ${GH_TOKEN}` } : {}),
-    },
-  });
-  if (!res.ok) return '';
-  const text = await res.text();
-  return text.slice(0, 9000);
+  try {
+    return (await gh(`/repos/${fullName}/readme`, true)).slice(0, 12000);
+  } catch {
+    return '';
+  }
 }
 
-const SYSTEM_PROMPT = `你是一位顶级中文科技专栏作者，为「万星日报」写每日一篇的 GitHub 万星开源项目深读稿。文风参照高质量中文科技日报：克制、具体、不堆形容词、不喊口号、每个论断都有依据（来自 README 或仓库事实）。
+async function fetchLatestRelease(fullName) {
+  try {
+    const r = await gh(`/repos/${fullName}/releases/latest`);
+    return { tag: r.tag_name, date: (r.published_at || '').slice(0, 10) };
+  } catch {
+    return null;
+  }
+}
 
-输出要求：只输出一个 JSON 对象（不要 markdown 代码围栏、不要多余文字），结构如下：
+async function searchRepos(q) {
+  const data = await gh(`/search/repositories?q=${encodeURIComponent(q)}&sort=stars&order=desc&per_page=10`);
+  return data.items || [];
+}
+
+async function findAlternatives(repo) {
+  const lang = repo.language ? ` language:${repo.language}` : '';
+  const topic = (repo.topics || [])[0];
+  const queries = [];
+  if (topic) queries.push(`topic:${topic}${lang} stars:>500`);
+  // 描述关键词兜底：取描述里较长的英文词做 name/description 搜
+  const words = (repo.description || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 4 && !['based', 'using', 'built', 'project', 'open', 'source'].includes(w))
+    .slice(0, 3);
+  if (words.length) queries.push(`${words.join(' ')} in:name,description stars:>1000`);
+  queries.push(`${repo.name} in:name,description stars:>500`);
+
+  const seen = new Set([repo.full_name]);
+  const picks = [];
+  for (const q of queries) {
+    try {
+      for (const r of await searchRepos(q)) {
+        if (seen.has(r.full_name) || r.archived) continue;
+        seen.add(r.full_name);
+        picks.push({
+          repo: r.full_name,
+          stars: r.stargazers_count,
+          license: r.license?.spdx_id && r.license.spdx_id !== 'NOASSERTION' ? r.license.spdx_id : '未声明',
+          language: r.language || '多语言',
+          pushed: (r.pushed_at || '').slice(0, 10),
+          description: r.description || '',
+        });
+      }
+    } catch { /* 单个查询失败不影响整体 */ }
+    if (picks.length >= 2) break;
+  }
+  return picks.slice(0, 2);
+}
+
+const SYSTEM_PROMPT = `你是《万星日报》的主笔，一名严谨的中文科技分析师。读者是开发者与技术决策者。文章风格：正式、专业、克制——用事实和数字说话，给出可执行的判断，不做营销式吹捧。禁止使用"赋能""颠覆""革命性"这类词。
+
+输出要求：只输出一个 JSON 对象（不要 markdown 代码围栏、不要多余文字）。
+
+block 类型：
+{ "type": "p", "text": "段落，可用 **加粗** 和 \`行内代码\`" }
+{ "type": "sub", "text": "小标题" }
+{ "type": "kv", "k": "你给它：", "v": "……" }
+{ "type": "code", "code": "命令或示例", "caption": "来源：README 某节" }
+{ "type": "list", "items": ["……"] }
+{ "type": "quote", "text": "引自 README 的原话" }
+
+写作规范（所有批次通用）：
+- 段落短，每段 1-3 句；信息密度优先，不写口水话。
+- 所有数字（星数、issue 数、版本号、日期）只能使用我提供的事实，不得推测或编造；缺失就写"官方未披露"。
+- 链接只能使用我提供的 URL 或 README 中明确出现的 URL。
+- code 块里的命令与输出必须来自 README，并标注来源。`;
+
+const PART_A = `本次只写文章的前 4 个 section，并给出标题信息。输出 JSON：
 {
   "title": "项目名：一句话点睛式标题（如 graphify：让 AI 查图，不再翻文件）",
-  "oneLiner": "一句话概括这个项目是什么、给谁用（40-60字）",
-  "category": "领域标签，用 · 分隔，如 AI · 效能 · 阅读",
-  "readMinutes": 数字（预计阅读分钟数 5-12）,
+  "oneLiner": "一句话概括它是什么、给谁用（40-60字，陈述句，不用感叹号）",
+  "category": "领域标签，用 · 分隔",
   "sections": [
-    {
-      "heading": "1 它解决什么问题",
-      "blocks": [
-        { "type": "p", "text": "段落，可用 **加粗** 和 \`行内代码\`" },
-        { "type": "sub", "text": "小标题，如 用途一 · AI：读懂一个陌生的开源项目" },
-        { "type": "kv", "k": "你给它：", "v": "……" },
-        { "type": "code", "code": "安装/使用示例", "caption": "官方 README 的真实输出或命令" },
-        { "type": "list", "items": ["……"] },
-        { "type": "quote", "text": "引自 README 的原话" }
-      ]
-    }
+    { "heading": "1 它解决什么问题", "blocks": [...] },
+    { "heading": "2 能用来干嘛", "blocks": [...] },
+    { "heading": "3 它是怎么做的", "blocks": [...] },
+    { "heading": "4 怎么上手", "blocks": [...] }
   ]
 }
 
-固定写 4 个 section，标题必须是：
-1 它解决什么问题
-2 能用来干嘛
-3 它是怎么做的
-4 怎么上手
+各栏要求：
+- 1：从具体工作场景切入，说明现状痛点与它带来的改变；引用 README 原话佐证核心主张；至少 3 段。
+- 2：写 2-3 个用途，每个用途用 sub 开头，配 kv（你给它/它还你），至少一个 code 块。
+- 3：讲清架构与核心机制，可用类比，但必须说明依据（README/架构文档里的模块名、目录结构）。
+- 4：真实可跑的安装与最小示例（code 块），2-3 条注意事项用 list。
+这 4 栏正文合计不少于 1200 个汉字。`;
 
-写作规范：
-- 第 1 节：从一个具体使用场景切入（如"你接手一个上万行的项目，问 AI……"），解释现状的痛和它带来的改变。
-- 第 2 节：写 2-3 个用途，每个用途用 sub + 两个 kv（你给它 / 它还你）展开，尽量用 README 里的真实命令、真实输出做 code 块。
-- 第 3 节：讲清核心原理/架构，用类比但不过度简化。
-- 第 4 节：给出真实可跑的安装命令和最小上手示例（code 块），以及 2-3 条注意事项（list）。
-- 数字要真实：星数、语言、许可证等用我提供的事实，不要编造。
-- 段落短，多用具体名词，少用"赋能""颠覆"这类词。`;
+const PART_B = `本次只写文章的后 4 个 section。输出 JSON：
+{ "sections": [
+    { "heading": "5 局限与风险", "blocks": [...] },
+    { "heading": "6 替代方案", "blocks": [...] },
+    { "heading": "7 谁该用，谁别用", "blocks": [...] },
+    { "heading": "8 出处与日期", "blocks": [...] }
+] }
+
+各栏要求：
+- 5 局限与风险：必须给具体事实——未关闭 Issue 与 PR 数量、最近提交时间、是否开发者预览/频繁破坏性变更、README 里提到的限制或安全要求、是否借开源推广商业产品。每条都写清"所以你要注意什么"。用 list。
+- 6 替代方案：从给定「替代候选」里选 1-2 个，用 sub + kv 写清：仓库、星数、许可证、最近更新、适用场景；最后用 p 给出选择判据（"项目是 X 就选 A，需要 Y 就选本项目"）。若候选列表为空：只写一个 p，内容为"按 GitHub 同类搜索暂未找到成熟同类项目"，并补一句基于本项目的选择判据；绝对不要伪造 kv 字段或编造项目。
+- 7 谁该用，谁别用：两个 list，各 2-3 条，判断必须能从前面事实推出，不写万能套话。
+- 8 出处与日期：list 列出本次引用的全部来源链接（仓库首页、README、Release、Issues 页面）；最后必须有一个 p，写明"材料截至 {今天日期}。文中命令与输出均取自官方文档和样例，未在本机运行。"
+这 4 栏正文合计不少于 800 个汉字。`;
 
 function extractJson(text) {
   const cleaned = text.replace(/```(?:json)?/gi, '').trim();
@@ -112,41 +179,70 @@ function extractJson(text) {
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 
-async function writeArticle(repo, readme) {
-  const facts = [
-    `仓库: ${repo.full_name}`,
+function factsBlock(repo, release, alternatives) {
+  const lines = [
+    `仓库: ${repo.full_name}（https://github.com/${repo.full_name}）`,
     `描述: ${repo.description || '（无）'}`,
-    `星数: ${repo.stargazers_count}`,
-    `语言: ${repo.language || '多语言'}`,
-    `许可证: ${repo.license?.spdx_id || '未声明'}`,
-    `创建时间: ${repo.created_at?.slice(0, 10)}`,
-    `最近推送: ${repo.pushed_at?.slice(0, 10)}`,
+    `星数: ${repo.stargazers_count} / Fork: ${repo.forks_count}`,
+    `未关闭的 Issue 与 PR: ${repo.open_issues_count}`,
+    `语言: ${repo.language || '多语言'} / 许可证: ${repo.license?.spdx_id && repo.license.spdx_id !== 'NOASSERTION' ? repo.license.spdx_id : '未声明'}`,
+    `创建: ${repo.created_at?.slice(0, 10)} / 最近推送: ${repo.pushed_at?.slice(0, 10)}`,
+    `最新 Release: ${release ? `${release.tag}（${release.date}）` : '无正式 Release'}`,
     `主页: ${repo.homepage || '无'}`,
-    `话题: ${(repo.topics || []).join(', ')}`,
-  ].join('\n');
+    `话题: ${(repo.topics || []).join(', ') || '无'}`,
+    `Issues 页面: https://github.com/${repo.full_name}/issues`,
+    `Releases 页面: https://github.com/${repo.full_name}/releases`,
+  ];
+  if (alternatives.length) {
+    lines.push('', '替代候选（GitHub 搜索同类项目所得，事实如下）：');
+    for (const a of alternatives) {
+      lines.push(`- ${a.repo} ★${a.stars}，${a.license}，${a.language}，最近推送 ${a.pushed}：${a.description}（https://github.com/${a.repo}）`);
+    }
+  } else {
+    lines.push('', '替代候选：无（GitHub 按同类话题搜索未找到成熟项目）');
+  }
+  return lines.join('\n');
+}
 
+async function callLLM(messages) {
+  const res = await fetch(AI_BASE + '/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${AI_KEY}` },
+    // 官方文档：思考模式与 JSON 模式不建议同开；关思考用 reasoning_effort=none
+    // （该端点的 thinking 只接受对象形态，字符串 "disabled" 会 400）
+    body: JSON.stringify({
+      model: AI_MODEL,
+      messages,
+      temperature: 0.6,
+      max_tokens: 16384,
+      reasoning_effort: 'none',
+      response_format: { type: 'json_object' },
+    }),
+  });
+  if (!res.ok) throw new Error(`LLM ${res.status}: ${await res.text().catch(() => '')}`);
+  const data = await res.json();
+  const choice = data.choices?.[0];
+  const content = choice?.message?.content;
+  if (!content) throw new Error(`LLM 回复为空（finish_reason=${choice?.finish_reason}）`);
+  return extractJson(content);
+}
+
+async function genPart(partPrompt, facts, readme) {
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
-    { role: 'user', content: `今日核心项目的事实信息：\n${facts}\n\nREADME 内容（可能截断）：\n${readme || '（未能获取 README，请基于事实信息谨慎写作，不要编造命令）'}` },
+    {
+      role: 'user',
+      content: `${partPrompt.replace('{今天日期}', today())}\n\n项目事实：\n${facts}\n\nREADME（可能截断）：\n${readme || '（未能获取 README，不要编造命令与输出）'}`,
+    },
   ];
-
   let lastErr;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const res = await fetch(AI_BASE + '/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${AI_KEY}` },
-        body: JSON.stringify({ model: AI_MODEL, messages, temperature: 0.6, max_tokens: 6000 }),
-      });
-      if (!res.ok) throw new Error(`LLM ${res.status}: ${await res.text().catch(() => '')}`);
-      const data = await res.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (!content) throw new Error('LLM 回复为空');
-      const post = extractJson(content);
-      for (const k of ['title', 'oneLiner', 'category', 'sections']) {
-        if (!post[k]) throw new Error(`缺少字段 ${k}`);
+      const part = await callLLM(messages);
+      if (!Array.isArray(part.sections) || part.sections.length < 4) {
+        throw new Error(`栏目不足（${part.sections?.length ?? 0}/4）`);
       }
-      return post;
+      return part;
     } catch (e) {
       lastErr = e;
       log(`写稿第 ${attempt} 次失败：${e.message}`);
@@ -154,6 +250,48 @@ async function writeArticle(repo, readme) {
     }
   }
   throw lastErr;
+}
+
+async function writeArticle(repo, readme, release, alternatives) {
+  const facts = factsBlock(repo, release, alternatives);
+  const partA = await genPart(PART_A, facts, readme);
+  const partB = await genPart(PART_B, facts, readme);
+
+  const post = {
+    title: partA.title,
+    oneLiner: partA.oneLiner,
+    category: partA.category,
+    sections: [...partA.sections, ...partB.sections],
+  };
+  if (!post.title || !post.oneLiner || !post.category) throw new Error('标题信息缺失');
+
+  const expect = ['它解决什么问题', '能用来干嘛', '它是怎么做的', '怎么上手', '局限与风险', '替代方案', '谁该用', '出处与日期'];
+  post.sections.forEach((s, i) => {
+    if (!String(s.heading || '').includes(expect[i])) log(`警告：第 ${i + 1} 栏标题异常「${s.heading}」`);
+  });
+
+  const st = computeStats(post);
+  if (st.chars < 1600) throw new Error(`正文过短（${st.chars} 字）`);
+  return post;
+}
+
+function textOf(b) {
+  return [b.text, b.v, b.caption, ...(b.items || [])].filter(Boolean).join(' ');
+}
+
+// 页尾自检：字数 / 代码块 / 阅读时长，全部由生成结果实测
+function computeStats(post) {
+  const cjk = (s) => (String(s).match(/[\u4e00-\u9fff]/g) || []).length;
+  let chars = 0;
+  let codeBlocks = 0;
+  for (const sec of post.sections) {
+    for (const b of sec.blocks || []) {
+      chars += cjk(textOf(b));
+      if (b.type === 'code') codeBlocks++;
+    }
+  }
+  const minutes = Math.max(3, Math.round((chars / 400 + codeBlocks * 0.75) * 10) / 10);
+  return { chars, codeBlocks, minutes, asOf: today() };
 }
 
 function loadAllPosts() {
@@ -173,30 +311,32 @@ function rebuildIndex() {
     stars: p.meta?.stars ?? '',
   }));
   mkdirSync(DATA_DIR, { recursive: true });
-  writeFileSync(join(DATA_DIR, 'index.json'), JSON.stringify({ updated: new Date().toISOString().slice(0, 10), issues }, null, 2));
+  writeFileSync(join(DATA_DIR, 'index.json'), JSON.stringify({ updated: today(), issues }, null, 2));
 }
 
 // 只保留当天一条：删除往期文章 JSON，不做归档
 function pruneOldPosts(date) {
   if (!existsSync(POSTS_DIR)) return;
   for (const f of readdirSync(POSTS_DIR)) {
-    if (f.endsWith('.json') && f !== `${date}.json`) {
-      unlinkSync(join(POSTS_DIR, f));
-    }
+    if (f.endsWith('.json') && f !== `${date}.json`) unlinkSync(join(POSTS_DIR, f));
   }
 }
 
-async function main() {
-  const date = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
+export async function main() {
+  const date = today();
   log('开始生成', date, '这一期…');
 
   const repo = await findCandidate();
   log(`当日核心项目：${repo.full_name} ★${repo.stargazers_count}`);
 
-  const readme = await fetchReadme(repo.full_name);
-  log(`README 拉取完成（${readme.length} 字符），开始写稿…`);
+  const [readme, release, alternatives] = await Promise.all([
+    fetchReadme(repo.full_name),
+    fetchLatestRelease(repo.full_name),
+    findAlternatives(repo),
+  ]);
+  log(`README ${readme.length} 字符，Release：${release ? release.tag : '无'}，替代候选 ${alternatives.length} 个，开始写稿…`);
 
-  const article = await writeArticle(repo, readme);
+  const article = await writeArticle(repo, readme, release, alternatives);
   const post = {
     date,
     ...article,
@@ -206,8 +346,10 @@ async function main() {
       language: repo.language || undefined,
       license: repo.license?.spdx_id && repo.license.spdx_id !== 'NOASSERTION' ? repo.license.spdx_id : undefined,
       lastCommit: repo.pushed_at?.slice(0, 10),
-      version: undefined,
+      openIssues: repo.open_issues_count,
+      version: release ? release.tag : undefined,
     },
+    stats: computeStats(article),
   };
 
   mkdirSync(POSTS_DIR, { recursive: true });
@@ -219,7 +361,10 @@ async function main() {
   writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
 
   rebuildIndex();
-  log(`完成：web/data/posts/${date}.json（当日仅保留这一条）`);
+  log(`完成：web/data/posts/${date}.json（正文 ${post.stats.chars} 字，命令块 ${post.stats.codeBlocks} 个，阅读约 ${post.stats.minutes} 分钟）`);
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+const isEntry = (() => {
+  try { return import.meta.url === pathToFileURL(process.argv[1]).href; } catch { return false; }
+})();
+if (isEntry) main().catch(e => { console.error(e); process.exit(1); });
