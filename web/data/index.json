@@ -1,0 +1,12 @@
+{
+  "updated": "2026-10-30",
+  "issues": [
+    {
+      "date": "2026-10-30",
+      "title": "DeepSeek Harness：一切皆插件，Agent 能力即插即用",
+      "oneLiner": "DeepSeek 开源的 AI Agent 运行时框架，一切皆插件，适合想快速搭建可扩展 Agent 的开发者。",
+      "category": "AI · Agent 框架 · 插件化 · 开发者工具",
+      "stars": 266073
+    }
+  ]
+}

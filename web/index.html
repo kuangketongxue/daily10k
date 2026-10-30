@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>万星日报 · 每天 GitHub 万星前沿项目，AI 替你读懂</title>
+<meta name="description" content="每天只讲一个 GitHub 万星前沿项目：它解决什么问题、能用来干嘛、怎么上手。AI 生成的高质量中文深读日报，每天 5:30 更新。">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="masthead">
+  <div class="wrap masthead-inner">
+    <a class="logo" href="index.html">万星日报<span class="logo-en">DAILY 10K</span></a>
+    <p class="tagline">每天只讲一个 GitHub 万星前沿项目 —— 它解决什么问题，能用来干嘛，怎么上手。每天 5:30 更新，只保留当天这一篇。</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="loading" id="loading">加载今日日报…</div>
+  <div class="today" id="today" hidden>
+    <div class="today-meta">
+      <span class="issue-date" id="t-date"></span>
+      <span class="today-stars" id="t-stars"></span>
+    </div>
+    <h2 class="today-title" id="t-title"></h2>
+    <p class="today-oneliner" id="t-oneliner"></p>
+    <div class="today-tags" id="t-category"></div>
+    <a class="read-btn" id="t-link" href="#">阅读全文 →</a>
+  </div>
+  <div class="empty" id="empty" hidden>
+    <p>今日日报还没生成，5:30 后再来看看。</p>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>由 GitHub 万星数据 + AI 深读自动生成 · 每天 5:30 更新 · 当天内容当天清</p>
+  </div>
+</footer>
+
+<script>
+fetch('data/index.json')
+  .then(r => r.json())
+  .then(idx => {
+    const it = idx.issues && idx.issues[0];
+    if (!it) { show('empty'); return; }
+    document.getElementById('t-date').textContent = it.date;
+    document.getElementById('t-stars').textContent = '★ ' + it.stars;
+    document.getElementById('t-title').textContent = it.title;
+    document.getElementById('t-oneliner').textContent = it.oneLiner;
+    document.getElementById('t-category').textContent = it.category;
+    document.getElementById('t-link').href = 'article.html?d=' + it.date;
+    show('today');
+  })
+  .catch(() => show('empty'));
+
+function show(id) {
+  document.getElementById('loading').hidden = true;
+  document.getElementById(id).hidden = false;
+}
+</script>
+</body>
+</html>

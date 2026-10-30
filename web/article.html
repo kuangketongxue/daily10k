@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>万星日报</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="masthead">
+  <div class="wrap masthead-inner">
+    <a class="logo" href="index.html">万星日报<span class="logo-en">DAILY 10K</span></a>
+  </div>
+</header>
+
+<main class="wrap article-wrap" id="article">
+  <div class="loading" id="loading">加载中…</div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>由 GitHub 万星数据 + AI 深读自动生成 · <a href="index.html">返回首页</a></p>
+  </div>
+</footer>
+
+<script>
+const params = new URLSearchParams(location.search);
+const date = params.get('d');
+
+fetch('data/posts/' + date + '.json')
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(render)
+  .catch(() => {
+    document.getElementById('loading').textContent = '没有找到这一期的日报。';
+  });
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function render(p) {
+  document.title = p.title + ' · 万星日报';
+  const m = p.meta || {};
+  const el = document.getElementById('article');
+  let html = `
+    <h1 class="a-title">${esc(p.title)}</h1>
+    <div class="a-summary">
+      <p class="a-oneliner"><strong>一句话：</strong>${esc(p.oneLiner)}</p>
+      <div class="a-metas">
+        <span>${esc(p.category || '')}</span>
+        ${m.license ? `<span>${esc(m.license)}</span>` : ''}
+        ${m.language ? `<span>${esc(m.language)}</span>` : ''}
+        ${m.stars ? `<span>GitHub 星数 ${esc(m.stars)}</span>` : ''}
+        ${m.lastCommit ? `<span>最近提交 ${esc(m.lastCommit)}</span>` : ''}
+        ${m.version ? `<span>${esc(m.version)}</span>` : ''}
+        ${p.readMinutes ? `<span>阅读约 ${p.readMinutes} 分钟</span>` : ''}
+      </div>
+    </div>`;
+
+  for (const sec of p.sections || []) {
+    html += `<section class="a-sec"><h2>${esc(sec.heading)}</h2>`;
+    for (const b of sec.blocks || []) {
+      if (b.type === 'p') {
+        html += `<p>${inline(b.text)}</p>`;
+      } else if (b.type === 'sub') {
+        html += `<h3>${esc(b.text)}</h3>`;
+      } else if (b.type === 'kv') {
+        html += `<p class="a-kv"><strong>${esc(b.k)}</strong>${inline(b.v)}</p>`;
+      } else if (b.type === 'list') {
+        html += '<ul>' + b.items.map(i => `<li>${inline(i)}</li>`).join('') + '</ul>';
+      } else if (b.type === 'code') {
+        html += `<pre class="a-code"><code>${esc(b.code)}</code></pre>`;
+        if (b.caption) html += `<p class="a-caption">${esc(b.caption)}</p>`;
+      } else if (b.type === 'quote') {
+        html += `<blockquote>${inline(b.text)}</blockquote>`;
+      }
+    }
+    html += '</section>';
+  }
+
+  html += `
+    <div class="a-repo">
+      <p>想自己试试？项目地址：</p>
+      <p><a class="repo-link" href="https://github.com/${esc(m.repo)}" target="_blank" rel="noopener">github.com/${esc(m.repo)}</a></p>
+    </div>`;
+
+  el.innerHTML = html;
+}
+
+function inline(s) {
+  return esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/`(.+?)`/g, '<code class="ic">$1</code>');
+}
+</script>
+</body>
+</html>
