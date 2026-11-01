@@ -1,12 +1,12 @@
 {
-  "updated": "2026-10-31",
+  "updated": "2026-11-01",
   "issues": [
     {
-      "date": "2026-10-31",
-      "title": "skills：把工程纪律写进 Agent 的指令集",
-      "oneLiner": "一套面向真实工程场景的 Agent Skills，用小型可组合的指令把对齐、测试、架构等基本功固化进日常开发流程。",
-      "category": "AI 编程助手 · 工程实践 · 开源工具",
-      "stars": 307487
+      "date": "2026-11-01",
+      "title": "claw-code：一个由 AI 代理自主维护的 Rust 博物馆展品",
+      "oneLiner": "claw-code 是一个用 Rust 实现的 CLI 代理工具链，其仓库本身由 AI 代理自主管理，更像一个展示代理自治能力的博物馆展品。",
+      "category": "Rust · CLI · AI Agent · 自主维护",
+      "stars": 194996
     }
   ]
 }
