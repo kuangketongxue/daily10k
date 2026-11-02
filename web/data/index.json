@@ -1,12 +1,12 @@
 {
-  "updated": "2026-11-02",
+  "updated": "2026-11-03",
   "issues": [
     {
-      "date": "2026-11-02",
-      "title": "impeccable：给 AI 编码代理一套设计词汇表，把 AI 味拦在上线前",
-      "oneLiner": "为编码代理提供设计指令与审查能力，用 62 条确定性规则检测并修复 AI 生成的界面通病，支持主流开发工具与 CI。",
-      "category": "AI · 开发者工具 · 设计系统 · Rust",
-      "stars": 99881
+      "date": "2026-11-03",
+      "title": "Claude Code Game Studios：让一次 Claude Code 会话变成一家 49 名 AI 员工的游戏工作室",
+      "oneLiner": "把 Claude Code 会话变成完整游戏开发工作室：49 个专业 AI 代理、74 个工作流技能、15 个钩子，按真实工作室层级组织，覆盖从头脑风暴到发布的全流程。",
+      "category": "AI 辅助开发 · 游戏开发 · Claude Code",
+      "stars": 33500
     }
   ]
 }
