@@ -1,0 +1,227 @@
+{
+  "date": "2026-11-02",
+  "title": "ECC：给 AI 编程代理装上工程化操作系统",
+  "oneLiner": "ECC 为 Claude Code、Codex、Cursor 等代理提供规划、测试、审查、记忆与技能复用的统一工程系统，安装一次即可让代理按流程工作。",
+  "category": "AI 代理 · 开发工具 · 工程化",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "AI 编程代理写代码的能力已经足够强，但多数代理仍然缺乏一个稳定的工程流程：它们直接进入实现，跳过规划，不做测试验证，也不从历史中学习。结果就是代码能生成，但质量、可维护性和团队协作的稳定性都依赖每次提示词的水平。"
+        },
+        {
+          "type": "p",
+          "text": "ECC（Agent Harness Operating System）试图把工程流程固化到代理的运行环境中。README 用一条流水线概括其核心主张：`plan -> test -> implement -> review -> verify -> remember -> improve`。它强调：**优化上下文窗口，持久化其余一切**（Optimize the context window. Persist everything else.）。"
+        },
+        {
+          "type": "quote",
+          "text": "Your agent can write code, but ECC gives it a coordinated engineering system and toolbox: it plans before it builds, verifies changes with tests, reviews its own work from a fresh context, remembers what matters, and turns repeated wins into reusable skills and workflows."
+        },
+        {
+          "type": "p",
+          "text": "这意味着，你不再需要为每个新项目或新会话重新编写一套提示词来约束代理的行为。ECC 将规划、测试、审查、记忆和技能复用作为代理的默认能力安装进环境，让代理的工作方式从“一次性生成”转向“可持续的工程循环”。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "用途一：让代理按工程流程工作"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个 Claude Code、Codex 或 Cursor 会话，以及一个代码库。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "代理在实现前先规划，实现后自动运行测试，从全新上下文审查自己的改动，并将成功的模式沉淀为可复用的技能。"
+        },
+        {
+          "type": "sub",
+          "text": "用途二：为代理提供领域专家能力"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "需要架构评审、安全扫描或构建修复的任务。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "71 个专业化代理，覆盖规划、审查、构建修复、安全、架构和领域工作；314 个技能，涵盖 TDD、研究、安全、文档、前端、数据、ML 和运维。"
+        },
+        {
+          "type": "sub",
+          "text": "用途三：跨会话持久化上下文"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个长期项目，代理需要记住之前的决策和教训。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "运行时钩子、会话摘要、持续学习、直觉（instincts）和上下文控制，让代理在后续会话中自动注入相关记忆。"
+        },
+        {
+          "type": "code",
+          "code": "npx ecc-universal@2.2.3 setup",
+          "caption": "来源：README「Install ECC」章节，通用引导安装命令"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "ECC 的架构可以理解为一个“代理的操作系统”：它不替换底层代理（如 Claude Code），而是在代理之上叠加一层协调层。这一层由四个主要组件构成：**代理（Agents）**、**技能（Skills）**、**命令（Commands）** 和 **钩子与记忆（Hooks and Memory）**。"
+        },
+        {
+          "type": "p",
+          "text": "核心机制是流水线式的任务编排。代理在实现前先进入规划阶段，生成计划后执行实现，随后用测试验证，再从全新上下文进行审查。这个流程由钩子（hooks）强制执行，确保代理不会跳过关键步骤。"
+        },
+        {
+          "type": "p",
+          "text": "记忆系统是另一个关键机制。ECC 在运行时捕获代理的会话活动，生成摘要，并在未来会话中注入相关上下文。这解决了长期项目中代理“失忆”的问题，让代理能够从过去的成功和失败中学习。"
+        },
+        {
+          "type": "p",
+          "text": "ECC 还包含 **AgentShield** 安全扫描组件，用于检测提示词、钩子、MCP 配置、权限、密钥和代理文件中的潜在风险。这为代理运行提供了安全边界，防止恶意或不当配置影响开发环境。"
+        },
+        {
+          "type": "p",
+          "text": "在平台支持方面，ECC 对 Claude Code 提供原生支持，对 Codex 和 Qoder 提供原生插件路径，对 Cursor、OpenCode、Gemini、Zed、GitHub Copilot 等提供能力受限的适配器。README 明确提醒：在假设功能对等之前，请先查看支持状态矩阵。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "安装 ECC 需要 Node.js 18 或更新版本。推荐使用通用引导安装程序，它会处理插件安装、更新、作用域更改和钩子配置文件更改。"
+        },
+        {
+          "type": "code",
+          "code": "npx ecc-universal@2.2.3 setup",
+          "caption": "来源：README「Install ECC」章节"
+        },
+        {
+          "type": "p",
+          "text": "安装完成后，启动一个新的 Claude Code 会话，运行 `/plugin list` 确认 `ecc@ecc` 插件已启用。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "确保 Node.js 18 或更新版本、Git 和 Claude Code 2.1 或更新版本已安装并位于 PATH 中。",
+            "对于 Windows 用户，请使用 PowerShell 运行安装命令，并选择“全局用户”和“标准钩子”选项。",
+            "不要将完整的手动 Claude 安装叠加在引导安装之上，选择一种方式即可。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭 Issue 与 PR 共 199 个**：截至 2026-11-02，仓库仍有 199 个未关闭的 Issue 与 PR。对于 2026-01-18 创建、不到十个月的项目，这个数字说明维护者需要时间处理反馈，你可能会遇到已知缺陷未被及时修复。所以你要注意：在提交 Issue 前先搜索是否已有相同报告，并优先查看最近更新的 Issue 以了解当前活跃问题。",
+            "**最近提交时间为 2026-10-30**：距离材料截止日 3 天。项目仍在活跃开发，但 README 明确说明由**单一维护者**负责，且提到\"每周发布\"。所以你要注意：功能迭代节奏可能受个人精力影响，重大变更可能没有充分预告。",
+            "**频繁破坏性变更风险**：README 提到 ECC 2.2 包含\"guided package setup\"，且项目从 98 个 legacy command shims 向\"skills-first surface\"迁移，命令数量在减少。这说明接口在演进，旧命令可能被移除或改名。所以你要注意：升级前先阅读 Release Notes，并测试你的自定义 hooks 和脚本是否仍然兼容。",
+            "**安全要求明确**：README 开头有警告，要求只从官方渠道安装——GitHub 仓库、npm 包 `ecc-universal` 和 `ecc-agentshield`、GitHub App、插件 slug `ecc@ecc`、网站 ecc.tools。第三方重新上传或非官方镜像**未被维护或审查，可能包含恶意软件**。所以你要注意：不要从任何其他来源安装，尤其是通过搜索广告或第三方博客提供的链接。",
+            "**商业产品推广**：README 中明确展示 ECC Pro 和 GitHub App，定价为\"Private repos from $19/seat/mo\"，并列出多个赞助商（CodeRabbit、Greptile、Moonshot AI、SerpApi 等）。开源核心保持 MIT，但项目有明确的商业变现路径。所以你要注意：如果用于私有仓库，需要评估每月每席位成本；同时确认你使用的功能是否属于免费开源范围，还是需要付费的 Pro 功能。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "真正同类的候选"
+        },
+        {
+          "type": "kv",
+          "k": "wshobson/agents",
+          "v": "★42082，MIT，Python，最近推送 2026-10-30。Multi-harness agentic plugin marketplace for Claude Code, Codex, Cursor, OpenCode, GitHub Copilot, Google Antigravity, and Pi。与 ECC 同为面向多 agent harness 的插件/技能分发系统，解决\"为不同 agent 配置工程化流程\"的同一类问题。"
+        },
+        {
+          "type": "kv",
+          "k": "thedotmack/claude-mem",
+          "v": "★109284，Apache-2.0，TypeScript，最近推送 2026-11-01。Persistent Context Across Sessions for Every Agent——捕获 agent 会话内容、压缩并注入未来会话。与 ECC 的\"记忆\"和\"持续学习\"功能重叠，但 ECC 覆盖更广（计划、测试、审查、安全）。"
+        },
+        {
+          "type": "p",
+          "text": "选择判据：如果你的核心需求是**跨 harness 的完整工程化流程**（计划→测试→实现→审查→验证→记忆→改进），选本项目 ECC；如果只需要**插件市场**来分发和安装 agent 技能，选 wshobson/agents；如果只需要**跨会话持久记忆**，选 thedotmack/claude-mem。注意 trailhq/Trail-Code 和 cheaper-inference/OmniRoute 未列入，因为前者聚焦\"更快更便宜\"的上下文优化，后者是 AI 网关，均不解决同一类问题。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**适合**：使用 Claude Code 作为主要开发工具，希望一次性配置计划、测试、审查、安全等完整工程化流程的团队或个人。",
+            "**适合**：需要跨多个 agent（Claude Code、Codex、Cursor 等）保持一致的开发规范，且愿意接受单一维护者更新节奏的开发者。",
+            "**适合**：重视安全，需要 AgentShield 扫描 prompts、hooks、MCP 配置和 secrets 的团队。"
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            "**不适合**：无法接受 199 个未关闭 Issue 且依赖单一维护者节奏的团队——你可能需要等待修复或功能落地。",
+            "**不适合**：只使用非官方渠道安装的开发者——README 明确警告第三方镜像可能含恶意软件。",
+            "**不适合**：私有仓库使用且预算敏感，因为 Pro 功能从 $19/seat/mo 起，需评估成本是否合理。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "仓库首页：https://github.com/affaan-m/ECC",
+            "README：https://github.com/affaan-m/ECC/blob/main/README.md",
+            "Releases 页面：https://github.com/affaan-m/ECC/releases",
+            "Issues 页面：https://github.com/affaan-m/ECC/issues",
+            "项目网站：https://ecc.tools",
+            "替代候选 wshobson/agents：https://github.com/wshobson/agents",
+            "替代候选 thedotmack/claude-mem：https://github.com/thedotmack/claude-mem"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-02。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "repo": "affaan-m/ECC",
+    "stars": 294808,
+    "language": "JavaScript",
+    "license": "MIT",
+    "lastCommit": "2026-10-30",
+    "openIssues": 199,
+    "version": "v2.2.3"
+  },
+  "stats": {
+    "chars": 1826,
+    "codeBlocks": 2,
+    "minutes": 6.1,
+    "asOf": "2026-11-02"
+  }
+}

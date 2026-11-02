@@ -1,12 +1,12 @@
 {
-  "updated": "2026-11-01",
+  "updated": "2026-11-02",
   "issues": [
     {
-      "date": "2026-11-01",
-      "title": "claw-code：一个由 AI 代理自主维护的 Rust 博物馆展品",
-      "oneLiner": "claw-code 是一个用 Rust 实现的 CLI 代理工具链，其仓库本身由 AI 代理自主管理，更像一个展示代理自治能力的博物馆展品。",
-      "category": "Rust · CLI · AI Agent · 自主维护",
-      "stars": 194996
+      "date": "2026-11-02",
+      "title": "ECC：给 AI 编程代理装上工程化操作系统",
+      "oneLiner": "ECC 为 Claude Code、Codex、Cursor 等代理提供规划、测试、审查、记忆与技能复用的统一工程系统，安装一次即可让代理按流程工作。",
+      "category": "AI 代理 · 开发工具 · 工程化",
+      "stars": 294808
     }
   ]
 }
