@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>万星日报</title>
-<meta name="description" content="万星日报：每天只讲一个 GitHub 万星前沿项目。">
+<meta name="description" content="万星日报：每天只讲一个 GitHub 万星热门项目（运行时抓取 Trending 热度榜）。">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#0d0d0d">
 <meta property="og:site_name" content="万星日报">
@@ -29,7 +29,7 @@
 
 <footer class="foot">
   <div class="wrap">
-    <p>由 GitHub 万星数据 + AI 深读自动生成 · <a href="index.html">返回首页</a></p>
+    <p>由 GitHub Trending 实时热度 + AI 深读自动生成 · <a href="index.html">返回首页</a></p>
   </div>
 </footer>
 
@@ -120,6 +120,8 @@ function render(p) {
         ${m.license ? `<span>${esc(m.license)}</span>` : ''}
         ${m.language ? `<span>${esc(m.language)}</span>` : ''}
         ${m.stars ? `<span>GitHub 星数 ${fmtNum(m.stars)}</span>` : ''}
+        ${m.trending ? `<span class="hot">Trending ${esc(m.trending.window)} #${esc(m.trending.rank)} · ${esc(m.trending.unit)}+${fmtNum(m.trending.gained)}★</span>` : ''}
+        ${m.lenses ? `<span>适合 ${esc(m.lenses.join(' / '))}</span>` : ''}
         ${m.lastCommit ? `<span>最近提交 ${esc(m.lastCommit)}</span>` : ''}
         ${m.openIssues != null ? `<span>未关闭 Issue/PR ${fmtNum(m.openIssues)}</span>` : ''}
         ${m.version ? `<span>${esc(m.version)}</span>` : ''}
@@ -164,7 +166,7 @@ function render(p) {
   article.innerHTML = html;
 }
 
-// 先摘出行内代码和 URL，再整体转义，避免 URL 吞掉后续中文/标点
+// 先摘出行内代码和链接，再整体转义，避免 URL 吞掉后续中文/标点
 function inline(s) {
   const slots = [];
   const stash = (html) => {
@@ -173,6 +175,8 @@ function inline(s) {
   };
   let text = String(s ?? '');
   text = text.replace(/`([^`]+)`/g, (_, code) => stash(`<code class="ic">${esc(code)}</code>`));
+  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+    (_, label, url) => stash(`<a class="src-link" href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>`));
   text = text.replace(/https?:\/\/[^\s<>"'`*\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]+/g, (url) => {
     const clean = url.replace(/[.,;:!?]+$/, '');
     return stash(`<a class="src-link" href="${esc(clean)}" target="_blank" rel="noopener">${esc(clean)}</a>`) + url.slice(clean.length);

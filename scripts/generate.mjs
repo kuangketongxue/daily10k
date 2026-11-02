@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
  * 万星日报 · 每日生成管线
- * 1. GitHub Search API 按星数档位找前沿项目（同档按星数与创建时间新鲜度打分），排除写过的与归档/派生仓库
- * 2. 取星数最高的一个作为当日核心，抓仓库事实（星数/issue/release/许可证）与 README
- * 3. 再抓 1-2 个真正同类的替代项目的事实
- * 4. 调用 LLM 按固定 8 栏写正式深读稿
- * 5. 输出 web/data/posts/<date>.json 并重建 index.json（只保留当天）
+ * 1. 运行时现场抓取 GitHub Trending（日榜 + 周榜）作为热度榜，逐个用 REST 复核
+ *    （排除写过的、归档/派生、清单资料类、星数不足万星的），按「日均新增星数」取榜首为当日核心
+ * 2. Trending 抓取失败或榜内无可写项目时，退到 Search API 实时查「近半年新晋的万星项目」
+ * 3. 抓仓库事实（星数/issue/release/许可证/热度）与 README，再找 1-4 个真正同类的替代项目
+ * 4. 调用 LLM 按固定 8 栏写正式深读稿，并逐个 HEAD 校验稿中链接，坏链降级为纯文本
+ * 5. 输出 web/data/posts/<日期>.json 并重建 index.json（只保留当天）
  *
  * 零依赖，Node 18+。配置在 scripts/config.json，密钥可用环境变量覆盖：
  *   AI_API_KEY / AI_BASE_URL / AI_MODEL / GITHUB_TOKEN
@@ -42,6 +43,7 @@ async function gh(path, raw = false, attempt = 1) {
       'Accept': raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json',
       ...(GH_TOKEN ? { Authorization: `Bearer ${GH_TOKEN}` } : {}),
     },
+    signal: AbortSignal.timeout(30000),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
@@ -57,26 +59,83 @@ async function gh(path, raw = false, attempt = 1) {
   return raw ? res.text() : res.json();
 }
 
-// 星数档位，从高往低扫：上一档全部写完才降档
-const STAR_TIERS = [
-  { label: '百万星', min: 1000000, max: null },
-  { label: '十万星', min: 100000, max: 999999 },
-  { label: '万星', min: 10000, max: 99999 },
+// 热度真源：GitHub Trending 是「此刻」的热门榜，每次运行现场抓取，日榜/周榜都抓
+const TRENDING_WINDOWS = [
+  { since: 'daily', label: '日榜', unit: '今日', perDay: 1 },
+  { since: 'weekly', label: '周榜', unit: '本周', perDay: 7 },
+];
+const MIN_STARS = 10000; // 万星日报的门槛
+
+// 选题偏好：优先推荐对高考/考研、求职、创业、AI、投资、健身真正有用的项目。
+// 只做排序权重不做硬过滤——热度榜全是无关项目时也要能出稿。
+const TOPIC_LENSES = [
+  { label: '高考/考研', re: /exam|study|learn|edu|quiz|flashcard|anki|math|memoriz|刷题|错题|题库|复习|考试|考研|高考|学习|笔记|背诵|单词|口语|阅读|sat\b|gre\b|toefl|ielts|物理|化学|生物/i },
+  { label: '求职', re: /resume|curriculum|job|hiring|recruit|interview|career|portfolio|applicant|ats\b|求职|招聘|面试|简历|内推|岗位|校招|秋招|春招/i },
+  { label: '创业', re: /startup|saas|indie|business|freelance|landing|launch|monetiz|stripe|ecommerce|shopify|no-code|solo|创业|独立开发|副业|获客|变现|开店|接单/i },
+  { label: 'AI', re: /\bai\b|llm|agent|mcp\b|rag\b|diffusion|transformer|neural|gpt|claude|gemini|copilot|machine learning|deep learning|prompt|inference|fine-?tun|embedding|agentic/i },
+  { label: '投资', re: /trad(e|ing)|stock|equit|quant|finance|invest|crypto|bitcoin|backtest|期权|量化|股票|基金|投资|理财|行情|财报|交易/i },
+  { label: '健身', re: /fitness|workout|gym\b|running|nutrition|diet|calorie|health|sleep|yoga|strength|weight|健身|训练|跑步|增肌|减脂|饮食|热量|睡眠|瑜伽|健康/i },
 ];
 
-// 档内排序：星数取对数（压住量级差）+ 创建时间新鲜度（一年内线性衰减到 0）
-function candidateScore(r) {
-  const ageDays = (Date.now() - Date.parse(r.created_at)) / 86400e3;
-  const freshness = Math.max(0, Math.min(1, 1 - ageDays / 365));
-  return Math.log10(Math.max(1, r.stargazers_count)) + freshness;
+export function topicLenses(r) {
+  const text = `${r.name} ${r.description || ''} ${(r.topics || []).join(' ')}`;
+  return TOPIC_LENSES.filter(l => l.re.test(text)).map(l => l.label);
 }
 
-// 跳过硬凑星数的清单/资料书类仓库，优先有编程语言的真项目
-const LISTISH = /awesome|curated|\blists? of\b|roadmap|interview|tutorial|handbook|ebook|cheat ?sheet|\bbook\b|指南|教程|笔记|电子书|清单|资料/i;
+async function httpText(url, attempt = 1) {
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; daily10k)', 'Accept': 'text/html' },
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!res.ok) {
+    if ((res.status === 429 || res.status >= 500) && attempt < 3) {
+      await sleep(attempt * 2000);
+      return httpText(url, attempt + 1);
+    }
+    throw new Error(`HTTP ${res.status} ${url}`);
+  }
+  return res.text();
+}
+
+export function parseTrending(html) {
+  const rows = [];
+  for (const block of html.split(/<article class="Box-row">/).slice(1)) {
+    const name = block.match(/<h2[^>]*>[\s\S]*?<a[^>]*href="\/([^"?#]+)"/);
+    if (!name) continue;
+    const gained = block.match(/([\d,]+)\s+stars?\s+(?:today|this week|this month)/);
+    rows.push({
+      fullName: name[1].trim(),
+      gained: Number((gained?.[1] || '0').replace(/,/g, '')),
+    });
+  }
+  return rows;
+}
+
+async function scrapeTrending() {
+  const out = [];
+  for (const w of TRENDING_WINDOWS) {
+    try {
+      const rows = parseTrending(await httpText(`https://github.com/trending?since=${w.since}`));
+      if (!rows.length) throw new Error('页面结构变了，解析到 0 条');
+      log(`现场抓取 Trending ${w.label}：${rows.length} 个，榜首 ${rows[0].fullName} ${w.unit}+${rows[0].gained} 星`);
+      rows.forEach((r, i) => {
+        if (out.some(x => x.fullName === r.fullName)) return;
+        out.push({ ...r, ...w, rank: i + 1, perDay: Math.round((r.gained / w.perDay) * 10) / 10 });
+      });
+    } catch (e) {
+      log(`Trending ${w.label} 抓取失败：${e.message}`);
+    }
+  }
+  return out;
+}
+
+// 跳过硬凑星数的清单/资料书类仓库，优先有编程语言的真项目。
+// 不把 interview 当清单标志：求职是本站的选题方向，面试/简历工具是真项目
+const LISTISH = /awesome|curated|\blists? of\b|roadmap|tutorial|handbook|ebook|cheat ?sheet|\bbook\b|指南|教程|笔记|电子书|清单|资料/i;
 const LIST_TOPICS = new Set([
   'awesome', 'awesome-list', 'curated-list', 'list', 'lists', 'resources',
   'tutorial', 'tutorials', 'tutorial-code', 'tutorial-exercises',
-  'roadmap', 'interview', 'interview-questions', 'cheat-sheet', 'cheatsheet',
+  'roadmap', 'interview-questions', 'cheat-sheet', 'cheatsheet',
   'books', 'book', 'ebook', 'free-programming-books',
 ]);
 const isListRepo = (r) =>
@@ -132,41 +191,65 @@ function relevance(core, r) {
   return specific * 3 + generic + words;
 }
 
+// 选题偏好优先，其次才是热度；返回 { repo, heat, themes }
 async function findCandidate() {
   const history = new Set(existsSync(HISTORY_FILE) ? JSON.parse(readFileSync(HISTORY_FILE, 'utf8')) : []);
-
-  for (const tier of STAR_TIERS) {
-    const q = `${tier.max ? `stars:${tier.min}..${tier.max}` : `stars:>=${tier.min}`} archived:false fork:false`;
-    let best = null;
-    let bestScore = -Infinity;
-    let scanned = 0;
-    let written = 0;
-    let skippedLists = 0;
-    let total = 0;
-    // 搜索接口最多返回 1000 条，按星数降序翻到最后一页才能确认这一档已扫完
-    for (let page = 1; page <= 10; page++) {
-      const data = await gh(`/search/repositories?q=${encodeURIComponent(q)}&sort=stars&order=desc&per_page=100&page=${page}`);
-      const items = data.items || [];
-      total = data.total_count || total;
-      scanned += items.length;
-      for (const r of items) {
-        if (history.has(r.full_name)) { written++; continue; }
-        if (r.archived || r.fork || r.disabled) continue;
-        if (isListRepo(r)) { skippedLists++; continue; }
-        const score = candidateScore(r);
-        if (score > bestScore) { bestScore = score; best = r; }
-      }
-      if (items.length < 100) break;
+  const trend = await scrapeTrending();
+  const pool = [];
+  let written = 0;
+  let small = 0;
+  for (const t of trend) {
+    if (history.has(t.fullName)) { written++; continue; }
+    let repo;
+    try {
+      repo = await gh(`/repos/${t.fullName}`);
+    } catch (e) {
+      log(`复核 ${t.fullName} 失败：${e.message}`);
+      continue;
     }
-    if (best) {
-      log(`${tier.label}档命中：${best.full_name} ★${best.stargazers_count}，创建于 ${best.created_at.slice(0, 10)}` +
-        `（该档共 ${total} 个，本次扫描 ${scanned}：已写过 ${written}，跳过清单类 ${skippedLists}）`);
-      return best;
-    }
-    const capped = total > scanned ? `，接口上限只覆盖前 ${scanned} 个` : '';
-    log(`${tier.label}档无可写项目（共 ${total} 个，扫描 ${scanned}：已写过 ${written}，跳过清单类 ${skippedLists}${capped}），降到下一档`);
+    if (repo.archived || repo.fork || repo.disabled) continue;
+    if (isListRepo(repo)) continue;
+    if (repo.stargazers_count < MIN_STARS) { small++; continue; }
+    pool.push({ repo, heat: t, themes: topicLenses(repo) });
   }
-  throw new Error('百万/十万/万三个档位都已写完，没有可写的项目了');
+  if (pool.length) {
+    // 优先在「命中选题且热度不低于榜首 25%」的项目里挑，避免为了蹭泛 topic 选冷门；
+    // 当天热门全是无关项目时，退回纯热度榜。打分：日均新增星数 ×（1 + 每命中一类 50%）
+    const score = (c) => c.heat.perDay * (1 + 0.5 * c.themes.length);
+    const hottest = Math.max(...pool.map(c => c.heat.perDay));
+    const preferred = pool.filter(c => c.themes.length && c.heat.perDay >= hottest * 0.25);
+    const finalists = preferred.length ? preferred : pool;
+    finalists.sort((a, b) => score(b) - score(a));
+    const pick = finalists[0];
+    log(`热度榜 ${trend.length} 个，可写 ${pool.length} 个（已写过 ${written}，不足万星 ${small}）；` +
+      `当日核心：${pick.repo.full_name} ★${pick.repo.stargazers_count}，Trending ${pick.heat.label}第 ${pick.heat.rank} 名，` +
+      `${pick.heat.unit}+${pick.heat.gained} 星（日均 ${pick.heat.perDay}）` +
+      (pick.themes.length ? `，命中选题：${pick.themes.join('/')}` : '，未命中偏好选题（今日热门都不对口）'));
+    return pick;
+  }
+  return findRisingFallback(history);
+}
+
+// 热度榜抓取失败/全被写过时的兜底：现场查「近半年新晋的万星项目」，仍是运行时数据
+async function findRisingFallback(history) {
+  log('热度榜没有可写项目，退到 Search API 实时查近半年新晋万星项目…');
+  const since = new Date(Date.now() - 183 * 864e5).toISOString().slice(0, 10);
+  const q = `created:>=${since} stars:>=${MIN_STARS} archived:false fork:false`;
+  const items = [];
+  for (let page = 1; page <= 3; page++) {
+    const data = await gh(`/search/repositories?q=${encodeURIComponent(q)}&sort=stars&order=desc&per_page=100&page=${page}`);
+    items.push(...(data.items || []));
+    if ((data.items || []).length < 100) break;
+  }
+  const pool = items
+    .filter(r => !history.has(r.full_name) && !r.archived && !r.fork && !r.disabled && !isListRepo(r) && r.stargazers_count >= MIN_STARS)
+    .map(repo => ({ repo, heat: null, themes: topicLenses(repo) }));
+  if (!pool.length) throw new Error(`近半年新晋的万星项目也已写完（${items.length} 个候选），没有可写的项目了`);
+  pool.sort((a, b) => b.themes.length - a.themes.length || b.repo.stargazers_count - a.repo.stargazers_count);
+  const pick = pool[0];
+  log(`兜底榜 ${items.length} 个，可写 ${pool.length} 个；当日核心：${pick.repo.full_name} ★${pick.repo.stargazers_count}` +
+    (pick.themes.length ? `，命中选题：${pick.themes.join('/')}` : '，未命中偏好选题'));
+  return pick;
 }
 
 async function fetchReadme(fullName) {
@@ -269,7 +352,7 @@ const PART_A = `本次只写文章的前 4 个 section，并给出标题信息�
 
 各栏要求：
 - 1：从具体工作场景切入，说明现状痛点与它带来的改变；引用 README 原话佐证核心主张；至少 3 段。
-- 2：写 2-3 个用途，每个用途用 sub 开头，配 kv（你给它/它还你），至少一个 code 块。
+- 2：写 2-3 个用途，每个用途用 sub 开头，配 kv（你给它/它还你），至少一个 code 块。读者最关心「{选题}」这几类方向，若本项目确实能服务其中某类，就优先写这个方向的用法；不相关就写它最真实的使用场景，不要硬蹭。
 - 3：讲清架构与核心机制，可用类比，但必须说明依据（README/架构文档里的模块名、目录结构）。
 - 4：真实可跑的安装与最小示例（code 块），2-3 条注意事项用 list。
 这 4 栏正文合计不少于 1200 个汉字。`;
@@ -297,11 +380,13 @@ function extractJson(text) {
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 
-function factsBlock(repo, release, alternatives) {
+function factsBlock(repo, release, alternatives, heat, themes) {
   const lines = [
     `仓库: ${repo.full_name}（https://github.com/${repo.full_name}）`,
     `描述: ${repo.description || '（无）'}`,
     `星数: ${repo.stargazers_count} / Fork: ${repo.forks_count}`,
+    ...(heat ? [`热度: GitHub Trending ${heat.label}第 ${heat.rank} 名，${heat.unit}新增 ${heat.gained} 星（本次生成时现场抓取）`] : []),
+    `读者关心的方向: ${themes.length ? themes.join('、') : '无明确命中'}`,
     `未关闭的 Issue 与 PR: ${repo.open_issues_count}`,
     `语言: ${repo.language || '多语言'} / 许可证: ${repo.license?.spdx_id && repo.license.spdx_id !== 'NOASSERTION' ? repo.license.spdx_id : '未声明'}`,
     `创建: ${repo.created_at?.slice(0, 10)} / 最近推送: ${repo.pushed_at?.slice(0, 10)}`,
@@ -372,12 +457,15 @@ function validateBlocks(part) {
   }
 }
 
-async function genPart(partPrompt, expect, facts, readme) {
+async function genPart(partPrompt, expect, facts, readme, themes) {
+  const intro = partPrompt
+    .replace('{今天日期}', today())
+    .replace('{选题}', themes.length ? themes.join('、') : '通用读者');
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
     {
       role: 'user',
-      content: `${partPrompt.replace('{今天日期}', today())}\n\n项目事实：\n${facts}\n\nREADME（可能截断）：\n${readme || '（未能获取 README，不要编造命令与输出）'}`,
+      content: `${intro}\n\n项目事实：\n${facts}\n\nREADME（可能截断）：\n${readme || '（未能获取 README，不要编造命令与输出）'}`,
     },
   ];
   let lastErr;
@@ -411,10 +499,69 @@ function ensureAsOf(post, date) {
   last.blocks.push({ type: 'p', text: `材料截至 ${date}。文中命令与输出均取自官方文档和样例，未在本机运行。` });
 }
 
-async function writeArticle(repo, readme, release, alternatives) {
-  const facts = factsBlock(repo, release, alternatives);
-  const partA = await genPart(PART_A, HEADINGS_A, facts, readme);
-  const partB = await genPart(PART_B, HEADINGS_B, facts, readme);
+// 模型可能编造链接，或照抄 README 里已失效的主页；出稿前逐个探活，
+// 只把「确定不存在」（404/410）的链接降级为纯文本，网络抖动不算坏链。
+const URL_RE = /https?:\/\/[^\s<>"'`) \]\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]+/g;
+
+async function linkStatus(url) {
+  for (const method of ['HEAD', 'GET']) {
+    try {
+      const res = await fetch(url, {
+        method,
+        redirect: 'follow',
+        signal: AbortSignal.timeout(15000),
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; daily10k)' },
+      });
+      if (res.status === 405 && method === 'HEAD') continue;
+      return res.status;
+    } catch {
+      if (method === 'HEAD') continue;
+      return 0;
+    }
+  }
+  return 0;
+}
+
+function textRefs(post) {
+  const refs = [];
+  for (const sec of post.sections) {
+    for (const b of sec.blocks || []) {
+      for (const k of ['text', 'v', 'caption']) if (typeof b[k] === 'string') refs.push({ obj: b, key: k });
+      if (Array.isArray(b.items)) b.items.forEach((item, i) => { if (typeof item === 'string') refs.push({ obj: b.items, key: i }); });
+    }
+  }
+  return refs;
+}
+
+export async function pruneDeadLinks(post) {
+  const refs = textRefs(post);
+  const urls = new Set();
+  for (const { obj, key } of refs) {
+    for (const m of String(obj[key]).match(URL_RE) || []) urls.add(m.replace(/[.,;:!?]+$/, ''));
+  }
+  const dead = new Set();
+  await Promise.all([...urls].map(async u => {
+    const status = await linkStatus(u);
+    if (status === 404 || status === 410) dead.add(u);
+  }));
+  if (!dead.size) return 0;
+  for (const { obj, key } of refs) {
+    let s = String(obj[key]);
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (m, label, url) => (dead.has(url) ? label : m));
+    s = s.replace(URL_RE, (m) => {
+      const clean = m.replace(/[.,;:!?]+$/, '');
+      return dead.has(clean) ? m.slice(clean.length) : m;
+    });
+    obj[key] = s.replace(/[ \t]{2,}/g, ' ').trim();
+  }
+  log(`链接探活：移除 ${dead.size} 个失效链接（${[...dead].join('、')}）`);
+  return dead.size;
+}
+
+async function writeArticle(repo, readme, release, alternatives, heat, themes) {
+  const facts = factsBlock(repo, release, alternatives, heat, themes);
+  const partA = await genPart(PART_A, HEADINGS_A, facts, readme, themes);
+  const partB = await genPart(PART_B, HEADINGS_B, facts, readme, themes);
 
   const post = {
     title: partA.title,
@@ -424,6 +571,7 @@ async function writeArticle(repo, readme, release, alternatives) {
   };
   if (!post.title || !post.oneLiner || !post.category) throw new Error('标题信息缺失');
   ensureAsOf(post, today());
+  await pruneDeadLinks(post);
 
   const st = computeStats(post);
   if (st.chars < 1600) throw new Error(`正文过短（${st.chars} 字）`);
@@ -481,13 +629,14 @@ export async function main() {
   const date = today();
   log('开始生成', date, '这一期…');
 
-  // 定时任务有 5:30 / 6:30 两次；当天已生成时第二次直接跳过，手动运行不受影响
+  // 定时任务在北京时间一天内有多批（16:00~23:30 UTC，见 daily.yml）；
+  // 当天已生成时后面的批次直接跳过，手动运行不受影响
   if (!DRY_RUN && process.env.GITHUB_EVENT_NAME === 'schedule' && existsSync(join(POSTS_DIR, `${date}.json`))) {
-    log(`今日 ${date} 的日报已存在，跳过本次定时兜底`);
+    log(`今日 ${date} 的日报已存在，跳过本次定时批次`);
     return;
   }
 
-  const repo = await findCandidate();
+  const { repo, heat, themes } = await findCandidate();
   log(`当日核心项目：${repo.full_name} ★${repo.stargazers_count}`);
 
   const [readme, release, alternatives] = await Promise.all([
@@ -497,7 +646,7 @@ export async function main() {
   ]);
   log(`README ${readme.length} 字符，Release：${release ? release.tag : '无'}，替代候选 ${alternatives.length} 个，开始写稿…`);
 
-  const article = await writeArticle(repo, readme, release, alternatives);
+  const article = await writeArticle(repo, readme, release, alternatives, heat, themes);
   const post = {
     date,
     ...article,
@@ -509,6 +658,8 @@ export async function main() {
       lastCommit: repo.pushed_at?.slice(0, 10),
       openIssues: repo.open_issues_count,
       version: release ? release.tag : undefined,
+      trending: heat ? { window: heat.label, rank: heat.rank, gained: heat.gained, unit: heat.unit } : undefined,
+      lenses: themes.length ? themes : undefined,
     },
     stats: computeStats(article),
   };
@@ -516,7 +667,9 @@ export async function main() {
   if (DRY_RUN) {
     log(`DRY_RUN 校验通过：${post.title}`);
     log(`8 栏：${post.sections.map(s => s.heading).join(' / ')}`);
-    log(`核心项目 ${repo.full_name} ★${repo.stargazers_count}；正文 ${post.stats.chars} 字，命令块 ${post.stats.codeBlocks} 个；替代候选 ${alternatives.map(a => a.repo).join('、') || '无'}；未写入任何文件。`);
+    log(`核心项目 ${repo.full_name} ★${repo.stargazers_count}${heat ? `（Trending ${heat.label} #${heat.rank}，${heat.unit}+${heat.gained}）` : ''}；` +
+      `命中选题 ${themes.join('/') || '无'}；正文 ${post.stats.chars} 字，命令块 ${post.stats.codeBlocks} 个；` +
+      `替代候选 ${alternatives.map(a => a.repo).join('、') || '无'}；未写入任何文件。`);
     return;
   }
 

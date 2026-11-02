@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>万星日报 · 每天 GitHub 万星前沿项目，AI 替你读懂</title>
-<meta name="description" content="每天只讲一个 GitHub 万星前沿项目：它解决什么问题、能用来干嘛、怎么上手。AI 生成的高质量中文深读日报，每天 5:30 更新。">
+<title>万星日报 · 每天现场抓取 GitHub 热门项目，AI 替你读懂</title>
+<meta name="description" content="每天只讲一个 GitHub 万星热门项目：它解决什么问题、能用来干嘛、怎么上手。运行时现场抓取 Trending 热度榜，优先高考/考研、求职、创业、AI、投资、健身方向。每天 5:30 前更新。">
 <link rel="canonical" href="https://kuangketongxue.github.io/daily10k/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#0d0d0d">
 <meta property="og:site_name" content="万星日报">
 <meta property="og:type" content="website">
-<meta property="og:title" content="万星日报 · 每天 GitHub 万星前沿项目，AI 替你读懂">
-<meta property="og:description" content="每天只讲一个 GitHub 万星前沿项目：它解决什么问题、能用来干嘛、怎么上手。">
+<meta property="og:title" content="万星日报 · 每天现场抓取 GitHub 热门项目，AI 替你读懂">
+<meta property="og:description" content="每天只讲一个 GitHub 万星热门项目：它解决什么问题、能用来干嘛、怎么上手。">
 <meta property="og:url" content="https://kuangketongxue.github.io/daily10k/">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="style.css">
@@ -20,13 +20,14 @@
 <header class="masthead">
   <div class="wrap masthead-inner">
     <a class="logo" href="index.html">万星日报<span class="logo-en">DAILY 10K</span></a>
-    <p class="tagline">每天只讲一个 GitHub 万星前沿项目 —— 它解决什么问题，能用来干嘛，怎么上手。每天 5:30 更新，只保留当天这一篇。</p>
+    <p class="tagline">每天只讲一个 GitHub 万星热门项目 —— 它解决什么问题，能用来干嘛，怎么上手。热度榜现场抓取，优先高考/考研、求职、创业、AI、投资、健身方向。每天 5:30 前更新，只保留当天这一篇。</p>
   </div>
 </header>
 
 <main class="wrap">
   <div class="loading" id="loading" role="status">加载今日日报…</div>
   <noscript><p class="loading">本站需要启用 JavaScript 才能加载今日日报。</p></noscript>
+  <div class="stale" id="stale" hidden></div>
   <div class="today" id="today" hidden>
     <div class="today-meta">
       <span class="issue-date" id="t-date"></span>
@@ -38,13 +39,13 @@
     <a class="read-btn" id="t-link" href="#">阅读全文 →</a>
   </div>
   <div class="empty" id="empty" hidden>
-    <p>今日日报还没生成，5:30 后再来看看。</p>
+    <p>今天的日报还没生成，5:30 前会更新，稍后再来看看。</p>
   </div>
 </main>
 
 <footer class="foot">
   <div class="wrap">
-    <p>由 GitHub 万星数据 + AI 深读自动生成 · 每天 5:30 更新 · 当天内容当天清</p>
+    <p>由 GitHub Trending 实时热度 + AI 深读自动生成 · 每天 5:30 前更新 · 当天内容当天清</p>
   </div>
 </footer>
 
@@ -61,6 +62,13 @@ fetch('data/index.json', { cache: 'no-cache' })
     document.getElementById('t-oneliner').textContent = it.oneLiner;
     document.getElementById('t-category').textContent = it.category;
     document.getElementById('t-link').href = 'article.html?d=' + encodeURIComponent(it.date);
+    // 生成失败或还没跑完时，首页不能把旧文章冒充成今天的
+    const bjToday = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
+    if (it.date !== bjToday) {
+      const stale = document.getElementById('stale');
+      stale.textContent = '今天（' + bjToday + '）的日报还在生成，下面这期是 ' + it.date + ' 的。';
+      stale.hidden = false;
+    }
     show('today');
   })
   .catch(() => {
