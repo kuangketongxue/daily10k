@@ -1,27 +1,27 @@
 {
   "date": "2026-11-02",
-  "title": "ECC：给 AI 编程代理装上工程化操作系统",
-  "oneLiner": "ECC 为 Claude Code、Codex、Cursor 等代理提供规划、测试、审查、记忆与技能复用的统一工程系统，安装一次即可让代理按流程工作。",
-  "category": "AI 代理 · 开发工具 · 工程化",
+  "title": "impeccable：给 AI 编码代理一套设计词汇表，把 AI 味拦在上线前",
+  "oneLiner": "为编码代理提供设计指令与审查能力，用 62 条确定性规则检测并修复 AI 生成的界面通病，支持主流开发工具与 CI。",
+  "category": "AI · 开发者工具 · 设计系统 · Rust",
   "sections": [
     {
       "heading": "1 它解决什么问题",
       "blocks": [
         {
           "type": "p",
-          "text": "AI 编程代理写代码的能力已经足够强，但多数代理仍然缺乏一个稳定的工程流程：它们直接进入实现，跳过规划，不做测试验证，也不从历史中学习。结果就是代码能生成，但质量、可维护性和团队协作的稳定性都依赖每次提示词的水平。"
-        },
-        {
-          "type": "p",
-          "text": "ECC（Agent Harness Operating System）试图把工程流程固化到代理的运行环境中。README 用一条流水线概括其核心主张：`plan -> test -> implement -> review -> verify -> remember -> improve`。它强调：**优化上下文窗口，持久化其余一切**（Optimize the context window. Persist everything else.）。"
+          "text": "让 AI 生成一个页面，默认输出几乎总是同一副面孔：Inter 字体、紫蓝渐变、卡片嵌套卡片、彩色背景上放灰字、标题上方加个圆角方块图标。这不是某一家模型的毛病，而是跨模型、跨项目反复出现的通病。"
         },
         {
           "type": "quote",
-          "text": "Your agent can write code, but ECC gives it a coordinated engineering system and toolbox: it plans before it builds, verifies changes with tests, reviews its own work from a fresh context, remembers what matters, and turns repeated wins into reusable skills and workflows."
+          "text": "Ask an agent for a page with no other guidance and these show up again and again, across models and projects."
         },
         {
           "type": "p",
-          "text": "这意味着，你不再需要为每个新项目或新会话重新编写一套提示词来约束代理的行为。ECC 将规划、测试、审查、记忆和技能复用作为代理的默认能力安装进环境，让代理的工作方式从“一次性生成”转向“可持续的工程循环”。"
+          "text": "impeccable 的解法不是换一个更强的模型，而是给代理一套**设计词汇表**：用 `polish`、`bolder` 这类具体动词去指挥它，而不是让它猜“Make it pop”是什么意思。同时提供 `critique` 与 `audit` 两个审查命令，以及一个不依赖 LLM 的确定性检测器，在代码合入前把 AI 味拦下来。"
+        },
+        {
+          "type": "p",
+          "text": "项目在 GitHub 上已获 **99,881 星**，本周新增 12,017 星，位列 Trending 周榜第 2。它支持 Claude Code、Cursor、Codex CLI、GitHub Copilot、Devin、Replit Agent、Gemini CLI 等 19 种编码代理，覆盖面是目前同类工具中最广的。"
         }
       ]
     },
@@ -30,50 +30,52 @@
       "blocks": [
         {
           "type": "sub",
-          "text": "用途一：让代理按工程流程工作"
+          "text": "用途一：给已有界面做设计审查与修复"
         },
         {
           "type": "kv",
           "k": "你给它：",
-          "v": "一个 Claude Code、Codex 或 Cursor 会话，以及一个代码库。"
+          "v": "一个页面或组件，例如 `/impeccable critique the pricing cards`"
         },
         {
           "type": "kv",
           "k": "它还你：",
-          "v": "代理在实现前先规划，实现后自动运行测试，从全新上下文审查自己的改动，并将成功的模式沉淀为可复用的技能。"
+          "v": "一份按可用性启发式打分的 UX 报告，以及按 P0（阻塞）到 P3（打磨）排序的修复清单。"
+        },
+        {
+          "type": "p",
+          "text": "README 给出的最小示例是 `/impeccable critique the pricing cards`。项目强调，它最擅长处理**已经存在的界面**：指向一个页面或组件，然后迭代。"
         },
         {
           "type": "sub",
-          "text": "用途二：为代理提供领域专家能力"
-        },
-        {
-          "type": "kv",
-          "k": "你给它：",
-          "v": "需要架构评审、安全扫描或构建修复的任务。"
-        },
-        {
-          "type": "kv",
-          "k": "它还你：",
-          "v": "71 个专业化代理，覆盖规划、审查、构建修复、安全、架构和领域工作；314 个技能，涵盖 TDD、研究、安全、文档、前端、数据、ML 和运维。"
-        },
-        {
-          "type": "sub",
-          "text": "用途三：跨会话持久化上下文"
-        },
-        {
-          "type": "kv",
-          "k": "你给它：",
-          "v": "一个长期项目，代理需要记住之前的决策和教训。"
-        },
-        {
-          "type": "kv",
-          "k": "它还你：",
-          "v": "运行时钩子、会话摘要、持续学习、直觉（instincts）和上下文控制，让代理在后续会话中自动注入相关记忆。"
+          "text": "用途二：在 CI 里自动检测 AI 味"
         },
         {
           "type": "code",
-          "code": "npx ecc-universal@2.2.3 setup",
-          "caption": "来源：README「Install ECC」章节，通用引导安装命令"
+          "code": "npx impeccable detect src/                   # 扫描目录\nnpx impeccable detect https://example.com    # 扫描渲染后的页面\nnpx impeccable detect --json .               # 机器可读输出\nnpx impeccable detect --github src/          # GitHub Actions 注解\nnpx impeccable detect --list-rules           # 列出所有规则",
+          "caption": "来源：README「Three ways to run the detector」"
+        },
+        {
+          "type": "p",
+          "text": "检测器有 **62 条确定性规则**，不调用 LLM、不需要 API key。它覆盖低对比度、过小字号、过度使用 Inter 字体、内边距过挤、标题层级跳级等具体问题。扫描源码文件时只跑模式类规则；需要渲染才能发现的规则（如对比度、字号）则要指向 dev server 的 URL。"
+        },
+        {
+          "type": "sub",
+          "text": "用途三：实时迭代设计变体"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "`/impeccable live` 打开 dev server 覆盖层，选中一个元素"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "在浏览器里热切换该元素的变体，接受后直接写回源码。"
+        },
+        {
+          "type": "p",
+          "text": "Live 模式支持 Vite、Next、SvelteKit、Astro、Nuxt 和纯 HTML。注意：它只编辑本地 checkout，不要注入已部署的站点，也不要为了它放宽生产环境的 CSP。"
         }
       ]
     },
@@ -82,23 +84,19 @@
       "blocks": [
         {
           "type": "p",
-          "text": "ECC 的架构可以理解为一个“代理的操作系统”：它不替换底层代理（如 Claude Code），而是在代理之上叠加一层协调层。这一层由四个主要组件构成：**代理（Agents）**、**技能（Skills）**、**命令（Commands）** 和 **钩子与记忆（Hooks and Memory）**。"
+          "text": "impeccable 的核心是 **24 个命令**，分成四组：Steer（`bolder`、`quieter`、`distill`、`colorize`、`typeset`、`layout`、`animate`、`delight`、`overdrive`）、Review（`critique`、`audit`）、Finish（`polish`、`harden`、`clarify`、`adapt`、`optimize`、`onboard`）、Iterate live（`live`、`generate`）以及 Plan and set up（`shape`、`init`、`document`、`extract`）。第 24 个 `craft` 是已废弃的别名。"
         },
         {
           "type": "p",
-          "text": "核心机制是流水线式的任务编排。代理在实现前先进入规划阶段，生成计划后执行实现，随后用测试验证，再从全新上下文进行审查。这个流程由钩子（hooks）强制执行，确保代理不会跳过关键步骤。"
+          "text": "工作流分两步。先跑 `/impeccable init`：它读取你的代码，只问它推断不出来的东西（产品给谁用、要做什么、约束是什么），然后写出 `PRODUCT.md`。之后所有命令都读这个文件。再跑 `/impeccable document` 把现有视觉系统捕获到 `DESIGN.md`，保证后续改动不跑偏。"
         },
         {
           "type": "p",
-          "text": "记忆系统是另一个关键机制。ECC 在运行时捕获代理的会话活动，生成摘要，并在未来会话中注入相关上下文。这解决了长期项目中代理“失忆”的问题，让代理能够从过去的成功和失败中学习。"
+          "text": "检测器有三种运行方式：**代理内 hook**（扫描代理编辑过的每个 UI 文件，在代理宣布完成前把发现递回去）、**CI/终端 CLI**（无需代理，独立运行）、**浏览器扩展**（在任意页面上叠加同样的发现）。README 明确指出，代理内 hook 是拦截 AI 味最有效的环节，因为“没有 hook，检测器只会在有人记得跑它的时候才跑”。"
         },
         {
           "type": "p",
-          "text": "ECC 还包含 **AgentShield** 安全扫描组件，用于检测提示词、钩子、MCP 配置、权限、密钥和代理文件中的潜在风险。这为代理运行提供了安全边界，防止恶意或不当配置影响开发环境。"
-        },
-        {
-          "type": "p",
-          "text": "在平台支持方面，ECC 对 Claude Code 提供原生支持，对 Codex 和 Qoder 提供原生插件路径，对 Cursor、OpenCode、Gemini、Zed、GitHub Copilot 等提供能力受限的适配器。README 明确提醒：在假设功能对等之前，请先查看支持状态矩阵。"
+          "text": "实现上，Node 只用于 `npx` 启动。skill 本体是一个自包含的引擎二进制，随 skill 一起分发，或首次运行时下载到 `~/.impeccable/bin/`。安装器会自动探测你的编码工具，并询问按项目还是全局安装。"
         }
       ]
     },
@@ -106,24 +104,20 @@
       "heading": "4 怎么上手",
       "blocks": [
         {
-          "type": "p",
-          "text": "安装 ECC 需要 Node.js 18 或更新版本。推荐使用通用引导安装程序，它会处理插件安装、更新、作用域更改和钩子配置文件更改。"
-        },
-        {
           "type": "code",
-          "code": "npx ecc-universal@2.2.3 setup",
-          "caption": "来源：README「Install ECC」章节"
+          "code": "npx impeccable install\n# 重载你的编码工具，然后在代理里运行：\n/impeccable init\n# 或者对 Codex：\n$impeccable init",
+          "caption": "来源：README「Installation」"
         },
         {
           "type": "p",
-          "text": "安装完成后，启动一个新的 Claude Code 会话，运行 `/plugin list` 确认 `ecc@ecc` 插件已启用。"
+          "text": "安装器会探测你的工具，询问安装范围，并在工具支持时提供设计 hook 的选项。**接受 hook**，然后重载工具。之后 `/impeccable` 单独输入即可看到命令列表。"
         },
         {
           "type": "list",
           "items": [
-            "确保 Node.js 18 或更新版本、Git 和 Claude Code 2.1 或更新版本已安装并位于 PATH 中。",
-            "对于 Windows 用户，请使用 PowerShell 运行安装命令，并选择“全局用户”和“标准钩子”选项。",
-            "不要将完整的手动 Claude 安装叠加在引导安装之上，选择一种方式即可。"
+            "三个工具需要额外一步：Codex 需在 `/hooks` 里批准项目 hook（更新后若变化需再次批准）；Grok Build 运行 `/hooks-trust` 或 `--trust` 启动；Hermes Agent 运行 `hermes plugins enable impeccable-design-hook`。",
+            "`npx impeccable update` 刷新已有安装；脚本场景可传 `--providers=claude,codex,cursor --scope=project|global`。",
+            "若走手动拷贝（不装 hook），会跳过设计 hook 和 subagents；要获得完整能力，请运行 `npx impeccable install`。"
           ]
         }
       ]
@@ -134,11 +128,13 @@
         {
           "type": "list",
           "items": [
-            "**未关闭 Issue 与 PR 共 199 个**：截至 2026-11-02，仓库仍有 199 个未关闭的 Issue 与 PR。对于 2026-01-18 创建、不到十个月的项目，这个数字说明维护者需要时间处理反馈，你可能会遇到已知缺陷未被及时修复。所以你要注意：在提交 Issue 前先搜索是否已有相同报告，并优先查看最近更新的 Issue 以了解当前活跃问题。",
-            "**最近提交时间为 2026-10-30**：距离材料截止日 3 天。项目仍在活跃开发，但 README 明确说明由**单一维护者**负责，且提到\"每周发布\"。所以你要注意：功能迭代节奏可能受个人精力影响，重大变更可能没有充分预告。",
-            "**频繁破坏性变更风险**：README 提到 ECC 2.2 包含\"guided package setup\"，且项目从 98 个 legacy command shims 向\"skills-first surface\"迁移，命令数量在减少。这说明接口在演进，旧命令可能被移除或改名。所以你要注意：升级前先阅读 Release Notes，并测试你的自定义 hooks 和脚本是否仍然兼容。",
-            "**安全要求明确**：README 开头有警告，要求只从官方渠道安装——GitHub 仓库、npm 包 `ecc-universal` 和 `ecc-agentshield`、GitHub App、插件 slug `ecc@ecc`、网站 ecc.tools。第三方重新上传或非官方镜像**未被维护或审查，可能包含恶意软件**。所以你要注意：不要从任何其他来源安装，尤其是通过搜索广告或第三方博客提供的链接。",
-            "**商业产品推广**：README 中明确展示 ECC Pro 和 GitHub App，定价为\"Private repos from $19/seat/mo\"，并列出多个赞助商（CodeRabbit、Greptile、Moonshot AI、SerpApi 等）。开源核心保持 MIT，但项目有明确的商业变现路径。所以你要注意：如果用于私有仓库，需要评估每月每席位成本；同时确认你使用的功能是否属于免费开源范围，还是需要付费的 Pro 功能。"
+            "**未关闭的 Issue 与 PR 有 62 个**，最近推送是 2026-11-01，最新 Release 为 cli-v4.8.0（2026-10-26）。项目创建于 2025-11-16，一年内迭代到 v4.8.0，说明变更频繁。所以你要注意：升级前先看 Release Notes，确认破坏性变更，并在 CI 里固定版本。",
+            "**README 明确说明 live mode 只编辑本地 checkout**，不要注入部署站点，也不要为了启用它而削弱生产 CSP。应用文案编辑会以你的权限运行 `package.json` 里的 `impeccable:manual-edit-validate` 脚本，所以你要注意：在不熟悉的仓库里用 live mode 前，先审查该脚本内容。",
+            "**设计 hook 不是对所有工具都默认开启**。Codex 需要手动在 `/hooks` 里批准项目 hook（更新后需再次批准），Grok Build 要运行 `/hooks-trust` 或加 `--trust`，Hermes Agent 要运行 `hermes plugins enable impeccable-design-hook`。所以你要注意：安装后没生效时，先检查这些额外步骤。",
+            "**手动复制会跳过设计 hook 和 subagents**，README 明确说只有 `npx impeccable install` 才会写入 hook。所以你要注意：如果团队用 git submodule 或手动拷贝方式部署，设计检查的自动化程度会低于预期。",
+            "**检测器对源码文件只跑 pattern rules**，需要渲染页面的规则（如低对比度、小字号）只在扫描 URL 时执行。所以你要注意：只跑 `detect src/` 会漏掉视觉类问题，应额外扫描 dev server。",
+            "**项目用 Rust 写自包含引擎，但安装依赖 `npx`**，Node 只在安装时需要。所以你要注意：CI 环境里如果没装 Node，得先装或改用二进制分发。",
+            "**项目主页是独立站点 impeccable.style**，README 大量链接到 docs 与教程，GitHub 仓库主要承载代码与 issue。所以你要注意：文档更新可能滞后于代码，遇到行为不符时以 Release Notes 和 Issues 为准。"
           ]
         }
       ]
@@ -148,21 +144,25 @@
       "blocks": [
         {
           "type": "sub",
-          "text": "真正同类的候选"
+          "text": "同类项目筛选"
         },
         {
           "type": "kv",
-          "k": "wshobson/agents",
-          "v": "★42082，MIT，Python，最近推送 2026-10-30。Multi-harness agentic plugin marketplace for Claude Code, Codex, Cursor, OpenCode, GitHub Copilot, Google Antigravity, and Pi。与 ECC 同为面向多 agent harness 的插件/技能分发系统，解决\"为不同 agent 配置工程化流程\"的同一类问题。"
+          "k": "Leonxlnx/taste-skill",
+          "v": "仓库 https://github.com/Leonxlnx/taste-skill · ★108210 · MIT · JavaScript · 最近推送 2026-10-31。给 coding agent 提供艺术指导、参考图和浏览器检查，避免生成通用 AI 页面。"
         },
         {
           "type": "kv",
-          "k": "thedotmack/claude-mem",
-          "v": "★109284，Apache-2.0，TypeScript，最近推送 2026-11-01。Persistent Context Across Sessions for Every Agent——捕获 agent 会话内容、压缩并注入未来会话。与 ECC 的\"记忆\"和\"持续学习\"功能重叠，但 ECC 覆盖更广（计划、测试、审查、安全）。"
+          "k": "miqdadbadjuber/anti-slop",
+          "v": "仓库 https://github.com/miqdadbadjuber/anti-slop · ★7971 · MIT · JavaScript · 最近推送 2026-11-01。为 AI coding agent 提供规则，过滤通用 AI 生成的 UI 设计、文案和代码。"
         },
         {
           "type": "p",
-          "text": "选择判据：如果你的核心需求是**跨 harness 的完整工程化流程**（计划→测试→实现→审查→验证→记忆→改进），选本项目 ECC；如果只需要**插件市场**来分发和安装 agent 技能，选 wshobson/agents；如果只需要**跨会话持久记忆**，选 thedotmack/claude-mem。注意 trailhq/Trail-Code 和 cheaper-inference/OmniRoute 未列入，因为前者聚焦\"更快更便宜\"的上下文优化，后者是 AI 网关，均不解决同一类问题。"
+          "text": "scanaislop/aislop（★718）聚焦代码质量而非视觉设计，JimLiu/baoyu-design（★5851）侧重生成 HTML 原型，两者与 Impeccable 的核心问题不完全同类，不列入。"
+        },
+        {
+          "type": "p",
+          "text": "**选择判据**：项目需要一套完整的 24 条命令（steer/review/finish/live/plan）加上 62 条确定性 slop 规则、且要跨 20 个 agent 工具统一工作流，选 Impeccable。如果只需要 agent 在生成时被引导出更有品味的视觉结果，选 taste-skill（星数更高、更新更近）。如果只需要过滤掉通用 AI 文案和代码模式，选 anti-slop。"
         }
       ]
     },
@@ -170,19 +170,27 @@
       "heading": "7 谁该用，谁别用",
       "blocks": [
         {
-          "type": "list",
-          "items": [
-            "**适合**：使用 Claude Code 作为主要开发工具，希望一次性配置计划、测试、审查、安全等完整工程化流程的团队或个人。",
-            "**适合**：需要跨多个 agent（Claude Code、Codex、Cursor 等）保持一致的开发规范，且愿意接受单一维护者更新节奏的开发者。",
-            "**适合**：重视安全，需要 AgentShield 扫描 prompts、hooks、MCP 配置和 secrets 的团队。"
-          ]
+          "type": "sub",
+          "text": "推荐使用"
         },
         {
           "type": "list",
           "items": [
-            "**不适合**：无法接受 199 个未关闭 Issue 且依赖单一维护者节奏的团队——你可能需要等待修复或功能落地。",
-            "**不适合**：只使用非官方渠道安装的开发者——README 明确警告第三方镜像可能含恶意软件。",
-            "**不适合**：私有仓库使用且预算敏感，因为 Pro 功能从 $19/seat/mo 起，需评估成本是否合理。"
+            "团队已有 Claude Code、Cursor、Codex 等 agent 工具，且希望把设计审查做成 CI 或 hook 的自动化环节——README 提供了 `detect --github` 和设计 hook 两种接入方式。",
+            "做 B 端或内容型界面、反复出现同质化设计（Inter 字体、紫蓝渐变、卡片套卡片）的团队——62 条规则正是针对这些模式。",
+            "需要把设计语言固化为 `PRODUCT.md` / `DESIGN.md` 的团队——`init` 和 `document` 命令能沉淀上下文，降低 agent 每次重猜的成本。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "只用 GitHub Copilot 且不想手动批准 hook 的团队——README 明确 Copilot 在 VS Code 里安装的是不带 hook 的版本，设计检查只能靠手动跑 CLI。",
+            "生产环境对 CSP 有严格限制、无法接受 live mode 注入的团队——README 警告不要削弱生产 CSP 来启用 live mode。",
+            "项目主要用纯源码扫描、且没有渲染页面条件的 CI——视觉类规则（低对比度、小字号）不会生效，检测效果会打折扣。"
           ]
         }
       ]
@@ -193,13 +201,13 @@
         {
           "type": "list",
           "items": [
-            "仓库首页：https://github.com/affaan-m/ECC",
-            "README：https://github.com/affaan-m/ECC/blob/main/README.md",
-            "Releases 页面：https://github.com/affaan-m/ECC/releases",
-            "Issues 页面：https://github.com/affaan-m/ECC/issues",
-            "项目网站：https://ecc.tools",
-            "替代候选 wshobson/agents：https://github.com/wshobson/agents",
-            "替代候选 thedotmack/claude-mem：https://github.com/thedotmack/claude-mem"
+            "仓库首页：https://github.com/pbakaus/impeccable",
+            "README：https://github.com/pbakaus/impeccable#readme",
+            "Issues 页面：https://github.com/pbakaus/impeccable/issues",
+            "Releases 页面：https://github.com/pbakaus/impeccable/releases",
+            "文档站：https://impeccable.style/docs",
+            "替代候选 taste-skill：https://github.com/Leonxlnx/taste-skill",
+            "替代候选 anti-slop：https://github.com/miqdadbadjuber/anti-slop"
           ]
         },
         {
@@ -210,18 +218,27 @@
     }
   ],
   "meta": {
-    "repo": "affaan-m/ECC",
-    "stars": 294808,
-    "language": "JavaScript",
-    "license": "MIT",
-    "lastCommit": "2026-10-30",
-    "openIssues": 199,
-    "version": "v2.2.3"
+    "repo": "pbakaus/impeccable",
+    "stars": 99881,
+    "language": "Rust",
+    "license": "Apache-2.0",
+    "lastCommit": "2026-11-01",
+    "openIssues": 62,
+    "version": "cli-v4.8.0",
+    "trending": {
+      "window": "周榜",
+      "rank": 2,
+      "gained": 12017,
+      "unit": "本周"
+    },
+    "lenses": [
+      "AI"
+    ]
   },
   "stats": {
-    "chars": 1826,
+    "chars": 1715,
     "codeBlocks": 2,
-    "minutes": 6.1,
+    "minutes": 5.8,
     "asOf": "2026-11-02"
   }
 }

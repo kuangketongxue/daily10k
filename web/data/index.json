@@ -3,10 +3,10 @@
   "issues": [
     {
       "date": "2026-11-02",
-      "title": "ECC：给 AI 编程代理装上工程化操作系统",
-      "oneLiner": "ECC 为 Claude Code、Codex、Cursor 等代理提供规划、测试、审查、记忆与技能复用的统一工程系统，安装一次即可让代理按流程工作。",
-      "category": "AI 代理 · 开发工具 · 工程化",
-      "stars": 294808
+      "title": "impeccable：给 AI 编码代理一套设计词汇表，把 AI 味拦在上线前",
+      "oneLiner": "为编码代理提供设计指令与审查能力，用 62 条确定性规则检测并修复 AI 生成的界面通病，支持主流开发工具与 CI。",
+      "category": "AI · 开发者工具 · 设计系统 · Rust",
+      "stars": 99881
     }
   ]
 }
