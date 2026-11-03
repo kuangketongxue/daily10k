@@ -66,6 +66,22 @@ const TRENDING_WINDOWS = [
 ];
 const MIN_STARS = 10000; // 万星日报的门槛
 
+// ── 生产可用度判据 ────────────────────────────────────────────────
+// 这两年的新坑：一批「某个 AI 编程工具的配置包」（代理集合、提示词库、技能包、钩子）
+// 会以极快的速度冲上趋势榜，但仓库里没有软件——几百 KB 的 Shell 和 Markdown，
+// 装不了、调不到接口、也没有构建产物，谈不上生产价值。光靠星数、语言名、
+// 现有的"清单类"正则都挡不住，必须看仓库里到底有没有可分发的软件形态。
+const MANIFESTS = new Set([
+  'package.json', 'pyproject.toml', 'setup.py', 'setup.cfg', 'requirements.txt',
+  'Cargo.toml', 'go.mod', 'pom.xml', 'build.gradle', 'build.gradle.kts',
+  'composer.json', 'Gemfile', 'CMakeLists.txt', 'meson.build', 'Package.swift',
+  'deno.json', 'deno.jsonc', 'vcpkg.json', 'conanfile.py', 'mix.exs', 'pubspec.yaml',
+]);
+
+// 以这些「语言」为主的仓库，多半是配置与脚本集合，而不是可分发软件
+const SCRIPT_LANGS = new Set(['Shell', 'Markdown', 'YAML', 'Dockerfile', 'Batchfile', 'Roff', 'TeX']);
+
+
 // 选题偏好：优先推荐对高考/考研、求职、创业、AI、投资、健身真正有用的项目。
 // 只做排序权重不做硬过滤——热度榜全是无关项目时也要能出稿。
 const TOPIC_LENSES = [
@@ -144,6 +160,124 @@ const isListRepo = (r) =>
   (r.topics || []).some(t => LIST_TOPICS.has(t)) ||
   LISTISH.test(`${r.name} ${r.description || ''}`);
 
+// 深度体检：语言构成 + 根目录清单。两次 API，只对排名靠前的候选做
+export async function inspectRepo(fullName) {
+  const [langs, root] = await Promise.all([
+    gh(`/repos/${fullName}/languages`).catch(() => ({})),
+    gh(`/repos/${fullName}/contents/`).catch(() => []),
+  ]);
+  const entries = Object.entries(langs || {}).sort((a, b) => b[1] - a[1]);
+  const codeBytes = entries.reduce((sum, [, v]) => sum + v, 0);
+  const topLang = entries.length ? entries[0][0] : '';
+  const topShare = codeBytes ? entries[0][1] / codeBytes : 0;
+  const names = Array.isArray(root) ? root.map(x => x.name) : [];
+  return {
+    codeBytes,
+    topLang,
+    topShare,
+    manifest: names.find(n => MANIFESTS.has(n)) || '',
+    hasCI: names.includes('.github'),
+  };
+}
+
+// 生产可用度系数：>1 更像能落地的东西，<1 更像围观型配置包
+export function productionFactor(info) {
+  let f = 1;
+  const notes = [];
+
+  if (info.manifest) {
+    f *= 1.35;
+    notes.push(`有构建清单 ${info.manifest}`);
+  } else {
+    f *= 0.85;
+    notes.push('无构建清单');
+  }
+
+  if (SCRIPT_LANGS.has(info.topLang) && info.topShare > 0.85) {
+    // 脚本语言主导：有构建清单的（如 nvm）还能算可安装的 CLI 工具，
+    // 没有清单的基本就是给别人用的配置/提示词集合，重罚
+    if (info.manifest) {
+      f *= 0.55;
+      notes.push(`${info.topLang} 主导但可安装`);
+    } else {
+      f *= 0.2;
+      notes.push(`${info.topLang} 占 ${Math.round(info.topShare * 100)}%`);
+    }
+  }
+
+  if (info.codeBytes >= 2 * 1024 * 1024) {
+    f *= 1.15;
+    notes.push(`代码 ${Math.round(info.codeBytes / 1024)}KB`);
+  } else if (info.codeBytes < 300 * 1024) {
+    f *= 0.7;
+    notes.push(`代码仅 ${Math.round(info.codeBytes / 1024)}KB`);
+  }
+
+  if (info.hasCI) f *= 1.08;
+
+  return { factor: f, notes };
+}
+
+// 圈内口碑：近 120 天 Hacker News 上的讨论热度。
+// GitHub 星数能被话题带起来，HN 的 points 是工程师一个个投出来的，
+// 作为「真有同行在乎」的旁证。命中就加分，不命中不扣分（HN 覆盖面有限）。
+async function hnBuzz(fullName) {
+  const since = Math.floor((Date.now() - 120 * 864e5) / 1000);
+  const q = encodeURIComponent(fullName.split('/').pop());
+  const url = `https://hn.algolia.com/api/v1/search?query=${q}&tags=story&numericFilters=created_at_i>${since}&hitsPerPage=30`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return { points: 0, stories: 0 };
+    const data = await res.json();
+    const want = fullName.toLowerCase();
+    const hits = (data.hits || []).filter(h =>
+      `${h.url || ''} ${h.title || ''}`.toLowerCase().includes(want));
+    return {
+      points: hits.reduce((s, h) => s + (h.points || 0), 0),
+      stories: hits.length,
+    };
+  } catch {
+    return { points: 0, stories: 0 };
+  }
+}
+
+// 给候选算最终分：热度 × 选题加成 × 生产可用度 × 圈内口碑
+export async function rankCandidates(pool, heatScore) {
+  const ranked = pool.map(c => ({ ...c, base: heatScore(c) }));
+  ranked.sort((a, b) => b.base - a.base);
+
+  // 只体检热度前 10：既够覆盖"当天可能出线的种子"，又不至于把 API 额度烧光
+  const shortlist = ranked.slice(0, 10);
+  for (const c of shortlist) {
+    const info = await inspectRepo(c.repo.full_name);
+    const { factor, notes } = productionFactor(info);
+    c.info = info;
+    c.quality = factor;
+    c.notes = notes;
+    c.buzz = await hnBuzz(c.repo.full_name);
+  }
+  for (const c of shortlist) {
+    const boost = c.buzz.points >= 100 ? 1.25
+      : c.buzz.points >= 30 ? 1.12
+      : c.buzz.points > 0 ? 1.04 : 1;
+    c.buzzBoost = boost;
+    c.score = c.base * c.quality * boost;
+  }
+  // 没体检到的深度降级：只有在体检过的候选全被判定为配置包时才轮到它们
+  for (const c of ranked.slice(10)) c.score = c.base * 0.15;
+
+  ranked.sort((a, b) => b.score - a.score);
+  return ranked;
+}
+
+function describe(c) {
+  const q = c.quality ? `质量系数 ${c.quality.toFixed(2)}` : '未体检';
+  const b = c.buzz && c.buzz.stories ? `，HN ${c.buzz.stories} 帖 ${c.buzz.points} 分` : '，HN 无讨论';
+  const n = c.notes ? `（${c.notes.join('，')}）` : '';
+  return `${c.repo.full_name} ★${c.repo.stargazers_count} 日均${c.heat ? c.heat.perDay : '-'} → 综合 ${Math.round(c.score)}｜${q}${n}${b}`;
+}
+
+
 // 替代方案相关性：泛化 topic（ai/mcp/cli/语言）不构成「同类」，具体 topic 才算
 const GENERIC_TOPICS = new Set([
   'ai', 'ai-agent', 'ai-agents', 'ai-tools', 'aiagent', 'agent', 'agents', 'agent-skills',
@@ -213,18 +347,17 @@ async function findCandidate() {
     pool.push({ repo, heat: t, themes: topicLenses(repo) });
   }
   if (pool.length) {
-    // 优先在「命中选题且热度不低于榜首 25%」的项目里挑，避免为了蹭泛 topic 选冷门；
-    // 当天热门全是无关项目时，退回纯热度榜。打分：日均新增星数 ×（1 + 每命中一类 50%）
-    const score = (c) => c.heat.perDay * (1 + 0.5 * c.themes.length);
+    // 先按热度排（日均新增星数 × 每命中一类选题 +50%），
+    // 再对热门前 8 做深度体检与圈内口碑加权——热度只决定谁进决赛，不再决定谁当选
+    const heatScore = (c) => c.heat.perDay * (1 + 0.5 * c.themes.length);
     const hottest = Math.max(...pool.map(c => c.heat.perDay));
     const preferred = pool.filter(c => c.themes.length && c.heat.perDay >= hottest * 0.25);
-    const finalists = preferred.length ? preferred : pool;
-    finalists.sort((a, b) => score(b) - score(a));
-    const pick = finalists[0];
-    log(`热度榜 ${trend.length} 个，可写 ${pool.length} 个（已写过 ${written}，不足万星 ${small}）；` +
-      `当日核心：${pick.repo.full_name} ★${pick.repo.stargazers_count}，Trending ${pick.heat.label}第 ${pick.heat.rank} 名，` +
-      `${pick.heat.unit}+${pick.heat.gained} 星（日均 ${pick.heat.perDay}）` +
-      (pick.themes.length ? `，命中选题：${pick.themes.join('/')}` : '，未命中偏好选题（今日热门都不对口）'));
+    const source = preferred.length ? preferred : pool;
+    const ranked = await rankCandidates(source, heatScore);
+    const pick = ranked[0];
+    log(`热度榜 ${trend.length} 个，可写 ${pool.length} 个（已写过 ${written}，不足万星 ${small}）`);
+    log('候选体检：\n  ' + ranked.slice(0, 5).map(describe).join('\n  '));
+    log(`当日核心：${describe(pick)}`);
     return pick;
   }
   return findRisingFallback(history);
@@ -245,10 +378,12 @@ async function findRisingFallback(history) {
     .filter(r => !history.has(r.full_name) && !r.archived && !r.fork && !r.disabled && !isListRepo(r) && r.stargazers_count >= MIN_STARS)
     .map(repo => ({ repo, heat: null, themes: topicLenses(repo) }));
   if (!pool.length) throw new Error(`近半年新晋的万星项目也已写完（${items.length} 个候选），没有可写的项目了`);
-  pool.sort((a, b) => b.themes.length - a.themes.length || b.repo.stargazers_count - a.repo.stargazers_count);
-  const pick = pool[0];
-  log(`兜底榜 ${items.length} 个，可写 ${pool.length} 个；当日核心：${pick.repo.full_name} ★${pick.repo.stargazers_count}` +
-    (pick.themes.length ? `，命中选题：${pick.themes.join('/')}` : '，未命中偏好选题'));
+  // 兜底路径同样过一遍生产可用度体检，避免退而求其次时又挑到配置包
+  const ranked = await rankCandidates(pool, c => c.themes.length * 1e9 + c.repo.stargazers_count);
+  const pick = ranked[0];
+  log(`兜底榜 ${items.length} 个，可写 ${pool.length} 个`);
+  log('候选体检：\n  ' + ranked.slice(0, 5).map(describe).join('\n  '));
+  log(`当日核心：${describe(pick)}`);
   return pick;
 }
 
