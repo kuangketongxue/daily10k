@@ -3,10 +3,10 @@
   "issues": [
     {
       "date": "2026-11-03",
-      "title": "Claude Code Game Studios：让一次 Claude Code 会话变成一家 49 名 AI 员工的游戏工作室",
-      "oneLiner": "把 Claude Code 会话变成完整游戏开发工作室：49 个专业 AI 代理、74 个工作流技能、15 个钩子，按真实工作室层级组织，覆盖从头脑风暴到发布的全流程。",
-      "category": "AI 辅助开发 · 游戏开发 · Claude Code",
-      "stars": 33500
+      "title": "agent-desktop：让 AI 代理直接操作桌面应用，不再依赖截图",
+      "oneLiner": "一个用 Rust 编写的命令行工具，让 AI 代理通过操作系统辅助功能树来读取和操作桌面应用，适用于 macOS、Windows 和 Linux。",
+      "category": "AI 代理 · 桌面自动化 · 命令行工具",
+      "stars": 11533
     }
   ]
 }

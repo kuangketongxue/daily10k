@@ -1,27 +1,27 @@
 {
   "date": "2026-11-03",
-  "title": "Claude Code Game Studios：让一次 Claude Code 会话变成一家 49 名 AI 员工的游戏工作室",
-  "oneLiner": "把 Claude Code 会话变成完整游戏开发工作室：49 个专业 AI 代理、74 个工作流技能、15 个钩子，按真实工作室层级组织，覆盖从头脑风暴到发布的全流程。",
-  "category": "AI 辅助开发 · 游戏开发 · Claude Code",
+  "title": "agent-desktop：让 AI 代理直接操作桌面应用，不再依赖截图",
+  "oneLiner": "一个用 Rust 编写的命令行工具，让 AI 代理通过操作系统辅助功能树来读取和操作桌面应用，适用于 macOS、Windows 和 Linux。",
+  "category": "AI 代理 · 桌面自动化 · 命令行工具",
   "sections": [
     {
       "heading": "1 它解决什么问题",
       "blocks": [
         {
           "type": "p",
-          "text": "独立开发者用 AI 做游戏时，常面对一个尴尬局面：**单个聊天会话没有结构**。没人阻止你硬编码魔法数字、跳过设计文档或写出意大利面代码；没有 QA 环节，没有设计评审，也没人问一句\"这真的符合游戏愿景吗？\"——这正是 README 开篇点出的核心痛点。"
+          "text": "AI 代理要操作桌面应用，通常依赖截图和像素匹配，这既慢又脆弱，尤其在界面变化频繁或应用窗口重叠时。**agent-desktop** 提供了一种替代方案：通过操作系统的辅助功能树（accessibility tree）直接读取应用界面元素，并让代理基于这些元素进行精确操作。"
+        },
+        {
+          "type": "p",
+          "text": "正如 README 所述，它的核心机制是：\"A snapshot returns JSON with a ref for every element an agent can act on. The agent acts on a ref and snapshots again to check, with no pixel matching; the loop stays in your agent.\" 这意味着代理不再需要理解屏幕像素，而是获得结构化的界面数据，并能直接对特定元素执行点击、输入等操作。"
+        },
+        {
+          "type": "p",
+          "text": "这种方式解决了三个痛点：一是**准确性**，通过辅助功能树获取的元素引用（ref）是精确的，不会因界面微调而失效；二是**效率**，无需处理截图和图像识别，操作和验证循环更直接；三是**可访问性**，它天然支持无障碍 API，使得自动化操作也能惠及残障用户场景。"
         },
         {
           "type": "quote",
-          "text": "Building a game solo with AI is powerful — but a single chat session has no structure. No one stops you from hardcoding magic numbers, skipping design docs, or writing spaghetti code. There's no QA pass, no design review, no one asking \"does this actually fit the game's vision?\""
-        },
-        {
-          "type": "p",
-          "text": "Claude Code Game Studios 的解法是给 AI 会话装上**真实工作室的骨架**：49 个专业代理被组织成三层层级——Tier 1 总监（创意总监、技术总监、制作人）守护愿景，Tier 2 部门负责人（游戏设计师、主程序员、美术总监等）掌管各自领域，Tier 3 专家（玩法程序员、引擎程序员、AI 程序员、QA 测试员等）做具体执行。每个代理都有明确职责、升级路径和质量门禁。"
-        },
-        {
-          "type": "p",
-          "text": "结果是你仍然做每个决策，但团队会提出正确的问题、及早发现错误，并从第一次头脑风暴到发布都保持项目组织化。项目热度印证了这一需求：GitHub 星数 **33,500**、Fork **4,514**，今日新增 **1,380** 星，位列 Trending 日榜第 5。"
+          "text": "Computer use for AI agents: read and operate desktop apps through the OS accessibility tree."
         }
       ]
     },
@@ -30,66 +30,55 @@
       "blocks": [
         {
           "type": "sub",
-          "text": "用途一：从零到可玩原型的完整游戏开发流程"
+          "text": "让 AI 代理执行桌面端到端任务"
         },
         {
           "type": "kv",
           "k": "你给它：",
-          "v": "一个游戏想法（或已有项目），以及你选择的流程严格度（minimal / standard / full）"
+          "v": "一个应用名称（如 Finder）和操作指令（如点击某个元素的 ref）。"
         },
         {
           "type": "kv",
           "k": "它还你：",
-          "v": "一个可运行、经过测试的游戏，附带设计文档、QA 证据、架构决策记录和发布清单"
-        },
-        {
-          "type": "p",
-          "text": "README 用一次实测回应了\"它到底产出游戏还是文档\"这个疑问：以 `minimal` 和 `standard` 两种 `modes.rigor` 级别从同一份简报构建了四个游戏，并统计了**首行游戏代码之前**写下的文档数。"
+          "v": "结构化的 JSON 快照，包含每个可交互元素的引用 ID 和可用操作；执行操作后再次快照以验证结果。"
         },
         {
           "type": "code",
-          "code": "| modes.rigor | Docs before first line of game code | Time |\n|---|---:|---:|\n| minimal     | 1（一页简报）                      | 0 min |\n| standard    | 30                                 | 58 min |",
-          "caption": "来源：README \"Does it produce games, or documents?\" 一节"
-        },
-        {
-          "type": "p",
-          "text": "所有构建都产出了可运行、已测试的游戏。但两位盲评者和一次真人试玩把 `standard` 构建评为**最后一名**——多出的 29 份文档买来的是可追溯性，而不是更好的游戏。这提醒你：`minimal` 是默认值不是偶然，除非项目确实需要，否则别急着把流程调重。"
+          "code": "agent-desktop snapshot --app Finder -i\nagent-desktop click @s8f3k2p9:e8\nagent-desktop snapshot --app Finder -i",
+          "caption": "来源：README Quick start 部分"
         },
         {
           "type": "sub",
-          "text": "用途二：创业团队的项目治理与多代理协作"
+          "text": "作为 MCP 服务器或 CLI 集成到现有代理工作流"
         },
         {
           "type": "kv",
           "k": "你给它：",
-          "v": "一个正在增长的游戏项目，以及 `system_overrides`（对单个系统提高标准）或 `testing.strict`（按测试类型决定缺失证据是否阻塞故事）"
+          "v": "通过 npm 全局安装，然后使用 `agent-desktop skills get desktop` 获取代理所需的技能文档。"
         },
         {
           "type": "kv",
           "k": "它还你：",
-          "v": "一个能按需收紧或放松流程的治理系统，以及 `/team-*` 系列命令（如 `/team-combat`、`/team-narrative`、`/team-ui`）来协调多个代理共同完成一个功能"
+          "v": "一个带有完整命令集（60 个命令名，56 个操作命令）的工具，覆盖观察、操作、窗口管理、剪贴板、通知等，可嵌入任何代理框架。"
         },
         {
-          "type": "p",
-          "text": "当项目变大、团队加入，`modes.rigor` 是唯一需要回答的问题——它作为六项独立旋钮（workflow、docs.density、qa.level、story_granularity、review_mode、team.size）的单一前门，`/start` 问一次而不是六次。`review_mode` 和 `team.size` 还能在 gitignored 的 `project.local.yaml` 中按开发者单独覆盖，不触碰共享配置。"
+          "type": "code",
+          "code": "npx skills add https://github.com/vercel-labs/agent-desktop --skill agent-desktop",
+          "caption": "来源：README For AI agents 部分"
         },
         {
           "type": "sub",
-          "text": "用途三：已有项目的接管与持续维护"
+          "text": "为桌面应用提供可访问性驱动的自动化测试"
         },
         {
           "type": "kv",
           "k": "你给它：",
-          "v": "一个已有的游戏代码库（Godot 4 / Unity / Unreal Engine 5）"
+          "v": "一个应用的界面元素引用和期望行为。"
         },
         {
           "type": "kv",
           "k": "它还你：",
-          "v": "通过 `/project-stage-detect` 分析项目阶段、`/adopt` 接管项目、`/setup-engine` 配置引擎，以及 15 个钩子自动执行的提交/推送/资源变更验证"
-        },
-        {
-          "type": "p",
-          "text": "模板包含三大引擎的代理集：Godot 4 的 `godot-specialist`（GDScript、Shaders、GDExtension），Unity 的 `unity-specialist`（DOTS/ECS、Shaders/VFX、Addressables、UI Toolkit），Unreal Engine 5 的 `unreal-specialist`（GAS、Blueprints、Replication、UMG/CommonUI）。"
+          "v": "无需截图或像素匹配的验证结果，每次操作后都能通过新快照确认状态变化。"
         }
       ]
     },
@@ -98,19 +87,19 @@
       "blocks": [
         {
           "type": "p",
-          "text": "架构核心是 **`project.yaml`**——仓库根目录下的单一事实来源，控制引擎、命名约定和 `modes` 块。`/start` 会为你写它，你很少需要手动编辑。"
+          "text": "agent-desktop 的核心架构围绕**辅助功能树快照**和**元素引用（ref）**展开。每次快照命令都会生成一个 JSON 文档，其中包含应用窗口、元素树以及每个可交互元素的唯一引用 ID（如 `@s8f3k2p9:e8`）。代理对这些引用执行操作，然后再次快照以验证效果。"
         },
         {
           "type": "p",
-          "text": "代理按真实工作室层级组织成三层（Tier 1 总监 / Tier 2 部门负责人 / Tier 3 专家），每个代理在 frontmatter 中声明模型：三位总监要求 Opus，`lead-programmer` 和十五位专家指定 Sonnet，其余三十位**继承你会话的模型**。README 明确说：把层级视为角色的资历，而不是计费方案——大部分工作室用你已经在用的模型运行。"
+          "text": "这种设计的关键在于：**引用只属于其生成时的快照**。如果界面发生变化，操作会返回 `STALE_REF` 或 `AMBIGUOUS_TARGET` 错误，代理需要获取新快照并重新解析。这确保了操作的准确性，但也要求代理正确处理这些错误码。"
         },
         {
           "type": "p",
-          "text": "质量保障来自三层机制：**74 个技能**（斜杠命令，覆盖从 `/brainstorm` 到 `/day-one-patch` 的每个工作流阶段）、**15 个钩子**（在提交、推送、资源变更、设计文档读写、会话生命周期、代理审计追踪和缺口检测上自动验证）、**14 条规则**（按路径限定的编码标准，在编辑玩法、引擎、AI、UI、网络代码、场景和资源文件时强制执行）。另有 **62 个文档模板**用于 GDD、UX 规范、ADR、冲刺计划、HUD 设计、无障碍等。"
+          "text": "项目使用 Rust 编写，分为多个平台适配器（`agent-desktop-macos`、`agent-desktop-windows`、`agent-desktop-linux`），每个适配器只在其对应操作系统上构建。它通过 npm 分发，包含原生二进制文件，支持 x64 和 ARM64 架构。此外，还提供 C 库（`libagent_desktop_ffi`），允许程序在进程内调用，避免每次启动 CLI 的开销。"
         },
         {
           "type": "p",
-          "text": "一个值得注意的机制：**游戏必须被运行并观察**。任何改变玩家可见内容的故事，在游戏启动、观察并保留截图到 `production/qa/evidence/` 之前不会被关闭。README 强调\"解析检查不是运行\"——这一规则在所有严格度级别都成立，包括 `minimal`（自动测试被豁免，但视觉检查不免）。"
+          "text": "一个值得注意的细节是：**默认是无头模式（headless）**。引用操作通过辅助功能 API 执行，不会移动鼠标指针或夺取焦点，这使得代理可以在后台运行而不会干扰用户。只有使用 `--headed` 标志时才允许物理输入。"
         }
       ]
     },
@@ -118,25 +107,21 @@
       "heading": "4 怎么上手",
       "blocks": [
         {
-          "type": "p",
-          "text": "前置要求：Git、Claude Code（推荐原生安装器，`npm install -g @anthropic-ai/claude-code` 在 Node.js 22+ 也可用）、Python 3（读取 `project.yaml`，缺失时所有设置静默回退到默认值）、Bash（运行所有钩子，Windows 上随 Git for Windows 附带）。推荐安装 `jq` 用于钩子验证。"
-        },
-        {
           "type": "code",
-          "code": "# 1. 克隆或用作模板\ngit clone https://github.com/Donchitos/Claude-Code-Game-Studios.git my-game\ncd my-game\n\n# 2. 在项目根目录（含 CLAUDE.md 和 project.yaml 的目录）打开 Claude Code\nclaude\n\n# 3. 运行 /start，系统会询问你处于哪个阶段并引导到正确工作流\n/start",
-          "caption": "来源：README \"Getting Started\" 一节"
-        },
-        {
-          "type": "p",
-          "text": "如果你已经知道自己需要什么，可以直接跳到特定技能：`/brainstorm`（从零探索游戏想法）、`/setup-engine godot 4.7`（配置引擎）、`/project-stage-detect`（分析已有项目）。"
+          "code": "npm install -g agent-desktop\nagent-desktop version",
+          "caption": "来源：README Installation 部分"
         },
         {
           "type": "list",
           "items": [
-            "必须在项目根目录启动 Claude Code——在子目录如 `src/` 启动会跳过项目的钩子、拒绝规则和 ask-first 权限模式。",
-            "`modes.rigor` 是唯一最重要的配置：`minimal`（默认，jam-game 速度）、`standard`（5 个必需 GDD 章节）、`full`（全部 8 个 GDD 章节加完整导演评审）。",
-            "钩子在可选工具缺失时优雅降级（只失去验证），但有一个刻意例外：暂存数据 JSON 的提交在无 Python 验证时会被阻止。"
+            "**macOS 用户**需要授予辅助功能权限：运行 `agent-desktop permissions --guide` 并按照提示操作。",
+            "**Linux 用户**需要确保在图形会话中运行，并安装 `at-spi2-core`。",
+            "**Windows 用户**无需额外授权，只要终端运行在相应完整性级别即可。"
           ]
+        },
+        {
+          "type": "p",
+          "text": "安装后，可以运行 `agent-desktop skills get desktop` 获取代理所需的技能文档，或直接使用 `agent-desktop snapshot --app Finder -i` 开始探索。"
         }
       ]
     },
@@ -146,11 +131,14 @@
         {
           "type": "list",
           "items": [
-            "未关闭的 Issue 与 PR 共 88 个，仓库最近一次推送为 2026-10-19，最新 Release v1.2.0 同日发布。活跃度尚可，但 88 个未关闭项意味着维护者可能跟不上社区反馈速度，你提交的 bug 或功能请求可能要等较长时间。",
-            "README 明确标注为开发者预览（badge 显示 built for Claude Code，未声明稳定版），且 v1.2.0 距创建仅 8 个月，版本迭代快。破坏性变更风险高，升级前需仔细阅读 changelog 并备份 project.yaml。",
-            "README 指出，若缺少 Python 3，所有设置会静默回退到默认值，且提交含数据 JSON 时会被阻止。这意味着环境不完整时，你得到的流程可能不是你以为的流程，且错误不会显式报出，排查成本高。",
-            "README 提到 hooks 在缺少可选工具（如 jq）时静默失败，只损失校验功能。你需要注意：校验缺失不会阻止开发，但质量门禁形同虚设，最终交付前必须检查工具链完整性。",
-            "项目通过 GitHub Sponsors 和 Buy Me a Coffee 接受捐赠（README 中有对应 badge），但未提及任何商业产品推广。开源与商业化的边界清晰，不过捐赠依赖单一维护者，长期维护可持续性存疑。"
+            "**未关闭 Issue 与 PR 共 135 个**。项目创建于 2026-02-19，至今约 8 个月，积累的反馈量不小。如果你要依赖它，先扫一遍 Issues 页面，看是否有与你目标平台相关的未解决阻塞项。",
+            "**最近推送为 2026-11-03，即本文撰写当天**，说明维护活跃。但最新 Release v1.1.0 也是同一天发布，版本迭代快，API 可能仍在变动。升级前务必读 CHANGELOG 或 Release Notes，确认破坏性变更。",
+            "**README 明确说明：快照、剪贴板读取、截图、命令输出和调试产物都可能包含私有桌面内容**，要求“keep them out of public logs and uploads”。这是硬性安全要求，不是建议。任何集成到公共日志或云端管道的方案，都必须先做脱敏。",
+            "**README 提到可选的 JEV helper 会将屏幕描述发送到配置的模型提供商**，与原生 CLI 分离。如果你启用它，等于把桌面内容交给第三方模型 API，需自行评估合规风险。",
+            "**四个命令（key-down、key-up、mouse-down、mouse-up）拒绝运行，直到守护进程能释放按住的键或按钮**。这意味着某些自动化流程可能被卡住，需要设计超时与恢复逻辑。",
+            "**项目由 Vercel Labs 维护，属于商业公司开源项目**。虽然许可证是 Apache-2.0，但方向可能随公司战略调整。长期依赖前，应确认你能接受这种治理模式。",
+            "**平台支持有差异**：Linux 上鼠标输入仅限 X11 且需 --headed；Wayland 剪贴板需 wl-clipboard；窗口管理在 Linux 仅支持 X11。如果你主要用 Wayland，功能会受限。",
+            "**权限要求**：macOS 需要辅助功能权限；Linux 需要用户图形会话与 at-spi2-core。部署到无头或 CI 环境时，这些前置条件可能无法满足，需提前验证。"
           ]
         }
       ]
@@ -160,25 +148,77 @@
       "blocks": [
         {
           "type": "sub",
-          "text": "同类项目筛选"
+          "text": "候选筛选"
         },
         {
           "type": "p",
-          "text": "在 GitHub 同类搜索中，**CoplayDev/unity-mcp** 和 **IvanMurzak/Unity-MCP** 与本题材最接近，均聚焦 Unity 引擎的 AI 辅助开发，但二者只覆盖 Unity，不涉及 Godot 或 Unreal，且不提供多代理工作室层级结构。其余候选（AnkleBreaker-Studio/unity-mcp-server 星数过低且未声明许可证，affaan-m/ECC 是通用 agent harness 而非游戏开发专用）不构成同类替代。"
+          "text": "从 GitHub 同类搜索中，**iFurySt/open-computer-use** 与 **amontlabs/lcu** 均宣称解决“computer use for AI agents”这一同类问题，且最近一周内有推送；**ghostwright/ghost-os** 最近推送为 2026-03-23，已 7 个月无更新，不优先；**Hacker-Valley-Media/Interceptor** 侧重浏览器自动化与真实 iPhone，与本项目“通过辅助功能树操作桌面应用”的核心不同，不纳入。"
+        },
+        {
+          "type": "sub",
+          "text": "候选一：iFurySt/open-computer-use"
         },
         {
           "type": "kv",
-          "k": "CoplayDev/unity-mcp",
-          "v": "★15647，MIT，C#，最近推送 2026-10-30。提供 Unity Editor 与 AI 助手间的桥接，含资产、场景、脚本管理工具。适合已用 Unity 且只需要 MCP 工具层的团队。"
+          "k": "仓库",
+          "v": "https://github.com/iFurySt/open-computer-use"
         },
         {
           "type": "kv",
-          "k": "IvanMurzak/Unity-MCP",
-          "v": "★4572，Apache-2.0，C#，最近推送 2026-10-31。提供 AI Skills、MCP 工具和 CLI，可将任意 C# 方法单行转为工具，支持 Claude Code、Gemini、Copilot 等。适合需要深度定制 Unity 开发循环的团队。"
+          "k": "星数",
+          "v": "2831"
+        },
+        {
+          "type": "kv",
+          "k": "许可证",
+          "v": "MIT"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新",
+          "v": "2026-11-02"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景",
+          "v": "需要 MIT 许可、Swift 技术栈、或希望避免 Vercel 治理的项目；功能定位为 Codex Computer Use 的开源替代。"
+        },
+        {
+          "type": "sub",
+          "text": "候选二：amontlabs/lcu"
+        },
+        {
+          "type": "kv",
+          "k": "仓库",
+          "v": "https://github.com/amontlabs/lcu"
+        },
+        {
+          "type": "kv",
+          "k": "星数",
+          "v": "2371"
+        },
+        {
+          "type": "kv",
+          "k": "许可证",
+          "v": "MIT"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新",
+          "v": "2026-11-02"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景",
+          "v": "需要将 computer use 能力解耦、嵌入任意 harness 的 JavaScript 项目；与本项目同为 CLI/MCP 驱动，但实现语言不同。"
+        },
+        {
+          "type": "sub",
+          "text": "选择判据"
         },
         {
           "type": "p",
-          "text": "选择判据：若你的项目是 **Unity 且仅需 AI 与编辑器之间的工具桥接**，选 CoplayDev/unity-mcp（星数更高、许可证清晰）；若需要更细粒度的 C# 方法级工具生成，选 IvanMurzak/Unity-MCP；若你使用 **Godot 或 Unreal**，或需要 49 个代理、74 个技能和工作室层级协调，则选本项目。"
+          "text": "若你的技术栈是 Rust 或需要跨 macOS/Windows/Linux 的原生二进制、且能接受 Apache-2.0，选本项目；若必须 MIT 许可或偏好 Swift 生态，选 iFurySt/open-computer-use；若需要在任意 JS harness 中嵌入且不依赖 Vercel 工具链，选 amontlabs/lcu。星数上本项目（11533）远高于两者，维护活跃度也最高。"
         }
       ]
     },
@@ -187,26 +227,26 @@
       "blocks": [
         {
           "type": "sub",
-          "text": "适合使用"
+          "text": "建议使用"
         },
         {
           "type": "list",
           "items": [
-            "独立开发者或小团队：README 实测显示 minimal 模式仅需 1 份文档即可开始编码，且 58 分钟内可产出运行的游戏，适合快速原型。",
-            "需要结构化管理但不想放弃决策权的人：README 强调“你仍然做每个决定”，代理只负责提问和把关，适合希望 AI 辅助但不失控的开发者。",
-            "多引擎项目（Godot/Unity/Unreal）团队：模板内置三套引擎专用代理集，可跨引擎复用同一套流程。"
+            "**需要跨平台桌面自动化的 AI Agent 开发者**：macOS、Windows、Linux 均支持辅助功能树，且提供 60 个命令，覆盖观察、点击、键盘、窗口、通知、剪贴板等常见操作。",
+            "**重视可验证性的自动化场景**：快照返回带 ref 的 JSON，动作基于 ref 执行，无像素匹配，适合需要确定性回环的 agent 架构。",
+            "**能接受 Vercel 治理与 Apache-2.0 许可的团队**：项目维护活跃（当日有推送），且有官方文档与技能包，上手成本较低。"
           ]
         },
         {
           "type": "sub",
-          "text": "不适合使用"
+          "text": "不建议使用"
         },
         {
           "type": "list",
           "items": [
-            "追求极致性能或最小化依赖的团队：项目依赖 Python 3、Bash、jq 等多个外部工具，且 README 明确说缺少 Python 时设置会静默回退，环境复杂度高。",
-            "需要长期稳定 API 的企业项目：项目处于快速迭代期（8 个月从创建到 v1.2.0），且未关闭 88 个 Issue/PR，破坏性变更风险高，不适合对稳定性要求苛刻的生产环境。",
-            "只想用 AI 辅助写代码而非管理完整游戏流程的人：项目核心是工作室层级和流程门禁，若你只需要代码补全或简单脚本生成，本项目会带来不必要的流程负担。"
+            "**需要将桌面内容写入公共日志或上传到第三方服务的场景**：README 明确警告快照、剪贴板、截图可能含私有内容，且 JEV helper 会外发屏幕描述。除非有严格脱敏流程，否则有泄露风险。",
+            "**依赖 Wayland 完整功能的 Linux 用户**：鼠标输入仅支持 X11 且需 --headed，窗口管理在 Linux 仅限 X11；Wayland 剪贴板需额外安装 wl-clipboard。",
+            "**不能处理守护进程卡死或按键锁定的自动化流水线**：key-down/key-up 等四个命令在守护进程释放前拒绝运行，若无超时与恢复机制，任务可能永久挂起。"
           ]
         }
       ]
@@ -217,12 +257,13 @@
         {
           "type": "list",
           "items": [
-            "仓库主页：https://github.com/Donchitos/Claude-Code-Game-Studios",
-            "README：https://github.com/Donchitos/Claude-Code-Game-Studios#readme",
-            "Issues 页面：https://github.com/Donchitos/Claude-Code-Game-Studios/issues",
-            "Releases 页面：https://github.com/Donchitos/Claude-Code-Game-Studios/releases",
-            "替代候选 CoplayDev/unity-mcp：https://github.com/CoplayDev/unity-mcp",
-            "替代候选 IvanMurzak/Unity-MCP：https://github.com/IvanMurzak/Unity-MCP"
+            "仓库首页：https://github.com/vercel-labs/agent-desktop",
+            "README：https://github.com/vercel-labs/agent-desktop#readme",
+            "Releases 页面：https://github.com/vercel-labs/agent-desktop/releases",
+            "Issues 页面：https://github.com/vercel-labs/agent-desktop/issues",
+            "主页：https://agent-browser.dev/desktop",
+            "替代候选 iFurySt/open-computer-use：https://github.com/iFurySt/open-computer-use",
+            "替代候选 amontlabs/lcu：https://github.com/amontlabs/lcu"
           ]
         },
         {
@@ -233,28 +274,27 @@
     }
   ],
   "meta": {
-    "repo": "Donchitos/Claude-Code-Game-Studios",
-    "stars": 33500,
-    "language": "Shell",
-    "license": "MIT",
-    "lastCommit": "2026-10-19",
-    "openIssues": 88,
-    "version": "v1.2.0",
+    "repo": "vercel-labs/agent-desktop",
+    "stars": 11533,
+    "language": "Rust",
+    "license": "Apache-2.0",
+    "lastCommit": "2026-11-03",
+    "openIssues": 135,
+    "version": "v1.1.0",
     "trending": {
       "window": "日榜",
-      "rank": 5,
-      "gained": 1380,
+      "rank": 2,
+      "gained": 3792,
       "unit": "今日"
     },
     "lenses": [
-      "创业",
       "AI"
     ]
   },
   "stats": {
-    "chars": 2193,
-    "codeBlocks": 2,
-    "minutes": 7,
+    "chars": 1857,
+    "codeBlocks": 3,
+    "minutes": 6.9,
     "asOf": "2026-11-03"
   }
 }
