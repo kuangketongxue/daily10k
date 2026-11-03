@@ -241,10 +241,77 @@ async function hnBuzz(fullName) {
   }
 }
 
+// 圈内风向：用 Exa 搜「最近被公开推荐的开源项目」，从文章正文里捞出被点名的仓库。
+// GitHub 星数能被话题带起来，但「有作者专门写一篇推荐文」难得多。
+// 只在有 EXA_API_KEY 时启用，没有就静默跳过，不影响出稿。
+const EXA_ENDPOINT = 'https://api.exa.ai/search';
+
+async function exaSearch(query, key, includeDomains) {
+  const res = await fetch(EXA_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+    body: JSON.stringify({
+      query,
+      type: 'auto',
+      numResults: 10,
+      startPublishedDate: new Date(Date.now() - 14 * 864e5).toISOString(),
+      ...(includeDomains ? { includeDomains } : {}),
+      contents: { text: { maxCharacters: 3000 } },
+    }),
+    signal: AbortSignal.timeout(25000),
+  });
+  if (!res.ok) throw new Error(`Exa ${res.status}`);
+  const data = await res.json();
+  return data.results || [];
+}
+
+// 只认这些来源：真人写的技术社区与工程博客。
+// 不加域名限定会搜回来大量 finds.dev / feed7.dev 这类「机器抓取仓库自动生成的 SEO 页」，
+// 它们会把垃圾项目顶得比真项目还高（实测过，信号是反的）。
+const BUZZ_DOMAINS = [
+  'dev.to', 'news.ycombinator.com', 'lobste.rs', 'github.blog',
+  'simonwillison.net', 'medium.com', 'hashnode.dev', 'substack.com',
+];
+
+let WEB_BUZZ = null;
+async function webBuzz() {
+  if (WEB_BUZZ) return WEB_BUZZ;
+  const key = process.env.EXA_API_KEY;
+  if (!key) {
+    WEB_BUZZ = new Map();
+    return WEB_BUZZ;
+  }
+  const queries = [
+    'open source project worth using recommended',
+    'open source tools I actually use in production',
+  ];
+  const mentions = new Map();
+  for (const q of queries) {
+    try {
+      const results = await exaSearch(q, key, BUZZ_DOMAINS);
+      for (const r of results) {
+        const blob = `${r.title || ''} ${r.url || ''} ${r.text || ''}`;
+        for (const m of blob.matchAll(/github\.com\/([\w.-]+)\/([\w.-]+)/g)) {
+          if (/^(topics|search|features|about|pricing|login|orgs|sponsors|trending|collections|apps)$/i.test(m[1])) continue;
+          const full = `${m[1]}/${m[2].replace(/\.git$/, '')}`.toLowerCase();
+          mentions.set(full, (mentions.get(full) || 0) + 1);
+        }
+      }
+    } catch (e) {
+      log(`Exa 搜索失败（不影响出稿）：${e.message}`);
+    }
+  }
+  log(`圈内风向：从 ${queries.length} 组推荐文里捞到 ${mentions.size} 个被点名的仓库`);
+  WEB_BUZZ = mentions;
+  return mentions;
+}
+
 // 给候选算最终分：热度 × 选题加成 × 生产可用度 × 圈内口碑
 export async function rankCandidates(pool, heatScore) {
   const ranked = pool.map(c => ({ ...c, base: heatScore(c) }));
   ranked.sort((a, b) => b.base - a.base);
+
+  const buzzMap = await webBuzz();
 
   // 只体检热度前 10：既够覆盖"当天可能出线的种子"，又不至于把 API 额度烧光
   const shortlist = ranked.slice(0, 10);
@@ -255,13 +322,17 @@ export async function rankCandidates(pool, heatScore) {
     c.quality = factor;
     c.notes = notes;
     c.buzz = await hnBuzz(c.repo.full_name);
+    c.webMentions = buzzMap.get(c.repo.full_name.toLowerCase()) || 0;
   }
   for (const c of shortlist) {
     const boost = c.buzz.points >= 100 ? 1.25
       : c.buzz.points >= 30 ? 1.12
       : c.buzz.points > 0 ? 1.04 : 1;
+    // 被推荐文点名比 HN 单帖更有分量：每出现一次 +12%，最多 +36%
+    const webBoost = c.webMentions ? Math.min(1 + 0.12 * c.webMentions, 1.36) : 1;
     c.buzzBoost = boost;
-    c.score = c.base * c.quality * boost;
+    c.webBoost = webBoost;
+    c.score = c.base * c.quality * boost * webBoost;
   }
   // 没体检到的深度降级：只有在体检过的候选全被判定为配置包时才轮到它们
   for (const c of ranked.slice(10)) c.score = c.base * 0.15;
@@ -273,8 +344,9 @@ export async function rankCandidates(pool, heatScore) {
 function describe(c) {
   const q = c.quality ? `质量系数 ${c.quality.toFixed(2)}` : '未体检';
   const b = c.buzz && c.buzz.stories ? `，HN ${c.buzz.stories} 帖 ${c.buzz.points} 分` : '，HN 无讨论';
+  const w = c.webMentions ? `，推荐文点名 ${c.webMentions} 次` : '';
   const n = c.notes ? `（${c.notes.join('，')}）` : '';
-  return `${c.repo.full_name} ★${c.repo.stargazers_count} 日均${c.heat ? c.heat.perDay : '-'} → 综合 ${Math.round(c.score)}｜${q}${n}${b}`;
+  return `${c.repo.full_name} ★${c.repo.stargazers_count} 日均${c.heat ? c.heat.perDay : '-'} → 综合 ${Math.round(c.score)}｜${q}${n}${b}${w}`;
 }
 
 
