@@ -3,33 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>万星日报</title>
+<title>万星日报 · 每天一个 GitHub 万星项目</title>
 <meta name="description" content="万星日报：每天只讲一个 GitHub 万星热门项目（运行时抓取 Trending 热度榜）。">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#0d0d0d">
+<meta name="theme-color" content="#0a3d6e">
 <meta property="og:site_name" content="万星日报">
 <meta property="og:type" content="article">
 <meta property="og:title" content="万星日报">
 <meta property="og:description" content="每天只讲一个 GitHub 万星前沿项目。">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://kuangketongxue.github.io/daily10k/img/hero-sky.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://kuangketongxue.github.io/daily10k/article.html">
+<link rel="preload" as="image" href="img/hero-sky.webp" type="image/webp" media="(min-width: 780px)">
+<link rel="preload" as="image" href="img/hero-sky-sm.webp" type="image/webp" media="(max-width: 779px)">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="masthead">
-  <div class="wrap masthead-inner">
+
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<header class="article-band">
+  <div class="band-bg" role="img" aria-label="晴朗蓝天下的大朵白云倒映在平静的水面上"></div>
+  <div class="band-veil"></div>
+  <div class="wrap masthead">
     <a class="logo" href="index.html">万星日报<span class="logo-en">DAILY 10K</span></a>
+    <a class="masthead-link" href="index.html">今天的日报</a>
   </div>
 </header>
 
 <main class="wrap article-wrap" id="article">
-  <div class="loading" id="loading" role="status">加载中…</div>
+  <div class="loading" id="loading" role="status">加载中<span class="dots"></span></div>
   <noscript><p class="empty">本站需要启用 JavaScript 才能加载日报正文。</p></noscript>
 </main>
 
 <footer class="foot">
   <div class="wrap">
-    <p>由 GitHub Trending 实时热度 + AI 深读自动生成 · <a href="index.html">返回首页</a></p>
+    <div class="foot-row">
+      <p>由 GitHub Trending 实时热度 + AI 深读自动生成 · <a href="index.html">返回首页</a></p>
+      <p class="credit">背景图：Pexels（Pexels License，可免费商用）</p>
+    </div>
   </div>
 </footer>
 
@@ -65,6 +77,7 @@ function fail() {
   setMeta('robots', 'noindex');
   article.innerHTML = `
     <div class="empty">
+      <p class="big" aria-hidden="true">☁</p>
       <p>没有找到这一期的日报。</p>
       <p class="empty-hint">本站每天只保留当天一篇，往期链接会失效。<a href="index.html">回首页看今天的</a></p>
     </div>`;
@@ -110,7 +123,7 @@ function render(p) {
 
   const m = p.meta || {};
   const stats = p.stats || {};
-  let html = `<a class="back" href="index.html">← 回首页</a>
+  let html = `<a class="back" href="index.html"><span aria-hidden="true">←</span> 回首页</a>
     <h1 class="a-title">${esc(title)}</h1>
     <div class="a-summary">
       <p class="a-oneliner"><strong>一句话：</strong>${esc(p.oneLiner)}</p>
@@ -129,26 +142,33 @@ function render(p) {
       </div>
     </div>`;
 
+  let body = '';
   for (const sec of p.sections || []) {
-    html += `<section class="a-sec"><h2>${esc(sec.heading)}</h2>`;
+    // 稿件的章节标题自带「1 」「2 」这样的序号，抽出来单独排版，避免和装饰序号重复
+    const raw = String(sec.heading ?? '');
+    const mt = raw.match(/^\s*(\d{1,2})\s*[.、．]?\s+(.+)$/);
+    const num = mt ? mt[1].padStart(2, '0') : '';
+    const label = mt ? mt[2] : raw;
+    body += `<section class="a-sec"><h2${num ? ` data-num="${num}"` : ''}>${esc(label)}</h2>`;
     for (const b of sec.blocks || []) {
       if (b.type === 'p') {
-        html += `<p>${inline(b.text)}</p>`;
+        body += `<p>${inline(b.text)}</p>`;
       } else if (b.type === 'sub') {
-        html += `<h3>${esc(b.text)}</h3>`;
+        body += `<h3>${esc(b.text)}</h3>`;
       } else if (b.type === 'kv') {
-        html += `<p class="a-kv"><strong>${esc(b.k)}</strong>${inline(b.v)}</p>`;
+        body += `<p class="a-kv"><strong>${esc(b.k)}</strong>${inline(b.v)}</p>`;
       } else if (b.type === 'list') {
-        html += '<ul>' + b.items.map(i => `<li>${inline(i)}</li>`).join('') + '</ul>';
+        body += '<ul>' + b.items.map(i => `<li>${inline(i)}</li>`).join('') + '</ul>';
       } else if (b.type === 'code') {
-        html += `<pre class="a-code"><code>${esc(b.code)}</code></pre>`;
-        if (b.caption) html += `<p class="a-caption">${esc(b.caption)}</p>`;
+        body += `<pre class="a-code"><code>${esc(b.code)}</code></pre>`;
+        if (b.caption) body += `<p class="a-caption">${esc(b.caption)}</p>`;
       } else if (b.type === 'quote') {
-        html += `<blockquote>${inline(b.text)}</blockquote>`;
+        body += `<blockquote>${inline(b.text)}</blockquote>`;
       }
     }
-    html += '</section>';
+    body += '</section>';
   }
+  html += `<div class="a-body">${body}</div>`;
 
   if (m.repo) {
     html += `
@@ -163,6 +183,7 @@ function render(p) {
     <p class="a-stats">字数自检：正文汉字 ${fmtNum(stats.chars)} 字 · 命令块 ${fmtNum(stats.codeBlocks)} 个 · 阅读约 ${esc(stats.minutes)} 分钟 · 材料截至 ${esc(stats.asOf)}。</p>`;
   }
 
+  document.getElementById('loading')?.remove();
   article.innerHTML = html;
 }
 
@@ -184,6 +205,25 @@ function inline(s) {
   text = esc(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   return text.replace(/\u0000(\d+)\u0000/g, (_, i) => slots[+i]);
 }
+
+// 顶部阅读进度条
+(function () {
+  const bar = document.getElementById('progress');
+  const upd = () => {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.transform = 'scaleX(' + (max > 0 ? Math.min(window.scrollY / max, 1) : 0) + ')';
+  };
+  addEventListener('scroll', upd, { passive: true });
+  addEventListener('resize', upd, { passive: true });
+  upd();
+})();
+
+// 浏览器不支持 WebP 时回落到 JPG 背景
+(function () {
+  const probe = new Image();
+  probe.onerror = function () { document.documentElement.classList.add('no-webp'); };
+  probe.src = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+})();
 </script>
 </body>
 </html>

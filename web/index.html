@@ -3,49 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>万星日报 · 每天现场抓取 GitHub 热门项目，AI 替你读懂</title>
+<title>万星日报 · 每天一个 GitHub 万星项目，AI 替你读懂</title>
 <meta name="description" content="每天只讲一个 GitHub 万星热门项目：它解决什么问题、能用来干嘛、怎么上手。运行时现场抓取 Trending 热度榜，优先高考/考研、求职、创业、AI、投资、健身方向。每天 5:30 前更新。">
 <link rel="canonical" href="https://kuangketongxue.github.io/daily10k/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#0d0d0d">
+<meta name="theme-color" content="#0a3d6e">
 <meta property="og:site_name" content="万星日报">
 <meta property="og:type" content="website">
-<meta property="og:title" content="万星日报 · 每天现场抓取 GitHub 热门项目，AI 替你读懂">
+<meta property="og:title" content="万星日报 · 每天一个 GitHub 万星项目，AI 替你读懂">
 <meta property="og:description" content="每天只讲一个 GitHub 万星热门项目：它解决什么问题、能用来干嘛、怎么上手。">
 <meta property="og:url" content="https://kuangketongxue.github.io/daily10k/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://kuangketongxue.github.io/daily10k/img/hero-sky.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="800">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://kuangketongxue.github.io/daily10k/img/hero-sky.jpg">
+<link rel="preload" as="image" href="img/hero-sky.webp" type="image/webp" media="(min-width: 780px)">
+<link rel="preload" as="image" href="img/hero-sky-sm.webp" type="image/webp" media="(max-width: 779px)">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="masthead">
-  <div class="wrap masthead-inner">
-    <a class="logo" href="index.html">万星日报<span class="logo-en">DAILY 10K</span></a>
-    <p class="tagline">每天只讲一个 GitHub 万星热门项目 —— 它解决什么问题，能用来干嘛，怎么上手。热度榜现场抓取，优先高考/考研、求职、创业、AI、投资、健身方向。每天 5:30 前更新，只保留当天这一篇。</p>
-  </div>
-</header>
 
-<main class="wrap">
-  <div class="loading" id="loading" role="status">加载今日日报…</div>
+<section class="hero">
+  <div class="hero-bg" role="img" aria-label="晴朗蓝天下的大朵白云倒映在平静的水面上"></div>
+  <div class="hero-veil"></div>
+  <div class="wrap hero-inner">
+    <p class="hero-kicker">Daily 10K · 每日一项目</p>
+    <h1 class="hero-title">万星日报<span class="en">One Repo · Read Deep · Every Day</span></h1>
+    <p class="hero-sub">每天只讲一个 GitHub <b>万星热门项目</b>。<br class="br-wide">它解决什么问题，能用来干嘛，怎么上手。</p>
+    <div class="hero-chips">
+      <span class="hero-chip">高考 / 考研</span>
+      <span class="hero-chip">求职</span>
+      <span class="hero-chip">创业</span>
+      <span class="hero-chip">AI</span>
+      <span class="hero-chip">投资</span>
+      <span class="hero-chip">健身</span>
+    </div>
+  </div>
+</section>
+
+<main id="today-sec" class="wrap">
+  <div class="loading" id="loading" role="status">加载今日日报<span class="dots"></span></div>
   <noscript><p class="loading">本站需要启用 JavaScript 才能加载今日日报。</p></noscript>
   <div class="stale" id="stale" hidden></div>
-  <div class="today" id="today" hidden>
+  <article class="today" id="today" hidden>
     <div class="today-meta">
       <span class="issue-date" id="t-date"></span>
+      <span class="issue-sep" aria-hidden="true"></span>
       <span class="today-stars" id="t-stars"></span>
     </div>
-    <h1 class="today-title" id="t-title"></h1>
+    <h2 class="today-title" id="t-title"></h2>
     <p class="today-oneliner" id="t-oneliner"></p>
     <div class="today-tags" id="t-category"></div>
-    <a class="read-btn" id="t-link" href="#">阅读全文 →</a>
-  </div>
+    <a class="read-btn" id="t-link" href="#">阅读全文<span class="go" aria-hidden="true">→</span></a>
+  </article>
   <div class="empty" id="empty" hidden>
+    <p class="big" aria-hidden="true">☁</p>
     <p>今天的日报还没生成，5:30 前会更新，稍后再来看看。</p>
+    <p class="empty-hint">热度榜每天现场抓取，只保留当天这一篇。</p>
   </div>
 </main>
 
 <footer class="foot">
   <div class="wrap">
-    <p>由 GitHub Trending 实时热度 + AI 深读自动生成 · 每天 5:30 前更新 · 当天内容当天清</p>
+    <div class="foot-row">
+      <p>由 GitHub Trending 实时热度 + AI 深读自动生成 · 每天 5:30 前更新 · 当天内容当天清</p>
+      <p class="credit">背景图：Pexels（Pexels License，可免费商用）</p>
+    </div>
   </div>
 </footer>
 
@@ -57,10 +81,27 @@ fetch('data/index.json', { cache: 'no-cache' })
     if (!it) { show('empty'); return; }
     const stars = Number(it.stars);
     document.getElementById('t-date').textContent = it.date;
-    document.getElementById('t-stars').textContent = Number.isFinite(stars) && stars > 0 ? '★ ' + stars.toLocaleString('zh-CN') : '';
+    const starsEl = document.getElementById('t-stars');
+    if (Number.isFinite(stars) && stars > 0) {
+      starsEl.textContent = '★ ' + stars.toLocaleString('zh-CN');
+    } else {
+      starsEl.hidden = true;
+    }
     document.getElementById('t-title').textContent = it.title;
     document.getElementById('t-oneliner').textContent = it.oneLiner;
-    document.getElementById('t-category').textContent = it.category;
+    // 分类用「·」「/」「,」分隔，逐项渲染成标签
+    const catEl = document.getElementById('t-category');
+    catEl.textContent = '';
+    String(it.category || '')
+      .split(/[·\/,，]/)
+      .map(s => s.trim())
+      .filter(Boolean)
+      .forEach(t => {
+        const s = document.createElement('span');
+        s.className = 'tag';
+        s.textContent = t;
+        catEl.appendChild(s);
+      });
     document.getElementById('t-link').href = 'article.html?d=' + encodeURIComponent(it.date);
     // 生成失败或还没跑完时，首页不能把旧文章冒充成今天的
     const bjToday = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
@@ -79,6 +120,13 @@ function show(id) {
   document.getElementById('loading').hidden = true;
   document.getElementById(id).hidden = false;
 }
+
+// 浏览器不支持 WebP 时回落到 JPG 背景
+(function () {
+  const probe = new Image();
+  probe.onerror = function () { document.documentElement.classList.add('no-webp'); };
+  probe.src = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+})();
 </script>
 </body>
 </html>

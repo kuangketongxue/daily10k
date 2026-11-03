@@ -36,11 +36,15 @@ AI_API_KEY=你的key AI_BASE_URL=https://token.sensenova.cn/v1 AI_MODEL=sensenov
 
 ```
 web/                  站点（纯静态，Pages 直接托管）
-  index.html          今日日报
-  article.html        文章页
+  index.html          今日日报（首屏 hero + 今日卡片）
+  article.html        文章页（图片头带 + 正文）
   404.html            自定义 404
   favicon.svg
   style.css
+  img/                首屏背景图（Pexels License）
+    hero-sky.webp       桌面 2000px
+    hero-sky-sm.webp    移动 900px
+    hero-sky.jpg        不支持 WebP 时的兜底
   data/index.json     当日索引
   data/posts/*.json   当日文章（每天只有一份）
 scripts/
