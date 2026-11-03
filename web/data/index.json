@@ -1,12 +1,12 @@
 {
-  "updated": "2026-11-03",
+  "updated": "2026-11-04",
   "issues": [
     {
-      "date": "2026-11-03",
-      "title": "agent-desktop：让 AI 代理直接操作桌面应用，不再依赖截图",
-      "oneLiner": "一个用 Rust 编写的命令行工具，让 AI 代理通过操作系统辅助功能树来读取和操作桌面应用，适用于 macOS、Windows 和 Linux。",
-      "category": "AI 代理 · 桌面自动化 · 命令行工具",
-      "stars": 11533
+      "date": "2026-11-04",
+      "title": "hallmark：给 AI 生成的网页立规矩，拒绝“一眼假”",
+      "oneLiner": "一个面向 Claude Code、Cursor 与 Codex 的设计技能，让 AI 生成的网页通过真实浏览器审查，不再出现千篇一律的 AI 风格。",
+      "category": "AI 开发工具 · 前端设计 · Claude Code",
+      "stars": 46892
     }
   ]
 }
