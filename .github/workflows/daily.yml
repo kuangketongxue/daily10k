@@ -47,6 +47,8 @@ jobs:
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
           AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
           AI_MODEL: ${{ secrets.AI_MODEL }}
+          # 圈内风向信号：搜「最近被公开推荐的开源项目」。没有这个 secret 时选品照常跑，只是少一路加权
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |
           for i in 1 2 3; do
