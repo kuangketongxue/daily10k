@@ -12,7 +12,14 @@
   3. 抓仓库事实（星数、未关闭 Issue/PR、最新 Release、许可证、Trending 排名与当日新增星数）与 README，再取 1-2 个真正同类的替代项目（按具体 topic 与描述关键词筛选，核心是 MCP/agent 工具时要求候选具备同类交付方式）；
   4. 调用 LLM 按固定 8 栏写正式深读稿：它解决什么问题 / 能用来干嘛 / 它是怎么做的 / 怎么上手 / 局限与风险 / 替代方案 / 谁该用谁别用 / 出处与日期；出稿前逐个探活正文链接，404/410 的降级为纯文本；
   5. 输出 `web/data/posts/<日期>.json`，删除往期，重建 `web/data/index.json`，并写入页尾自检（字数/命令块/阅读时长）。
-- `.github/workflows/daily.yml`：GitHub 的 `schedule` 不保证准点，实测（2026-10-30~11-02）有 3~4 小时排队延迟，单靠「北京 5:30」那一批必然迟到。所以在北京 00:00~07:30 之间排了 6 批（UTC 16:00 / 17:30 / 19:00 / 21:30 / 22:30 / 23:30），哪批先跑起来就先出稿，其余批次命中「当天已生成」后几秒退出；延迟 5.5 小时以内都能在 5:30 前发出。
+
+选品还会叠加两路「同行口碑」信号（命中才加权，不命中不扣分）：
+
+- **Hacker News**：近 120 天相关讨论的 points 与帖数（`hn.algolia.com`）；
+- **Exa 推荐文**：搜 dev.to / HN / lobste.rs / github.blog 等真人技术社区里「最近被公开推荐的开源项目」，从正文里捞出被点名的仓库，每被点名一次 +12%（上限 +36%）。需要 `EXA_API_KEY`，没有就静默跳过。
+
+写稿的字数门禁是分层的：前 4 栏、后 4 栏各自有字数底线，达不到时把「实际字数 / 目标字数」回喂给模型让它扩写，而不是原样重发；全部写完后再过一道总字数底线。这样避免「整篇作废重跑三遍仍然差几十个字」的情况（2026-11-04 05:30 批次就栽在这上面）。
+- `.github/workflows/daily.yml`：GitHub 的 `schedule` 不保证准点，实测（2026-10-30~11-02）有 3~4 小时排队延迟，单靠「北京 5:30」那一批必然迟到。所以在北京 00:00~07:30 之间排了 6 批（UTC 16:00 / 17:30 / 19:00 / 21:30 / 22:30 / 23:30），哪批先跑起来就先出稿，其余批次命中「当天已生成」后几秒退出；延迟 5.5 小时以内都能在 5:30 前发出。另加一批北京 10:00（UTC 02:00）补跑，早间全部失败时当天仍有一次机会。任一批次失败都会自动开一个 issue 告警（同一天不重复开），不会静默失败。
 - `.github/workflows/pages.yml`：`web/` 有变更时自动发布到 GitHub Pages；因为 bot 用默认
   `GITHUB_TOKEN` 推送的提交不会触发 `push` 事件，它还会在 `daily-report` 跑完后直接发布一次。
 
@@ -27,7 +34,7 @@ AI_API_KEY=你的key AI_BASE_URL=https://token.sensenova.cn/v1 AI_MODEL=sensenov
 ## 线上配置（已完成）
 
 仓库：`kuangketongxue/daily10k`（公开），Pages 源已设为 GitHub Actions，Secrets 已配好
-（`AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL`）。想立刻出新一期：Actions → daily-report → Run workflow。
+（`AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL` / `EXA_API_KEY`）。想立刻出新一期：Actions → daily-report → Run workflow。
 
 想先验证密钥和整条链路、但不出新一期：同样在 Actions → daily-report → Run workflow 里勾选
 `dry_run`。它会完整跑选品、抓取、写稿与校验，但不写入 `web/data`、不提交。

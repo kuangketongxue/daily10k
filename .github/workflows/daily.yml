@@ -15,6 +15,7 @@ on:
     - cron: "30 21 * * *"  # 北京 05:30
     - cron: "30 22 * * *"  # 北京 06:30
     - cron: "30 23 * * *"  # 北京 07:30 兜底
+    - cron: "0 2 * * *"    # 北京 10:00 补跑：早间批次全部失败时仍有一次机会
   workflow_dispatch:
     inputs:
       dry_run:
@@ -24,6 +25,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: daily-generate
@@ -76,3 +78,24 @@ jobs:
             sleep 5
           done
           exit 1
+
+      # 失败不能静默：2026-11-03 05:30 批次曾连续三次字数不达标而失败，
+      # 直到 06:25 的下一批才补上，期间没有任何告警
+      - name: 失败时开 issue 告警
+        if: ${{ failure() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="daily-report 生成失败：$(TZ=Asia/Shanghai date +%F)"
+          COUNT=$(gh issue list --state open --search "$TITLE in:title" --json number --jq 'length' 2>/dev/null || echo 0)
+          if [ "$COUNT" != "0" ]; then
+            echo "已存在同日的失败 issue，不重复创建"
+            exit 0
+          fi
+          gh issue create --title "$TITLE" \
+            --body "运行链接：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          常见原因：正文字数不达标、GitHub API 限流（403/429）、LLM 超时或返回空。
+
+          处理方式：先看日志确认原因；若只是偶发，可直接用 gh run rerun ${{ github.run_id }} 重跑，或等下一个批次（北京 10:00 有补跑）。" \
+            2>/dev/null || echo "issue 创建失败（检查 issues:write 权限），请到 Actions 页面查看"

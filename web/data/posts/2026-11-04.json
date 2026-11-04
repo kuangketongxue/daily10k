@@ -204,7 +204,7 @@
           "type": "list",
           "items": [
             "仓库首页：https://github.com/Nutlope/hallmark",
-            "README：https://github.com/Nutlope/hallmark（README 内容）",
+            "README：https://github.com/Nutlope/hallmark",
             "Issues 页面：https://github.com/Nutlope/hallmark/issues",
             "Releases 页面：https://github.com/Nutlope/hallmark/releases",
             "主页：https://www.usehallmark.com/",
@@ -236,7 +236,7 @@
     ]
   },
   "stats": {
-    "chars": 1797,
+    "chars": 1795,
     "codeBlocks": 4,
     "minutes": 7.5,
     "asOf": "2026-11-04"

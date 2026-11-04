@@ -544,6 +544,11 @@ const HEADINGS = [
 const HEADINGS_A = HEADINGS.slice(0, 4);
 const HEADINGS_B = HEADINGS.slice(4);
 
+// 分栏字数底线：prompt 要求 PART_A 1200 字、PART_B 800 字，但模型经常只写到七成。
+// 与其在最后整篇作废（实测 2026-11-04 05:30 批次三次都卡在 1547~1586 字），
+// 不如在分栏这一层就把实际字数反馈给模型让它扩写，重试成本低得多。
+const PART_MIN_CHARS = { A: 1000, B: 650 };
+
 const PART_A = `本次只写文章的前 4 个 section，并给出标题信息。输出 JSON：
 {
   "title": "项目名：一句话点睛式标题（如 graphify：让 AI 查图，不再翻文件）",
@@ -577,7 +582,9 @@ const PART_B = `本次只写文章的后 4 个 section。输出 JSON：
 - 6 替代方案：先判断每个「替代候选」是否真的解决同一类问题，只把确实同类的写进来（1-2 个），候选多于两个时优先星数更高、最近仍有推送的；用 sub + kv 写清：仓库、星数、许可证、最近更新、适用场景；最后用 p 给出选择判据（"项目是 X 就选 A，需要 Y 就选本项目"）。若没有真正同类的候选：只写一个 p，内容为"按 GitHub 同类搜索暂未找到成熟的同类项目"，并补一句基于本项目的选择判据；绝对不要为了凑栏目把不相关的项目写成替代方案，也不要伪造 kv 字段或编造项目。
 - 7 谁该用，谁别用：两个 list，各 2-3 条，判断必须能从前面事实推出，不写万能套话。
 - 8 出处与日期：list 列出本次引用的全部来源链接（仓库首页、README、Release、Issues 页面）；最后必须有一个 p，写明"材料截至 {今天日期}。文中命令与输出均取自官方文档和样例，未在本机运行。"
-这 4 栏正文合计不少于 800 个汉字。`;
+这 4 栏正文合计不少于 800 个汉字。
+
+所有链接必须写成 [标签](URL) 形式，标签用「仓库首页」「README」「Releases 页面」「Issues 页面」「项目主页」这类人类可读名称，不要把 URL 本身当链接文本。`;
 
 function extractJson(text) {
   const cleaned = text.replace(/```(?:json)?/gi, '').trim();
@@ -664,7 +671,17 @@ function validateBlocks(part) {
   }
 }
 
-async function genPart(partPrompt, expect, facts, readme, themes) {
+// 单栏正文字数（只数汉字，与页尾自检口径一致）
+function partChars(part) {
+  const cjk = (s) => (String(s).match(/[\u4e00-\u9fff]/g) || []).length;
+  let n = 0;
+  for (const sec of part.sections || []) {
+    for (const b of sec.blocks || []) n += cjk(textOf(b));
+  }
+  return n;
+}
+
+async function genPart(partPrompt, expect, facts, readme, themes, minChars) {
   const intro = partPrompt
     .replace('{今天日期}', today())
     .replace('{选题}', themes.length ? themes.join('、') : '通用读者');
@@ -686,11 +703,21 @@ async function genPart(partPrompt, expect, facts, readme, themes) {
       if (badIdx !== -1) throw new Error(`第 ${badIdx + 1} 栏应为「${expect[badIdx]}」，实得「${part.sections[badIdx]?.heading ?? '空'}」`);
       part.sections = part.sections.slice(0, 4);
       validateBlocks(part);
+      const chars = partChars(part);
+      if (chars < minChars) throw new Error(`字数不足（${chars}/${minChars}）`);
       return part;
     } catch (e) {
       lastErr = e;
       const wait = Math.max(e.status === 429 ? 15000 : 3000, e.retryAfterMs || 0);
       log(`写稿第 ${attempt} 次失败：${e.message}（${Math.round(wait / 1000)}s 后重试）`);
+      // 字数不够时把差距反馈给模型让它扩写，而不是原样重发一遍
+      if (/^字数不足/.test(e.message) && attempt < 3) {
+        const got = Number(e.message.match(/\d+/)?.[0] || 0);
+        messages.push({
+          role: 'user',
+          content: `你上一稿正文只有 ${got} 个汉字，少于本栏要求的 ${minChars} 字。请扩写：在不编造事实、不新增链接、不重复已写内容的前提下，补充具体场景、机制细节与依据，保持段落短小。只输出同样的 JSON。`,
+        });
+      }
       await sleep(wait);
     }
   }
@@ -767,8 +794,8 @@ export async function pruneDeadLinks(post) {
 
 async function writeArticle(repo, readme, release, alternatives, heat, themes) {
   const facts = factsBlock(repo, release, alternatives, heat, themes);
-  const partA = await genPart(PART_A, HEADINGS_A, facts, readme, themes);
-  const partB = await genPart(PART_B, HEADINGS_B, facts, readme, themes);
+  const partA = await genPart(PART_A, HEADINGS_A, facts, readme, themes, PART_MIN_CHARS.A);
+  const partB = await genPart(PART_B, HEADINGS_B, facts, readme, themes, PART_MIN_CHARS.B);
 
   const post = {
     title: partA.title,
@@ -781,7 +808,8 @@ async function writeArticle(repo, readme, release, alternatives, heat, themes) {
   await pruneDeadLinks(post);
 
   const st = computeStats(post);
-  if (st.chars < 1600) throw new Error(`正文过短（${st.chars} 字）`);
+  // 分栏已在 genPart 内逐栏校验并反馈扩写，这里只留最后一道底线
+  if (st.chars < 1500) throw new Error(`正文过短（${st.chars} 字）`);
   return post;
 }
 
@@ -821,7 +849,7 @@ function rebuildIndex() {
     stars: p.meta?.stars ?? '',
   }));
   mkdirSync(DATA_DIR, { recursive: true });
-  writeFileSync(join(DATA_DIR, 'index.json'), JSON.stringify({ updated: today(), issues }, null, 2));
+  writeFileSync(join(DATA_DIR, 'index.json'), JSON.stringify({ updated: today(), issues }, null, 2) + '\n');
 }
 
 // 只保留当天一条：删除往期文章 JSON，不做归档
@@ -886,7 +914,7 @@ export async function main() {
 
   const history = existsSync(HISTORY_FILE) ? JSON.parse(readFileSync(HISTORY_FILE, 'utf8')) : [];
   if (!history.includes(repo.full_name)) history.push(repo.full_name);
-  writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+  writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2) + '\n');
 
   rebuildIndex();
   log(`完成：web/data/posts/${date}.json（正文 ${post.stats.chars} 字，命令块 ${post.stats.codeBlocks} 个，阅读约 ${post.stats.minutes} 分钟）`);

@@ -112,6 +112,7 @@ img { max-width: 100%; display: block; }
 
 /* 无 WebP 支持时的兜底 */
 .no-webp .hero-bg { background-image: url("img/hero-sky.jpg"); }
+.no-webp .article-band .band-bg { background-image: url("img/hero-sky.jpg"); }
 
 @keyframes skyDrift {
   from { transform: scale(1) translate3d(0, 0, 0); }
