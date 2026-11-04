@@ -1,12 +1,12 @@
 {
-  "updated": "2026-11-04",
+  "updated": "2026-11-05",
   "issues": [
     {
-      "date": "2026-11-04",
-      "title": "hallmark：给 AI 生成的网页立规矩，拒绝“一眼假”",
-      "oneLiner": "一个面向 Claude Code、Cursor 与 Codex 的设计技能，让 AI 生成的网页通过真实浏览器审查，不再出现千篇一律的 AI 风格。",
-      "category": "AI 开发工具 · 前端设计 · Claude Code",
-      "stars": 46892
+      "date": "2026-11-05",
+      "title": "Scrapling：让 AI 代理直接抓取网页，从单请求到全站爬取",
+      "oneLiner": "一个 Python 网页抓取框架，把 HTTP 请求、无头浏览器、解析与并发爬虫收进同一套 API，并可通过 MCP 服务接入 AI 代理。",
+      "category": "网页抓取 · Python · AI 工具",
+      "stars": 96404
     }
   ]
 }
