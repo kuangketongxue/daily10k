@@ -1,12 +1,12 @@
 {
-  "updated": "2026-11-05",
+  "updated": "2026-11-06",
   "issues": [
     {
-      "date": "2026-11-05",
-      "title": "Scrapling：让 AI 代理直接抓取网页，从单请求到全站爬取",
-      "oneLiner": "一个 Python 网页抓取框架，把 HTTP 请求、无头浏览器、解析与并发爬虫收进同一套 API，并可通过 MCP 服务接入 AI 代理。",
-      "category": "网页抓取 · Python · AI 工具",
-      "stars": 96404
+      "date": "2026-11-06",
+      "title": "DeepTutor：让 AI 家教记住你学过的每一页",
+      "oneLiner": "DeepTutor 是一个开源的终身个性化 AI 家教，通过多智能体协作和长期记忆，为高考、考研等备考者提供持续跟踪的个性化辅导。",
+      "category": "AI 教育 · 多智能体 · 终身学习",
+      "stars": 55416
     }
   ]
 }
