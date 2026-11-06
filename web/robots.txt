@@ -1,0 +1,9 @@
+# 注意：本站是 GitHub Pages 的「项目站点」，部署在 /daily10k/ 子路径下。
+# 爬虫只会读取域名根目录的 /robots.txt，子路径下的这一份是给人工查看与
+# Search Console 用的，不参与实际抓取规则。真正的「不被收录」靠各页的
+# <meta name="robots" content="noindex">。
+
+User-agent: *
+Allow: /
+
+Sitemap: https://kuangketongxue.github.io/daily10k/sitemap.xml

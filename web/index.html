@@ -7,6 +7,7 @@
 <meta name="description" content="每天只讲一个 GitHub 万星热门项目：它解决什么问题、能用来干嘛、怎么上手。运行时现场抓取 Trending 热度榜，优先高考/考研、求职、创业、AI、投资、健身方向。每天 5:30 前更新。">
 <link rel="canonical" href="https://kuangketongxue.github.io/daily10k/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0a3d6e">
 <meta property="og:site_name" content="万星日报">
 <meta property="og:type" content="website">
@@ -46,7 +47,7 @@
 
 <main id="today-sec" class="wrap">
   <div class="loading" id="loading" role="status">加载今日日报<span class="dots"></span></div>
-  <noscript><p class="loading">本站需要启用 JavaScript 才能加载今日日报。</p></noscript>
+  <noscript><style>#loading{display:none}</style><p class="empty">本站需要启用 JavaScript 才能加载今日日报。</p></noscript>
   <div class="stale" id="stale" hidden></div>
   <article class="today" id="today" hidden>
     <div class="today-meta">
@@ -58,7 +59,7 @@
     <p class="today-oneliner" id="t-oneliner"></p>
     <div class="today-tags" id="t-category"></div>
     <div class="today-actions">
-      <a class="read-btn" id="t-link" href="#">阅读全文<span class="go" aria-hidden="true">→</span></a>
+      <a class="read-btn" id="t-link" href="article.html">阅读全文<span class="go" aria-hidden="true">→</span></a>
       <span class="today-fav-slot" id="t-fav"></span>
     </div>
   </article>
@@ -78,6 +79,17 @@
   </div>
 </footer>
 
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "万星日报",
+  "alternateName": "Daily 10K",
+  "url": "https://kuangketongxue.github.io/daily10k/",
+  "description": "每天只讲一个 GitHub 万星热门项目：它解决什么问题、能用来干嘛、怎么上手。",
+  "inLanguage": "zh-CN"
+}
+</script>
 <script src="favorites.js"></script>
 <script src="register-sw.js"></script>
 <script>

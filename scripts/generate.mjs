@@ -875,10 +875,14 @@ function restoreArchivedFavorites(favorites) {
   if (restored) log(`从归档恢复 ${restored} 期被收藏的文章全文`);
 }
 
-// 重建收藏索引：丢掉全文已不存在、也没归档的条目（点开必然 404 的死链不留）
+// 重建收藏索引：丢掉全文已不存在、也没归档的条目（点开必然 404 的死链不留）。
+// 判据必须同时看 posts/ 与 archive/ —— 只有归档没有当天副本是完全正常的状态。
 function rebuildFavorites(favorites) {
   if (!existsSync(FAVORITES_FILE)) return;
-  const live = new Set(readdirSync(POSTS_DIR).filter(f => f.endsWith('.json')));
+  const live = new Set([
+    ...readdirSync(POSTS_DIR).filter(f => f.endsWith('.json')),
+    ...(existsSync(ARCHIVE_DIR) ? readdirSync(ARCHIVE_DIR).filter(f => f.endsWith('.json')) : []),
+  ]);
   const kept = favorites.items.filter(it => live.has(`${it.date}.json`));
   const dropped = favorites.items.length - kept.length;
   if (dropped) log(`清理 ${dropped} 条死链收藏（全文已不存在且无归档）`);

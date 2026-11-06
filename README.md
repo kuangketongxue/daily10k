@@ -31,7 +31,7 @@
 - `web/data/archive/<日期>.json`：被收藏期次的全文归档，**不会被 `pruneOldPosts()` 删除**。生成时先把被收藏的往期挪进归档，再执行当天清，最后把仍被收藏的恢复回 `posts/`，保证 `article.html?d=<日期>` 一直能打开。
 - `web/favorites.html`：收藏夹页。点「看全文」就地展开正文（与文章页同一套排版），也可跳原文页；「取消收藏」移除条目。
 - `web/favorites.js`：收藏列表读取、收藏按钮、正文渲染的共享模块。
-- `web/sw.js` + `web/register-sw.js`：Service Worker，缓存静态资源与归档全文，离线也能看已展开过的收藏。
+- `web/sw.js` + `web/register-sw.js`：Service Worker。两个缓存分开管——骨架缓存带版本号（部署时由 `pages.yml` 注入 commit SHA，每次部署自动换新），归档全文单独一个缓存，**不随版本升级清空**。策略也不是一刀切：按日期的全文缓存优先（离线必读），`index.json` 与收藏索引网络优先 + 1.5 秒超时回落（保证当天内容新鲜，又不让弱网卡住首屏），页面骨架先用缓存后台更新。
 - `web/sw-edit.html`：收藏/取消收藏的操作说明页（含可复制的命令）。
 - `scripts/favorite.mjs`：收藏写入工具（本机专用）。
 
@@ -44,7 +44,7 @@ GitHub Pages 是纯静态托管，浏览器端没有任何服务器可以代写�
 node scripts/favorite.mjs add 2026-11-06      # 收藏（全文自动归档）
 node scripts/favorite.mjs remove 2026-11-06   # 取消收藏（归档保留）
 node scripts/favorite.mjs list                # 查看收藏夹
-node scripts/favorite.mjs sync                # 清理死链、重建索引
+node scripts/favorite.mjs sync                # 清理死链、重建索引（posts/ 与 archive/ 都算活着）
 ```
 
 写完记得提交推送，Pages 才会更新：
@@ -55,6 +55,14 @@ git add web/data && git commit -m "收藏 2026-11-06" && git push
 
 > 不想用命令行的话，也可以在 GitHub 网页上直接编辑 `web/data/favorites.json`，
 > 并把对应全文放进 `web/data/archive/`，效果完全一样。
+
+## 站点基础文件
+
+- `web/robots.txt`、`web/sitemap.xml`：给搜索引擎看的入口。注意本站是 GitHub Pages 的**项目站点**，
+  爬虫只读域名根目录的 `/robots.txt`，`/daily10k/robots.txt` 不会生效；真正阻止收录靠各页的
+  `<meta name="robots" content="noindex">`。`sitemap.xml` 需要在 Search Console 里手动提交。
+- `web/manifest.webmanifest`：PWA 清单，配合 Service Worker 可以「添加到主屏幕」。
+- `web/404.html`：GitHub Pages 的自定义 404，路径用绝对路径 `/daily10k/`（子路径下相对路径会解析错）。
 
 ## 本地手动跑一次
 

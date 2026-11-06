@@ -50,9 +50,9 @@ function isFavorited(index, date) {
 
 // 归档全文：收藏夹页展开某条时按需拉取。
 // 走 Cache Storage（由 sw.js 提供），任何设备首次展开后即可离线回看。
-// 先找当天的 posts/，没有再找往期归档 archive/ —— 两者都可能存在。
+// 顺序是 archive 优先：收藏夹里每一条都被归档过，先打 archive 就不会先撞一个必然的 404。
 async function loadArchivedPost(date) {
-  const candidates = [FAV_POST(date), FAV_ARCHIVE(date)];
+  const candidates = [FAV_ARCHIVE(date), FAV_POST(date)];
   let lastErr = null;
   for (const path of candidates) {
     const url = new URL(path, location.href).href;
@@ -126,7 +126,7 @@ function mountFavButton(container, date, opts = {}) {
 
 /* ---------- 收藏夹列表页 ---------- */
 
-function renderFavoritesPage(root, index, opts = {}) {
+function renderFavoritesPage(root, index) {
   const items = (index && index.items ? index.items : []).slice()
     .sort((a, b) => String(b.savedAt || b.date).localeCompare(String(a.savedAt || a.date)));
 
@@ -207,7 +207,7 @@ async function fillFavBody(body, date) {
   try {
     const post = await loadArchivedPost(date);
     body.dataset.loaded = '1';
-    body.innerHTML = renderPostHtml(post);
+    body.innerHTML = renderPostHtml(post, { headingTag: 'h2' });
   } catch {
     body.innerHTML = `
       <div class="empty fav-miss">
@@ -218,12 +218,16 @@ async function fillFavBody(body, date) {
   }
 }
 
-// 复用文章页的排版：把 post JSON 渲染成和 article.html 一致的正文结构
-function renderPostHtml(p) {
+// 复用文章页的排版：把 post JSON 渲染成和 article.html 一致的正文结构。
+// opts.headingTag：文章页自己用 h1；收藏夹里就地展开时页面已有 h1，必须降到 h2，否则一页两个 h1。
+// opts.afterTitle：插在标题与摘要之间的自定义内容（文章页用它放收藏按钮槽位）。
+function renderPostHtml(p, opts = {}) {
   const m = p.meta || {};
   const stats = p.stats || {};
+  const h = opts.headingTag || 'h1';
 
-  let html = `<h1 class="a-title">${esc(p.title || '万星日报')}</h1>
+  let html = `<${h} class="a-title">${esc(p.title || '万星日报')}</${h}>
+    ${opts.afterTitle || ''}
     <div class="a-summary">
       <p class="a-oneliner"><strong>一句话：</strong>${esc(p.oneLiner)}</p>
       <div class="a-metas">
@@ -321,13 +325,14 @@ function rememberOpen(date, open) {
 /* ---------- 取消收藏 ---------- */
 
 // 同收藏一样，浏览器端不直接改仓库文件：交给本机维护页处理。
-// 当前页先做本地移除（视觉立即反馈），用户到维护页执行命令后才真正生效。
+// 先在本页给一个明确的「已标记」反馈再跳转 —— 直接闪走会让人以为点错了。
 function dropFavorite(root, date, btn) {
   const item = root.querySelector('.fav-item[data-date="' + CSS.escape(date) + '"]');
-  if (item) {
-    item.classList.add('is-leaving');
-    setTimeout(() => item.remove(), 260);
-  }
+  if (item) item.classList.add('is-leaving');
+  btn.disabled = true;
+  btn.textContent = '已标记取消…';
   rememberOpen(date, false);
-  location.href = 'sw-edit.html?date=' + encodeURIComponent(date) + '&drop=1';
+  setTimeout(() => {
+    location.href = 'sw-edit.html?date=' + encodeURIComponent(date) + '&drop=1';
+  }, 450);
 }

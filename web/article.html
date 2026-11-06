@@ -6,13 +6,17 @@
 <title>万星日报 · 每天一个 GitHub 万星项目</title>
 <meta name="description" content="万星日报：每天只讲一个 GitHub 万星热门项目（运行时抓取 Trending 热度榜）。">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0a3d6e">
 <meta property="og:site_name" content="万星日报">
 <meta property="og:type" content="article">
 <meta property="og:title" content="万星日报">
 <meta property="og:description" content="每天只讲一个 GitHub 万星前沿项目。">
 <meta property="og:image" content="https://kuangketongxue.github.io/daily10k/img/hero-sky.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="800">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://kuangketongxue.github.io/daily10k/img/hero-sky.jpg">
 <link rel="canonical" href="https://kuangketongxue.github.io/daily10k/article.html">
 <link rel="preload" as="image" href="img/hero-sky.webp" type="image/webp" media="(min-width: 780px)">
 <link rel="preload" as="image" href="img/hero-sky-sm.webp" type="image/webp" media="(max-width: 779px)">
@@ -33,7 +37,7 @@
 
 <main class="wrap article-wrap" id="article">
   <div class="loading" id="loading" role="status">加载中<span class="dots"></span></div>
-  <noscript><p class="empty">本站需要启用 JavaScript 才能加载日报正文。</p></noscript>
+  <noscript><style>#loading{display:none}</style><h1 class="a-title">万星日报</h1><p class="empty">本站需要启用 JavaScript 才能加载日报正文。</p></noscript>
 </main>
 
 <footer class="foot">
@@ -51,8 +55,25 @@
 const article = document.getElementById('article');
 const rawDate = new URLSearchParams(location.search).get('d') || '';
 
-if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) load(rawDate);
-else loadLatest();
+// 全文可能有两处来源：posts/ 是当天池（会被每日清理），archive/ 是被收藏期次的永久归档。
+// 必须依次尝试，否则收藏夹里的「原文页」会 404 —— 站点只保留当天一篇时这是常态而非异常。
+const SOURCES = ['data/posts/', 'data/archive/'];
+
+async function load(date) {
+  for (const dir of SOURCES) {
+    try {
+      const res = await fetch(dir + encodeURIComponent(date) + '.json', { cache: 'no-cache' });
+      if (!res.ok) continue;
+      render(await res.json());
+      return;
+    } catch (e) { /* 解析失败或换下一个来源继续找 */ }
+  }
+  fail(date);
+}
+
+function bjToday() {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
+}
 
 // 没带 d 参数时回落到今日索引，而不是去请求 posts/null.json
 function loadLatest() {
@@ -64,24 +85,20 @@ function loadLatest() {
       history.replaceState(null, '', 'article.html?d=' + latest);
       load(latest);
     })
-    .catch(fail);
+    .catch(() => fail());
 }
 
-function load(date) {
-  fetch('data/posts/' + encodeURIComponent(date) + '.json', { cache: 'no-cache' })
-    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(render)
-    .catch(fail);
-}
-
-function fail() {
+function fail(date) {
   document.title = '没有找到这一期的日报 · 万星日报';
   setMeta('robots', 'noindex');
+  const hint = date && date !== bjToday()
+    ? '本站每天只保留当天一篇，往期只在被收藏后才保留全文。'
+    : '今天的日报可能还在生成，5:30 前会更新。';
   article.innerHTML = `
     <div class="empty">
       <p class="big" aria-hidden="true">☁</p>
       <p>没有找到这一期的日报。</p>
-      <p class="empty-hint">本站每天只保留当天一篇，往期链接会失效。<a href="index.html">回首页看今天的</a></p>
+      <p class="empty-hint">${hint}<a href="index.html">回首页看今天的</a></p>
     </div>`;
 }
 
@@ -105,15 +122,6 @@ function setCanonical(href) {
   el.href = href;
 }
 
-function esc(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-function fmtNum(n) {
-  const v = Number(n);
-  return Number.isFinite(v) ? v.toLocaleString('zh-CN') : esc(n);
-}
-
 function render(p) {
   const title = p.title || '万星日报';
   document.title = title + ' · 万星日报';
@@ -123,68 +131,10 @@ function render(p) {
   setMeta('og:url', location.href, 'property');
   setCanonical(location.origin + location.pathname + (p.date ? '?d=' + encodeURIComponent(p.date) : ''));
 
-  const m = p.meta || {};
-  const stats = p.stats || {};
-  let html = `<a class="back" href="index.html"><span aria-hidden="true">←</span> 回首页</a>
-    <h1 class="a-title">${esc(title)}</h1>
-    <div class="a-fav-slot" id="a-fav"></div>
-    <div class="a-summary">
-      <p class="a-oneliner"><strong>一句话：</strong>${esc(p.oneLiner)}</p>
-      <div class="a-metas">
-        ${p.date ? `<span>${esc(p.date)}</span>` : ''}
-        <span>${esc(p.category || '')}</span>
-        ${m.license ? `<span>${esc(m.license)}</span>` : ''}
-        ${m.language ? `<span>${esc(m.language)}</span>` : ''}
-        ${m.stars ? `<span>GitHub 星数 ${fmtNum(m.stars)}</span>` : ''}
-        ${m.trending ? `<span class="hot">Trending ${esc(m.trending.window)} #${esc(m.trending.rank)} · ${esc(m.trending.unit)}+${fmtNum(m.trending.gained)}★</span>` : ''}
-        ${m.lenses ? `<span>适合 ${esc(m.lenses.join(' / '))}</span>` : ''}
-        ${m.lastCommit ? `<span>最近提交 ${esc(m.lastCommit)}</span>` : ''}
-        ${m.openIssues != null ? `<span>未关闭 Issue/PR ${fmtNum(m.openIssues)}</span>` : ''}
-        ${m.version ? `<span>${esc(m.version)}</span>` : ''}
-        ${stats.minutes ? `<span>阅读约 ${esc(stats.minutes)} 分钟</span>` : ''}
-      </div>
-    </div>`;
-
-  let body = '';
-  for (const sec of p.sections || []) {
-    // 稿件的章节标题自带「1 」「2 」这样的序号，抽出来单独排版，避免和装饰序号重复
-    const raw = String(sec.heading ?? '');
-    const mt = raw.match(/^\s*(\d{1,2})\s*[.、．]?\s+(.+)$/);
-    const num = mt ? mt[1].padStart(2, '0') : '';
-    const label = mt ? mt[2] : raw;
-    body += `<section class="a-sec"><h2${num ? ` data-num="${num}"` : ''}>${esc(label)}</h2>`;
-    for (const b of sec.blocks || []) {
-      if (b.type === 'p') {
-        body += `<p>${inline(b.text)}</p>`;
-      } else if (b.type === 'sub') {
-        body += `<h3>${esc(b.text)}</h3>`;
-      } else if (b.type === 'kv') {
-        body += `<p class="a-kv"><strong>${esc(b.k)}</strong>${inline(b.v)}</p>`;
-      } else if (b.type === 'list') {
-        body += '<ul>' + b.items.map(i => `<li>${inline(i)}</li>`).join('') + '</ul>';
-      } else if (b.type === 'code') {
-        body += `<pre class="a-code"><code>${esc(b.code)}</code></pre>`;
-        if (b.caption) body += `<p class="a-caption">${esc(b.caption)}</p>`;
-      } else if (b.type === 'quote') {
-        body += `<blockquote>${inline(b.text)}</blockquote>`;
-      }
-    }
-    body += '</section>';
-  }
-  html += `<div class="a-body">${body}</div>`;
-
-  if (m.repo) {
-    html += `
-    <div class="a-repo">
-      <p>想自己试试？项目地址：</p>
-      <p><a class="repo-link" href="https://github.com/${esc(m.repo)}" target="_blank" rel="noopener">github.com/${esc(m.repo)}</a></p>
-    </div>`;
-  }
-
-  if (stats.chars != null) {
-    html += `
-    <p class="a-stats">字数自检：正文汉字 ${fmtNum(stats.chars)} 字 · 命令块 ${fmtNum(stats.codeBlocks)} 个 · 阅读约 ${esc(stats.minutes)} 分钟 · 材料截至 ${esc(stats.asOf)}。</p>`;
-  }
+  // 正文排版统一由 favorites.js 的 renderPostHtml 产出，这里只补文章页独有的外壳，
+  // 避免两处各写一份 esc/inline 后逐渐漂移
+  const html = `<a class="back" href="index.html"><span aria-hidden="true">←</span> 回首页</a>`
+    + renderPostHtml(p, { afterTitle: '<div class="a-fav-slot" id="a-fav"></div>' });
 
   document.getElementById('loading')?.remove();
   article.innerHTML = html;
@@ -194,24 +144,10 @@ function render(p) {
   });
 }
 
-// 先摘出行内代码和链接，再整体转义，避免 URL 吞掉后续中文/标点
-function inline(s) {
-  const slots = [];
-  const stash = (html) => {
-    slots.push(html);
-    return '\u0000' + (slots.length - 1) + '\u0000';
-  };
-  let text = String(s ?? '');
-  text = text.replace(/`([^`]+)`/g, (_, code) => stash(`<code class="ic">${esc(code)}</code>`));
-  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
-    (_, label, url) => stash(`<a class="src-link" href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>`));
-  text = text.replace(/https?:\/\/[^\s<>"'`*\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]+/g, (url) => {
-    const clean = url.replace(/[.,;:!?]+$/, '');
-    return stash(`<a class="src-link" href="${esc(clean)}" target="_blank" rel="noopener">${esc(clean)}</a>`) + url.slice(clean.length);
-  });
-  text = esc(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  return text.replace(/\u0000(\d+)\u0000/g, (_, i) => slots[+i]);
-}
+// 入口放在所有定义之后：load() 在第一个 await 之前就会读 SOURCES，
+// 之前的写法把调用放在 const SOURCES 之前，带 ?d= 直达会直接抛 TDZ 错误、整页空白
+if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) load(rawDate);
+else loadLatest();
 
 // 顶部阅读进度条
 (function () {

@@ -1,7 +1,7 @@
 /* ==========================================================
    万星日报 · DAILY 10K
    视觉基调：晴朗天空 / 大积云 / 镜面水面
-   亮色为主，暗色模式自动适配
+   固定亮色（color-scheme: light），不做暗色变体
    ========================================================== */
 
 :root {
@@ -14,14 +14,14 @@
 
   --ink: #0a1f36;
   --ink-2: #3d5b78;
-  --ink-3: #7189a3;
+  --ink-3: #5d748f;   /* 3.61:1 → 4.82:1，正文小字达 WCAG AA */
 
   --blue-700: #0d528f;
   --blue-600: #1268c4;
   --blue-500: #1a7fe0;
   --blue-050: #e8f1fc;
 
-  --gold: #b07515;
+  --gold: #96620f;    /* 3.56:1 → 4.75:1，星数徽章达 WCAG AA */
   --gold-050: #fdf4e3;
 
   --r-lg: 20px;
@@ -778,7 +778,7 @@ main {
   font-size: 13px;
   color: rgba(255, 255, 255, .9);
   text-decoration: none;
-  padding: 7px 15px;
+  padding: 9px 17px;
   border: 1px solid rgba(255, 255, 255, .4);
   border-radius: 999px;
   background: rgba(255, 255, 255, .12);
@@ -798,7 +798,8 @@ main {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 40px;
+  margin-top: 32px;
+  padding: 8px 0;
   font-size: 13.5px;
   font-weight: 500;
   color: var(--ink-3);
@@ -848,7 +849,7 @@ main {
   margin-top: 16px;
   display: flex;
   flex-wrap: wrap;
-  gap: 7px 16px;
+  gap: 6px 20px;
   font-size: 12.5px;
   color: var(--ink-3);
 }
@@ -858,11 +859,9 @@ main {
   align-items: center;
 }
 
-.a-metas > span:not(:first-child)::before {
-  content: "·";
-  margin-right: 13px;
-  opacity: .5;
-}
+/* 这里原本用 ::before 插一个「·」当分隔符，问题是 flex 换行后它会落到行首，
+   看起来像个错字；而分类本身就用「·」连接（AI 教育·多智能体·终身学习），
+   两种点混在一起更分不清。改成纯间距分隔，任何宽度下都不会出问题。 */
 
 .a-metas .hot {
   color: var(--gold);
@@ -1067,7 +1066,12 @@ blockquote p:last-child { margin-bottom: 0; }
 }
 
 .foot p { margin: 0; }
-.foot a { color: #cfe2f4; text-decoration: none; }
+.foot a {
+  display: inline-block;
+  padding: 4px 2px;
+  color: #cfe2f4;
+  text-decoration: none;
+}
 .foot a:hover { color: #fff; text-decoration: underline; }
 .foot .credit { color: #7fa0bf; }
 
@@ -1116,7 +1120,7 @@ blockquote p:last-child { margin-bottom: 0; }
     flex-wrap: wrap;
   }
 
-  .fav-open, .fav-drop, .fav-goto { flex: 1 1 auto; text-align: center; }
+  .fav-open, .fav-drop, .fav-goto { flex: 1 1 0; min-width: 0; text-align: center; }
 
   .edit-box { padding: 20px; }
 
@@ -1124,7 +1128,7 @@ blockquote p:last-child { margin-bottom: 0; }
   .masthead { padding-top: 18px; padding-bottom: 18px; }
   .logo { font-size: 19px; }
   .logo-en { font-size: 9.5px; letter-spacing: .3em; }
-  .masthead-link { font-size: 12px; padding: 6px 12px; }
+  .masthead-link { font-size: 12px; padding: 9px 14px; }
 
   .back { margin-top: 28px; }
   .a-summary { padding: 20px 20px; border-radius: 16px; }

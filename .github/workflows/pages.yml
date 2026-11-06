@@ -33,6 +33,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # 把 commit SHA 写进 sw.js 的缓存版本号：
+      # 每次部署骨架缓存自动换新，用户不会长期停留在旧样式/旧脚本上。
+      # 归档全文用的是另一个缓存（daily10k-archive-v1），不随版本号清空。
+      - name: 注入 Service Worker 缓存版本
+        run: |
+          sed -i "s/__SW_VERSION__/${GITHUB_SHA}/g" web/sw.js
+          grep -n "RAW_VERSION" web/sw.js
+
       - name: 上传静态站点
         uses: actions/upload-pages-artifact@v5
         with:

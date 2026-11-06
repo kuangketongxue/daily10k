@@ -121,12 +121,15 @@ function remove(date) {
 
 function sync() {
   const fav = loadFavorites();
-  const live = new Set(
-    existsSync(POSTS_DIR) ? readdirSync(POSTS_DIR).filter(f => f.endsWith('.json')) : []
-  );
+  // posts/ 是当天池，每天会被清；archive/ 才是收藏期次的真正归属。
+  // 只按 posts/ 判断会把「仅存在于归档里」的有效收藏全部误删。
+  const live = new Set([
+    ...(existsSync(POSTS_DIR) ? readdirSync(POSTS_DIR).filter(f => f.endsWith('.json')) : []),
+    ...(existsSync(ARCHIVE_DIR) ? readdirSync(ARCHIVE_DIR).filter(f => f.endsWith('.json')) : []),
+  ]);
   const kept = fav.items.filter(it => live.has(`${it.date}.json`));
   const dropped = fav.items.length - kept.length;
-  if (dropped) log(`清理 ${dropped} 条死链收藏`);
+  if (dropped) log(`清理 ${dropped} 条死链收藏（posts/ 与 archive/ 都没有全文）`);
   saveFavorites({ updated: today(), items: kept });
   log(`收藏夹现有 ${kept.length} 条`);
 }

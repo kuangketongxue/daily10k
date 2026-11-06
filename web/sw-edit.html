@@ -6,6 +6,7 @@
 <title>收藏操作 · 万星日报</title>
 <meta name="description" content="收藏夹写入说明：收藏动作由本机命令完成，浏览器端不持有任何凭据。">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0a3d6e">
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="style.css">
@@ -35,12 +36,12 @@
 
   <div class="edit-box">
     <p class="edit-step">第 1 步 · 在仓库目录打开终端，执行下面这条命令：</p>
-    <pre class="a-code"><code id="cmd-add">node scripts/favorite.mjs add 2026-11-06</code></pre>
+    <pre class="a-code"><code id="cmd-add">node scripts/favorite.mjs add &lt;日期&gt;</code></pre>
     <p class="edit-step">第 2 步 · 提交并推送，让收藏夹上线：</p>
-    <pre class="a-code"><code id="cmd-push">git add web/data &amp;&amp; git commit -m "收藏 2026-11-06" &amp;&amp; git push</code></pre>
+    <pre class="a-code"><code id="cmd-push">git add web/data &amp;&amp; git commit -m "收藏 &lt;日期&gt;" &amp;&amp; git push</code></pre>
     <p class="edit-hint">取消收藏把 <code class="ic">add</code> 换成 <code class="ic">remove</code> 即可。想直接看当前收藏夹，执行
       <code class="ic">node scripts/favorite.mjs list</code>。</p>
-    <p class="edit-hint">如果你是在手机或别的电脑上打开的这个页面，这台山电脑的命令行不方便用 ——
+    <p class="edit-hint">如果你是在手机或别的电脑上打开的这个页面，那台设备的命令行不方便用 ——
       可以直接在 GitHub 网页上编辑 <code class="ic">web/data/favorites.json</code>，
       再把对应全文放进 <code class="ic">web/data/archive/</code>，效果完全一样。</p>
   </div>
@@ -65,7 +66,7 @@ const stateEl = document.getElementById('edit-state');
 const cmdAdd = document.getElementById('cmd-add');
 const cmdPush = document.getElementById('cmd-push');
 
-if (!date) {
+if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
   dateEl.textContent = '未指定日期';
   stateEl.textContent = '请从首页或文章页的收藏按钮进入';
 } else {
@@ -81,12 +82,26 @@ if (!date) {
 document.querySelectorAll('.a-code code').forEach(el => {
   el.style.cursor = 'pointer';
   el.title = '点击复制';
-  el.addEventListener('click', () => {
-    navigator.clipboard?.writeText(el.textContent).then(() => {
-      const old = el.textContent;
-      el.textContent = '已复制 ✓';
-      setTimeout(() => { el.textContent = old; }, 1200);
-    });
+  el.addEventListener('click', async () => {
+    const old = el.textContent;
+    let ok = false;
+    try {
+      // clipboard 只在 https / localhost 下可用，被权限拒绝时会抛错 —— 必须兜住，
+      // 否则点击后毫无反应，用户不知道到底复制成功没有
+      await navigator.clipboard.writeText(old);
+      ok = true;
+    } catch {
+      // 老浏览器或非安全上下文：退回选中文本，让用户自己按 Ctrl+C
+      try {
+        const r = document.createRange();
+        r.selectNodeContents(el);
+        const sel = getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+      } catch { /* 忽略 */ }
+    }
+    el.textContent = ok ? '已复制 ✓' : '已选中，按 Ctrl+C';
+    setTimeout(() => { el.textContent = old; }, ok ? 1200 : 2000);
   });
 });
 
