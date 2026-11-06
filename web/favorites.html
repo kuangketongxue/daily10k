@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的收藏夹 · 万星日报</title>
+<meta name="description" content="万星日报收藏夹：收藏过的 GitHub 万星项目深读，全文永久保留，随时回看。">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0a3d6e">
+<meta name="robots" content="noindex">
+<meta property="og:site_name" content="万星日报">
+<meta property="og:type" content="profile">
+<meta property="og:title" content="我的收藏夹 · 万星日报">
+<link rel="canonical" href="https://kuangketongxue.github.io/daily10k/favorites.html">
+<link rel="preload" as="image" href="img/hero-sky.webp" type="image/webp" media="(min-width: 780px)">
+<link rel="preload" as="image" href="img/hero-sky-sm.webp" type="image/webp" media="(max-width: 779px)">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<header class="article-band">
+  <div class="band-bg" role="img" aria-label="晴朗蓝天下的大朵白云倒映在平静的水面上"></div>
+  <div class="band-veil"></div>
+  <div class="wrap masthead">
+    <a class="logo" href="index.html">万星日报<span class="logo-en">DAILY 10K</span></a>
+    <a class="masthead-link" href="index.html">今天的日报</a>
+  </div>
+</header>
+
+<main class="wrap article-wrap">
+  <a class="back" href="index.html"><span aria-hidden="true">←</span> 回首页</a>
+  <h1 class="a-title">我的收藏夹</h1>
+  <p class="fav-lead">收藏过的期次会永久保留全文，点开就能看。没被收藏的往期会在每天更新时清理掉。</p>
+  <div class="loading" id="loading" role="status">正在读取收藏夹<span class="dots"></span></div>
+  <div id="fav-root"></div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-row">
+      <p>由 GitHub Trending 实时热度 + AI 深读自动生成 · <a href="index.html">返回首页</a></p>
+      <p class="credit">背景图：Pexels（Pexels License，可免费商用）</p>
+    </div>
+  </div>
+</footer>
+
+<script src="favorites.js"></script>
+<script src="register-sw.js"></script>
+<script>
+const root = document.getElementById('fav-root');
+const loading = document.getElementById('loading');
+
+loadFavoritesIndex()
+  .then(idx => {
+    loading.hidden = true;
+    renderFavoritesPage(root, idx);
+  })
+  .catch(() => {
+    loading.textContent = '收藏夹读取失败，请检查网络后刷新重试。';
+  });
+
+// 顶部阅读进度条
+(function () {
+  const bar = document.getElementById('progress');
+  const upd = () => {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.transform = 'scaleX(' + (max > 0 ? Math.min(window.scrollY / max, 1) : 0) + ')';
+  };
+  addEventListener('scroll', upd, { passive: true });
+  addEventListener('resize', upd);
+  upd();
+})();
+
+// 浏览器不支持 WebP 时回落到 JPG 背景
+(function () {
+  const probe = new Image();
+  probe.onerror = function () { document.documentElement.classList.add('no-webp'); };
+  probe.src = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+})();
+</script>
+</body>
+</html>

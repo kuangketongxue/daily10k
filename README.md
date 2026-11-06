@@ -23,6 +23,39 @@
 - `.github/workflows/pages.yml`：`web/` 有变更时自动发布到 GitHub Pages；因为 bot 用默认
   `GITHUB_TOKEN` 推送的提交不会触发 `push` 事件，它还会在 `daily-report` 跑完后直接发布一次。
 
+## 收藏夹
+
+站点每天只留当天一篇，往期全文会被清理。**被收藏的期次会把全文归档保留**，收藏夹里随时能点开看全文。
+
+- `web/data/favorites.json`：收藏索引（日期 / 标题 / 一句话 / 分类 / 星数 / 收藏时间），由生成管线和收藏脚本共同维护。
+- `web/data/archive/<日期>.json`：被收藏期次的全文归档，**不会被 `pruneOldPosts()` 删除**。生成时先把被收藏的往期挪进归档，再执行当天清，最后把仍被收藏的恢复回 `posts/`，保证 `article.html?d=<日期>` 一直能打开。
+- `web/favorites.html`：收藏夹页。点「看全文」就地展开正文（与文章页同一套排版），也可跳原文页；「取消收藏」移除条目。
+- `web/favorites.js`：收藏列表读取、收藏按钮、正文渲染的共享模块。
+- `web/sw.js` + `web/register-sw.js`：Service Worker，缓存静态资源与归档全文，离线也能看已展开过的收藏。
+- `web/sw-edit.html`：收藏/取消收藏的操作说明页（含可复制的命令）。
+- `scripts/favorite.mjs`：收藏写入工具（本机专用）。
+
+### 为什么收藏要在本机执行命令
+
+GitHub Pages 是纯静态托管，浏览器端没有任何服务器可以代写入库；前端代码里也绝不能放 GitHub token。
+所以「收藏」这个写动作由本机 git 凭据完成，网页只负责跳转到 `sw-edit.html` 给出命令。
+
+```bash
+node scripts/favorite.mjs add 2026-11-06      # 收藏（全文自动归档）
+node scripts/favorite.mjs remove 2026-11-06   # 取消收藏（归档保留）
+node scripts/favorite.mjs list                # 查看收藏夹
+node scripts/favorite.mjs sync                # 清理死链、重建索引
+```
+
+写完记得提交推送，Pages 才会更新：
+
+```bash
+git add web/data && git commit -m "收藏 2026-11-06" && git push
+```
+
+> 不想用命令行的话，也可以在 GitHub 网页上直接编辑 `web/data/favorites.json`，
+> 并把对应全文放进 `web/data/archive/`，效果完全一样。
+
 ## 本地手动跑一次
 
 ```bash
@@ -43,19 +76,27 @@ AI_API_KEY=你的key AI_BASE_URL=https://token.sensenova.cn/v1 AI_MODEL=sensenov
 
 ```
 web/                  站点（纯静态，Pages 直接托管）
-  index.html          今日日报（首屏 hero + 今日卡片）
-  article.html        文章页（图片头带 + 正文）
+  index.html          今日日报（首屏 hero + 今日卡片 + 收藏按钮）
+  article.html        文章页（图片头带 + 正文 + 收藏按钮）
+  favorites.html      收藏夹页（就地展开全文）
+  sw-edit.html        收藏操作说明页（本机写入入口）
   404.html            自定义 404
   favicon.svg
   style.css
+  favorites.js        收藏模块（列表 / 按钮 / 正文渲染）
+  sw.js               Service Worker（离线缓存归档全文）
+  register-sw.js      Service Worker 注册
   img/                首屏背景图（Pexels License）
     hero-sky.webp       桌面 2000px
     hero-sky-sm.webp    移动 900px
     hero-sky.jpg        不支持 WebP 时的兜底
   data/index.json     当日索引
-  data/posts/*.json   当日文章（每天只有一份）
+  data/posts/*.json   文章（当天池 + 被收藏期次的恢复副本）
+  data/archive/*.json 被收藏期次的全文归档（永久保留）
+  data/favorites.json 收藏索引
 scripts/
   generate.mjs        生成管线
+  favorite.mjs        收藏写入工具（本机专用）
   config.json         本地配置（含密钥，勿提交公开仓库）
   history.json        已写过的仓库清单（防重复）
 ```

@@ -45,6 +45,8 @@
   </div>
 </footer>
 
+<script src="favorites.js"></script>
+<script src="register-sw.js"></script>
 <script>
 const article = document.getElementById('article');
 const rawDate = new URLSearchParams(location.search).get('d') || '';
@@ -125,6 +127,7 @@ function render(p) {
   const stats = p.stats || {};
   let html = `<a class="back" href="index.html"><span aria-hidden="true">←</span> 回首页</a>
     <h1 class="a-title">${esc(title)}</h1>
+    <div class="a-fav-slot" id="a-fav"></div>
     <div class="a-summary">
       <p class="a-oneliner"><strong>一句话：</strong>${esc(p.oneLiner)}</p>
       <div class="a-metas">
@@ -185,6 +188,10 @@ function render(p) {
 
   document.getElementById('loading')?.remove();
   article.innerHTML = html;
+  if (p.date) mountFavButton(document.getElementById('a-fav'), p.date, {
+    label: '收藏这一期',
+    onLabel: '已收藏 · 点击取消',
+  });
 }
 
 // 先摘出行内代码和链接，再整体转义，避免 URL 吞掉后续中文/标点

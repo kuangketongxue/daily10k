@@ -23,7 +23,6 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
 <section class="hero">
   <div class="hero-bg" role="img" aria-label="晴朗蓝天下的大朵白云倒映在平静的水面上"></div>
   <div class="hero-veil"></div>
@@ -38,6 +37,9 @@
       <span class="hero-chip">AI</span>
       <span class="hero-chip">投资</span>
       <span class="hero-chip">健身</span>
+    </div>
+    <div class="hero-fav">
+      <a class="hero-fav-link" href="favorites.html">☆ 我的收藏夹</a>
     </div>
   </div>
 </section>
@@ -55,7 +57,10 @@
     <h2 class="today-title" id="t-title"></h2>
     <p class="today-oneliner" id="t-oneliner"></p>
     <div class="today-tags" id="t-category"></div>
-    <a class="read-btn" id="t-link" href="#">阅读全文<span class="go" aria-hidden="true">→</span></a>
+    <div class="today-actions">
+      <a class="read-btn" id="t-link" href="#">阅读全文<span class="go" aria-hidden="true">→</span></a>
+      <span class="today-fav-slot" id="t-fav"></span>
+    </div>
   </article>
   <div class="empty" id="empty" hidden>
     <p class="big" aria-hidden="true">☁</p>
@@ -73,6 +78,8 @@
   </div>
 </footer>
 
+<script src="favorites.js"></script>
+<script src="register-sw.js"></script>
 <script>
 fetch('data/index.json', { cache: 'no-cache' })
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -103,6 +110,7 @@ fetch('data/index.json', { cache: 'no-cache' })
         catEl.appendChild(s);
       });
     document.getElementById('t-link').href = 'article.html?d=' + encodeURIComponent(it.date);
+    mountFavButton(document.getElementById('t-fav'), it.date);
     // 生成失败或还没跑完时，首页不能把旧文章冒充成今天的
     const bjToday = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
     if (it.date !== bjToday) {

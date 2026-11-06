@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>收藏操作 · 万星日报</title>
+<meta name="description" content="收藏夹写入说明：收藏动作由本机命令完成，浏览器端不持有任何凭据。">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0a3d6e">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="article-band">
+  <div class="band-bg" role="img" aria-label="晴朗蓝天下的大朵白云倒映在平静的水面上"></div>
+  <div class="band-veil"></div>
+  <div class="wrap masthead">
+    <a class="logo" href="index.html">万星日报<span class="logo-en">DAILY 10K</span></a>
+    <a class="masthead-link" href="favorites.html">我的收藏夹</a>
+  </div>
+</header>
+
+<main class="wrap article-wrap">
+  <a class="back" href="favorites.html"><span aria-hidden="true">←</span> 回收藏夹</a>
+  <h1 class="a-title">这一期要收藏吗？</h1>
+
+  <div class="a-summary">
+    <p class="a-oneliner"><strong>说明：</strong>网站本身是纯静态的，浏览器没有能力直接改仓库文件（也不该把 GitHub 密钥放进网页）。所以「收藏」这个写动作要在本机执行一次命令，之后收藏夹和全文归档会随站点一起发布上线。</p>
+    <div class="a-metas">
+      <span id="edit-date">未指定日期</span>
+      <span id="edit-state">等待确认</span>
+    </div>
+  </div>
+
+  <div class="edit-box">
+    <p class="edit-step">第 1 步 · 在仓库目录打开终端，执行下面这条命令：</p>
+    <pre class="a-code"><code id="cmd-add">node scripts/favorite.mjs add 2026-11-06</code></pre>
+    <p class="edit-step">第 2 步 · 提交并推送，让收藏夹上线：</p>
+    <pre class="a-code"><code id="cmd-push">git add web/data &amp;&amp; git commit -m "收藏 2026-11-06" &amp;&amp; git push</code></pre>
+    <p class="edit-hint">取消收藏把 <code class="ic">add</code> 换成 <code class="ic">remove</code> 即可。想直接看当前收藏夹，执行
+      <code class="ic">node scripts/favorite.mjs list</code>。</p>
+    <p class="edit-hint">如果你是在手机或别的电脑上打开的这个页面，这台山电脑的命令行不方便用 ——
+      可以直接在 GitHub 网页上编辑 <code class="ic">web/data/favorites.json</code>，
+      再把对应全文放进 <code class="ic">web/data/archive/</code>，效果完全一样。</p>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-row">
+      <p>由 GitHub Trending 实时热度 + AI 深读自动生成 · <a href="index.html">返回首页</a></p>
+      <p class="credit">背景图：Pexels（Pexels License，可免费商用）</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+const params = new URLSearchParams(location.search);
+const date = params.get('date') || '';
+const drop = params.get('drop') === '1';
+
+const dateEl = document.getElementById('edit-date');
+const stateEl = document.getElementById('edit-state');
+const cmdAdd = document.getElementById('cmd-add');
+const cmdPush = document.getElementById('cmd-push');
+
+if (!date) {
+  dateEl.textContent = '未指定日期';
+  stateEl.textContent = '请从首页或文章页的收藏按钮进入';
+} else {
+  dateEl.textContent = date;
+  stateEl.textContent = drop ? '取消收藏' : '加入收藏';
+  const verb = drop ? 'remove' : 'add';
+  const label = drop ? '取消收藏' : '收藏';
+  cmdAdd.textContent = `node scripts/favorite.mjs ${verb} ${date}`;
+  cmdPush.textContent = `git add web/data && git commit -m "${label} ${date}" && git push`;
+}
+
+// 点一下复制命令，省得手动敲
+document.querySelectorAll('.a-code code').forEach(el => {
+  el.style.cursor = 'pointer';
+  el.title = '点击复制';
+  el.addEventListener('click', () => {
+    navigator.clipboard?.writeText(el.textContent).then(() => {
+      const old = el.textContent;
+      el.textContent = '已复制 ✓';
+      setTimeout(() => { el.textContent = old; }, 1200);
+    });
+  });
+});
+
+// 浏览器不支持 WebP 时回落到 JPG 背景
+(function () {
+  const probe = new Image();
+  probe.onerror = function () { document.documentElement.classList.add('no-webp'); };
+  probe.src = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+})();
+</script>
+</body>
+</html>
