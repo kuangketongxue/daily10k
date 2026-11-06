@@ -14,5 +14,6 @@
   "vercel-labs/agent-desktop",
   "Nutlope/hallmark",
   "D4Vinci/Scrapling",
-  "HKUDS/DeepTutor"
+  "HKUDS/DeepTutor",
+  "thedotmack/claude-mem"
 ]

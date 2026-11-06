@@ -1,0 +1,313 @@
+{
+  "date": "2026-11-07",
+  "title": "claude-mem：让 AI 记住每一次会话，不再从零开始",
+  "oneLiner": "一个为 Claude Code 等编码代理设计的持久记忆压缩系统，自动捕获会话中的工具使用，压缩成语义摘要，并在未来会话中注入相关上下文。",
+  "category": "AI 代理 · 长期记忆 · 上下文工程",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "使用 Claude Code 这类编码代理时，最常见也最恼人的问题不是模型能力不足，而是**上下文断裂**：会话结束或连接断开后，代理对项目的一切了解——你刚重构过的模块、刚修掉的 bug、刚定下的接口约定——全部归零。下一次会话，它只能靠重新读文件、重新问你来拼凑背景。"
+        },
+        {
+          "type": "p",
+          "text": "claude-mem 的定位正是填补这个缺口。README 开篇即点明核心主张：**「Claude-Mem seamlessly preserves context across sessions by automatically capturing tool usage observations, generating semantic summaries, and making them available to future sessions.」** 翻译过来就是：它自动捕获代理在会话中的工具使用观察，生成语义摘要，并让这些摘要对后续会话可用。"
+        },
+        {
+          "type": "p",
+          "text": "这不是一个「记忆插件」那么简单。它把记忆做成了一个**分层系统**：捕获层、压缩层、注入层。捕获层监听代理的每一次工具调用；压缩层用 AI 把原始日志提炼成有语义的观察；注入层在未来的会话中按需检索并注入相关上下文。整个过程无需人工干预——README 在 Key Features 中明确写着「Automatic Operation - No manual intervention required」。"
+        },
+        {
+          "type": "p",
+          "text": "对开发者而言，这意味着你不再需要反复向代理解释项目背景，不再担心会话切换后丢失上下文。对团队而言，它提供了一个共享的记忆层，让每个成员的工作成果都能被后续会话复用。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "用途一：跨会话的上下文延续"
+        },
+        {
+          "type": "p",
+          "text": "这是 claude-mem 最核心的用途。安装后，每次会话中代理的工具使用都会被自动捕获并压缩成观察记录。下次会话开始时，相关观察会自动注入，代理能直接「想起」之前的决策、修改和约定。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一次会话中的工具调用日志（文件读取、代码编辑、命令执行等）"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "压缩后的语义观察，以及未来会话中按需注入的相关上下文"
+        },
+        {
+          "type": "code",
+          "code": "/plugin marketplace add thedotmack/claude-mem\n/plugin install claude-mem\n\n# 重启 Claude Code 后，来自先前会话的上下文将自动出现在新会话中",
+          "caption": "来源：README Quick Start 节"
+        },
+        {
+          "type": "sub",
+          "text": "用途二：项目历史检索"
+        },
+        {
+          "type": "p",
+          "text": "当你想查询项目历史中的某个决策或修改时，claude-mem 提供「Smart Search (Default)」——一个三步 mem-search skill，让你用自然语言查询项目历史，而不是翻遍所有会话日志。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "自然语言查询，如「上次为什么改了这个函数的签名？」"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "匹配的历史观察记录，带引用 ID，可通过 worker API 或 Web 查看器查看"
+        },
+        {
+          "type": "sub",
+          "text": "用途三：团队共享记忆（TeamBrain）"
+        },
+        {
+          "type": "p",
+          "text": "对于团队协作场景，claude-mem 提供了可选的 TeamBrain 工作区：一个共享空间，包含真实的工作列表、成员归属和关联发现。每个成员可以自主选择分享什么，个人请求和评审笔记保持独立。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "团队成员各自的会话观察与工作产出"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "共享的工作列表、成员归属信息，以及跨成员的关联发现"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "claude-mem 的架构可以概括为「**捕获-压缩-注入**」三段流水线，外加一个可选的 Web 查看器。这个三段式结构在 README 的 Key Features 和 Quick Start 中都有迹可循。"
+        },
+        {
+          "type": "p",
+          "text": "**捕获层**通过注册宿主工具的 hooks 实现。以 Claude Code 为例，安装时通过 `/plugin marketplace add thedotmack/claude-mem` 注册插件，重启后插件 hooks 被激活，自动监听代理的每一次工具调用。对于没有 host hooks 的工具（如 Grok Bot），则改为监视聊天日志文件——README 明确提到「Grok Bot has no host hooks, so we watch the chat log files」。"
+        },
+        {
+          "type": "p",
+          "text": "**压缩层**是系统的核心。原始的工具使用观察被发送给一个「observer model」——可以是 claude-mem 自带的托管模型（CMEM Pro）、你自己的 OpenRouter 或 Gemini key，也可以是你的 Anthropic 计划。压缩的目标是生成语义摘要，而不是保留完整日志。README 在 Key Features 中将其概括为「Progressive Disclosure - Layered memory retrieval with token cost visibility」，即分层记忆检索，且 token 成本可见。"
+        },
+        {
+          "type": "p",
+          "text": "**注入层**负责在未来的会话中按需检索相关上下文。它采用「Smart Search」三步检索流程，并支持「Context Configuration」——细粒度控制注入哪些上下文。记忆存储基于 SQLite 和 ChromaDB（从项目话题标签可见），支持向量嵌入检索。"
+        },
+        {
+          "type": "p",
+          "text": "**Web 查看器**是可选的前端界面。安装完成后，worker URL 会打印在启动信息中，你可以访问 `/viewer` 查看记忆、会话和设置。对于团队场景，TeamBrain 共享工作区也通过 Web 界面呈现。"
+        },
+        {
+          "type": "p",
+          "text": "值得注意的是，安装过程会询问你选择哪个记忆提供者：claude-mem observer（30 天免费试用）、自己的 OpenRouter 或 Gemini key、或 Anthropic 计划。这种可插拔的 provider 设计，让记忆压缩的成本和路径都由你控制。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "安装 claude-mem 只需一条命令，但要注意：**必须用 `npx claude-mem install`，而不是 `npm install -g claude-mem`**。后者只安装 SDK/库，不注册插件 hooks，也不启动 worker 服务。"
+        },
+        {
+          "type": "code",
+          "code": "npx claude-mem install",
+          "caption": "来源：README Quick Start 节"
+        },
+        {
+          "type": "p",
+          "text": "安装器会先完成所有设置，然后在浏览器中让你登录 claude-mem（邮箱魔法链接，无需信用卡）。登录会为你的账户配置记忆密钥，并解锁 claude-mem observer 的 30 天免费试用。试用结束后，记忆会自动回退到你的 Anthropic 计划，除非你订阅。"
+        },
+        {
+          "type": "p",
+          "text": "如果你不想登录，可以传递显式的 `--provider` 标志，设置 `CLAUDE_MEM_ONLINE_OPTIN=false`，或在 CI/非交互 shell 中运行——安装器会在没有任何账户交互的情况下完成。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "安装后需要重启 Claude Code，新会话中才会自动出现来自先前会话的上下文。",
+            "对于 OpenCode，需要 1.3.4 或更高版本（包括 OpenCode 2），安装后同样需要重启。",
+            "隐私控制：使用 `<private>` 标签可以排除敏感内容，使其不被存储。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭 Issue 与 PR 共 126 个**，而项目创建于 2025-08-31，最近推送为 2026-11-06。这意味着平均每 2 天就有超过 1 个新问题或合并请求积压。**所以你要注意**：如果遇到 bug，响应速度可能不稳定；建议先搜索已有 Issue 再提交，避免重复。",
+            "**最新 Release 为 v15.10.1（2026-11-06）**，版本号已到 15 位，且 README 中多次出现 `--ide` 参数和 `--provider` 切换。这表明项目处于高频迭代期，**破坏性变更可能频繁**。升级前务必阅读 [Releases 页面](https://github.com/thedotmack/claude-mem/releases) 的变更日志，并在测试环境验证。",
+            "**README 明确要求 Node.js >= 20.0.0**，且安装过程需要交互式终端（`npx claude-mem install` 会询问多个问题）。**所以你要注意**：在 CI 或非交互环境中必须显式传 `--provider` 或设置 `CLAUDE_MEM_ONLINE_OPTIN=false`，否则安装会挂起。",
+            "**安装默认触发浏览器登录（邮箱魔法链接）并开启 30 天免费试用**，试用结束后自动回落到 Anthropic 计划。**所以你要注意**：这不是纯本地工具，默认配置会将记忆数据发送到 cmem.ai 托管服务；如需完全本地化，必须显式选择 `--provider host` 或本地 observer。",
+            "**README 提到截图功能默认关闭，但开启后会保存到 `~/.claude-mem/media-v1/` 并可能上传**。**所以你要注意**：涉及敏感界面截图时，务必保持默认关闭，或使用 `<private>` 标签排除存储。",
+            "**项目主页（claude-mem.ai）和 README 中的赞助商徽章（Vercel、Greptile、SerpApi）表明存在商业推广成分**。**所以你要注意**：核心功能是开源的，但托管服务（CMEM Pro）是付费的；评估时需区分开源核心与商业扩展。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "按同类 topic（ai-memory、long-term-memory、claude-code）筛选，以下两个项目确实解决「跨会话持久记忆」这一同类问题，且星数更高、最近仍有推送。"
+        },
+        {
+          "type": "sub",
+          "text": "CaviraOSS/LongMemory"
+        },
+        {
+          "type": "kv",
+          "k": "仓库",
+          "v": "[仓库首页](https://github.com/CaviraOSS/LongMemory)"
+        },
+        {
+          "type": "kv",
+          "k": "星数",
+          "v": "4569"
+        },
+        {
+          "type": "kv",
+          "k": "许可证",
+          "v": "Apache-2.0"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新",
+          "v": "2026-10-18"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景",
+          "v": "需要本地持久化存储、支持 Claude Desktop 和 GitHub Copilot 等多工具，且希望完全离线运行。"
+        },
+        {
+          "type": "sub",
+          "text": "activeloopai/hivemind"
+        },
+        {
+          "type": "kv",
+          "k": "仓库",
+          "v": "[仓库首页](https://github.com/activeloopai/hivemind)"
+        },
+        {
+          "type": "kv",
+          "k": "星数",
+          "v": "1647"
+        },
+        {
+          "type": "kv",
+          "k": "许可证",
+          "v": "Apache-2.0"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新",
+          "v": "2026-11-04"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景",
+          "v": "需要将 agent 的 traces 转化为可复用技能（skills），而非仅注入上下文；适合强调技能复用的团队。"
+        },
+        {
+          "type": "p",
+          "text": "**选择判据**：若你的核心需求是「跨会话注入相关上下文」且接受托管服务，选本项目（claude-mem）；若必须完全本地、多工具兼容且不介意更新较慢，选 LongMemory；若更看重把历史行为转化为可复用技能而非纯记忆，选 hivemind。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "使用 Claude Code、OpenCode、T3 Code 等支持插件钩子的 agent，且希望跨会话保留项目上下文的个人开发者——安装只需 `npx claude-mem install`，且支持 `--ide` 参数适配多种工具。",
+            "团队需要共享记忆（TeamBrain 功能）或需要审计引用（Citations）的协作场景——README 明确提供团队工作列表和成员归属。",
+            "愿意接受 30 天试用后付费托管服务，或能自行配置本地 provider 的用户——默认流程简单，但需明确记忆数据流向。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "对数据隐私有严格合规要求、不能接受任何云端上传的组织——默认配置会登录 cmem.ai 并开启托管；虽然可改用本地 provider，但需要额外配置且部分功能（如 Cloud Sync）仍依赖云端。",
+            "运行环境无法提供交互式终端（如纯 CI 流水线）且不愿处理安装问答的团队——README 明确要求交互式安装，非交互需显式传参，增加了出错概率。",
+            "需要稳定 API 且不能承受频繁破坏性变更的生产系统——版本号已到 v15，且 126 个未关闭 Issue/PR 表明迭代活跃，升级风险需自行评估。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/thedotmack/claude-mem) — 项目描述、星数、Fork 数、语言、许可证、创建日期、最近推送日期。",
+            "[README](https://github.com/thedotmack/claude-mem#readme) — 安装命令、功能特性、Node.js 版本要求、隐私控制、截图说明、TeamBrain 与 Citations 描述。",
+            "[Releases 页面](https://github.com/thedotmack/claude-mem/releases) — 最新版本 v15.10.1（2026-11-06）。",
+            "[Issues 页面](https://github.com/thedotmack/claude-mem/issues) — 未关闭 Issue 与 PR 数量（126）。",
+            "[项目主页](https://claude-mem.ai) — 商业托管服务与文档入口。",
+            "[LongMemory 仓库首页](https://github.com/CaviraOSS/LongMemory) — 替代方案事实。",
+            "[hivemind 仓库首页](https://github.com/activeloopai/hivemind) — 替代方案事实。"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-07。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "repo": "thedotmack/claude-mem",
+    "stars": 113966,
+    "language": "TypeScript",
+    "license": "Apache-2.0",
+    "lastCommit": "2026-11-06",
+    "openIssues": 126,
+    "version": "v15.10.1",
+    "trending": {
+      "window": "周榜",
+      "rank": 1,
+      "gained": 9318,
+      "unit": "本周"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 2301,
+    "codeBlocks": 2,
+    "minutes": 7.3,
+    "asOf": "2026-11-07"
+  }
+}

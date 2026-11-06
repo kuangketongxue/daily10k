@@ -1,12 +1,26 @@
 {
-  "updated": "2026-11-06",
+  "updated": "2026-11-07",
   "issues": [
+    {
+      "date": "2026-11-07",
+      "title": "claude-mem：让 AI 记住每一次会话，不再从零开始",
+      "oneLiner": "一个为 Claude Code 等编码代理设计的持久记忆压缩系统，自动捕获会话中的工具使用，压缩成语义摘要，并在未来会话中注入相关上下文。",
+      "category": "AI 代理 · 长期记忆 · 上下文工程",
+      "stars": 113966
+    },
     {
       "date": "2026-11-06",
       "title": "DeepTutor：让 AI 家教记住你学过的每一页",
       "oneLiner": "DeepTutor 是一个开源的终身个性化 AI 家教，通过多智能体协作和长期记忆，为高考、考研等备考者提供持续跟踪的个性化辅导。",
       "category": "AI 教育 · 多智能体 · 终身学习",
       "stars": 55416
+    },
+    {
+      "date": "2026-11-04",
+      "title": "hallmark：给 AI 生成的网页立规矩，拒绝“一眼假”",
+      "oneLiner": "一个面向 Claude Code、Cursor 与 Codex 的设计技能，让 AI 生成的网页通过真实浏览器审查，不再出现千篇一律的 AI 风格。",
+      "category": "AI 开发工具 · 前端设计 · Claude Code",
+      "stars": 46892
     }
   ]
 }
