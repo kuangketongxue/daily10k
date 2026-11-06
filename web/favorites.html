@@ -33,7 +33,16 @@
 <main class="wrap article-wrap">
   <a class="back" href="index.html"><span aria-hidden="true">←</span> 回首页</a>
   <h1 class="a-title">我的收藏夹</h1>
-  <p class="fav-lead">收藏过的期次会永久保留全文，点开就能看。没被收藏的往期会在每天更新时清理掉。</p>
+  <p class="fav-lead">收藏只存在这台设备上，不需要登录。换设备时用下面的导出 / 导入搬一次。</p>
+
+  <div class="fav-sync" id="fav-sync">
+    <div class="fav-sync-btns">
+      <button type="button" class="fav-sync-btn" data-act="export">导出收藏</button>
+      <button type="button" class="fav-sync-btn" data-act="import">导入收藏</button>
+    </div>
+    <div class="fav-sync-body" hidden></div>
+  </div>
+
   <div class="loading" id="loading" role="status">正在读取收藏夹<span class="dots"></span></div>
   <noscript><style>#loading{display:none}</style><p class="empty">本站需要启用 JavaScript 才能读取收藏夹。</p></noscript>
   <div id="fav-root"></div>
@@ -53,15 +62,11 @@
 <script>
 const root = document.getElementById('fav-root');
 const loading = document.getElementById('loading');
+const syncPanel = document.getElementById('fav-sync');
 
-loadFavoritesIndex()
-  .then(idx => {
-    loading.hidden = true;
-    renderFavoritesPage(root, idx);
-  })
-  .catch(() => {
-    loading.textContent = '收藏夹读取失败，请检查网络后刷新重试。';
-  });
+loading.hidden = true;
+initSyncPanel(syncPanel, root);
+initFavoritesPage(root);
 
 // 顶部阅读进度条
 (function () {

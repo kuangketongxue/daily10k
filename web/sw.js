@@ -35,8 +35,8 @@ const SHELL = [
   'manifest.webmanifest',
   // 首页数据也预缓存：SW 是在首次页面加载之后才装好的，不预缓存的话
   // 用户「只访问过一次」就断网，会看到一片空白。
+  // 收藏列表已改为走后端 API（跨域，本 SW 不拦截），不再预缓存静态 favorites.json。
   'data/index.json',
-  'data/favorites.json',
 ];
 
 self.addEventListener('install', (event) => {

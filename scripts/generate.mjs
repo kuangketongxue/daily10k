@@ -903,7 +903,9 @@ function archiveFavorites(date, favorites) {
 }
 
 function rebuildIndex() {
-  const posts = loadAllPosts().sort((a, b) => b.date.localeCompare(a.date));
+  // 往期不再删除，索引只列最近 30 期：首页只取第一条，
+  // 但留一点历史给「往前翻」用，同时避免 index.json 随天数无限膨胀。
+  const posts = loadAllPosts().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
   const issues = posts.map(p => ({
     date: p.date,
     title: p.title,
@@ -974,13 +976,12 @@ export async function main() {
   mkdirSync(POSTS_DIR, { recursive: true });
   writeFileSync(join(POSTS_DIR, `${date}.json`), JSON.stringify(post, null, 2));
 
-  // 收藏夹：新一期可能被收藏，先把往期被收藏的全文挪进归档，再执行当天清
-  const favorites = loadFavorites();
-  archiveFavorites(date, favorites);
-  pruneOldPosts(date);
-  restoreArchivedFavorites(favorites);
-  rebuildFavorites(favorites);
-
+  // 收藏状态已挪到线上后端（Cloudflare KV），生成管线不再知道「谁收藏了哪期」，
+  // 所以「按收藏归档 + 当天清」这条路走不通了 —— 一清，收藏夹点开就是 404。
+  // 改成永久保留全部往期：单篇约 14KB，一年 5MB 上下，GitHub Pages 完全扛得住。
+  // 好处是任何日期的链接永远打得开，也不再依赖「用户先收藏、我们才保留」。
+  // （下面的 archiveFavorites / pruneOldPosts / restoreArchivedFavorites /
+  //   rebuildFavorites 已停用，函数保留只为兼容历史数据，无人再调用。）
   const history = existsSync(HISTORY_FILE) ? JSON.parse(readFileSync(HISTORY_FILE, 'utf8')) : [];
   if (!history.includes(repo.full_name)) history.push(repo.full_name);
   writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2) + '\n');

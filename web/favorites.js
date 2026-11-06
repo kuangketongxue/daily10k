@@ -1,19 +1,21 @@
 /* ==========================================================
-   万星日报 · 收藏夹共享模块
+   万星日报 · 收藏夹模块（纯本机存储）
    ---------------------------------------------------------
-   收藏列表只有一个事实源：仓库里的 data/favorites.json。
-   它同时被两处消费：
-     1. 浏览器直接 fetch 读取 —— 收藏列表、首页/文章页的收藏状态
-     2. scripts/generate.mjs 每次生成时重写 —— 只保留全文仍存在的条目
-   浏览器端不写仓库（没有凭据，前端也绝不放 token）：
-   实际写入由本机 git 完成，走 sw-edit.html 这个维护页。
+   收藏只存在这台设备的浏览器里：
+     - 点「收藏这一期」立刻增删，不需要登录、不需要网络、不需要任何密钥
+     - 刷新、重启浏览器都还在
+     - 换设备：在旧设备点「导出收藏」拿一段短码，在新设备点「导入收藏」粘贴
+
+   为什么用短码而不是账号同步：站点是 GitHub Pages 纯静态，
+   没有任何能替浏览器写数据的通道（前端持凭据 = 密钥公开），
+   所以「跨设备」只能靠用户自己搬运一次，短码是最省事的形式。
+
+   正文按日期从 data/posts/ 现取；往期永久保留，所以任何一天都能回看。
    ========================================================== */
 
-const FAV_INDEX = 'data/favorites.json';
-const FAV_POST = (date) => 'data/posts/' + encodeURIComponent(date) + '.json';
-// 往期被收藏的全文会归档到这里；posts/ 里没有时回落到这个路径
-const FAV_ARCHIVE = (date) => 'data/archive/' + encodeURIComponent(date) + '.json';
+const LS_FAV = 'daily10k:favorites';
 const LS_OPEN = 'daily10k:favorites:open';
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /* ---------- 小工具 ---------- */
 
@@ -31,41 +33,75 @@ function writeCache(key, value) {
   try { localStorage.setItem(key, value); } catch { /* 隐私模式/配额满时静默降级 */ }
 }
 
-/* ---------- 收藏列表 ---------- */
+/* ---------- 收藏数据 ---------- */
 
-// 列表形状：{ updated, items: [{ date, title, oneLiner, category, stars, savedAt }] }
-async function loadFavoritesIndex() {
-  const res = await fetch(FAV_INDEX, { cache: 'no-cache' });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return res.json();
-}
-
-function favoriteDates(index) {
-  return new Set((index && index.items ? index.items : []).map(it => it.date));
-}
-
-function isFavorited(index, date) {
-  return !!date && favoriteDates(index).has(date);
-}
-
-// 归档全文：收藏夹页展开某条时按需拉取。
-// 走 Cache Storage（由 sw.js 提供），任何设备首次展开后即可离线回看。
-// 顺序是 archive 优先：收藏夹里每一条都被归档过，先打 archive 就不会先撞一个必然的 404。
-async function loadArchivedPost(date) {
-  const candidates = [FAV_ARCHIVE(date), FAV_POST(date)];
-  let lastErr = null;
-  for (const path of candidates) {
-    const url = new URL(path, location.href).href;
-    try {
-      const cached = await caches.match(url);
-      const res = cached || await fetch(url, { cache: 'no-cache' });
-      if (!res.ok) { lastErr = new Error('HTTP ' + res.status); continue; }
-      return await res.json();
-    } catch (e) {
-      lastErr = e;
-    }
+function loadFavorites() {
+  const raw = readCache(LS_FAV);
+  if (!raw) return { items: [] };
+  try {
+    const d = JSON.parse(raw);
+    const items = Array.isArray(d.items) ? d.items : [];
+    return { items: items.filter(d => DATE_RE.test(d)) };
+  } catch {
+    return { items: [] };
   }
-  throw lastErr || new Error('not found');
+}
+
+function saveFavorites(items) {
+  const uniq = [...new Set(items)].sort().reverse();
+  writeCache(LS_FAV, JSON.stringify({ items: uniq }));
+  return uniq;
+}
+
+function has(items, date) { return Array.isArray(items) && items.includes(date); }
+
+function toggleFavorite(date, action) {
+  const set = new Set(loadFavorites().items);
+  if (action === 'add') set.add(date); else set.delete(date);
+  return saveFavorites([...set]);
+}
+
+/* ---------- 导出 / 导入（跨设备短码） ---------- */
+
+// 码里只有日期，纯 ASCII；体积随收藏数线性增长（10 期约 60 字符）
+function encodeFavorites(items) {
+  const payload = JSON.stringify({ v: 1, items: [...new Set(items)].sort() });
+  return btoa(payload).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+function decodeFavorites(code) {
+  const clean = String(code || '').trim().replace(/[-\s]/g, m => (m === '-' ? '+' : ''));
+  if (!clean) throw new Error('短码是空的。');
+  let payload;
+  try {
+    payload = JSON.parse(atob(clean.replace(/_/g, '/')));
+  } catch {
+    throw new Error('短码格式不对，检查是不是复制完整了。');
+  }
+  if (!payload || payload.v !== 1 || !Array.isArray(payload.items)) {
+    throw new Error('短码格式不对。');
+  }
+  const items = payload.items.filter(d => DATE_RE.test(d));
+  if (!items.length) throw new Error('短码里没有任何有效日期。');
+  return items;
+}
+
+/* ---------- 轻提示 ---------- */
+
+let toastTimer = null;
+function toast(msg) {
+  let el = document.getElementById('fav-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'fav-toast';
+    el.className = 'fav-toast';
+    el.setAttribute('role', 'status');
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('is-on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('is-on'), 2600);
 }
 
 /* ---------- 收藏按钮 ---------- */
@@ -78,47 +114,38 @@ function starSvg(filled) {
       stroke-linejoin="round"/></svg>`;
 }
 
-// 每个槽位独立创建一个按钮，避免多个槽位（首页/文章页）争抢同一个 id
-function ensureFavButton() {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'fav-btn';
-  btn.hidden = true;
-  return btn;
-}
-
-function paintFavButton(btn, filled, label) {
+function paintFavButton(btn, filled, label, busy) {
   btn.dataset.fav = filled ? '1' : '0';
+  btn.dataset.busy = busy ? '1' : '0';
   btn.classList.toggle('is-on', filled);
+  btn.disabled = !!busy;
   btn.innerHTML = starSvg(filled) + '<span class="fav-text">' + esc(label) + '</span>';
   btn.setAttribute('aria-pressed', filled ? 'true' : 'false');
+  btn.setAttribute('aria-busy', busy ? 'true' : 'false');
 }
 
-// 在指定容器里挂一个收藏按钮，并绑定当前日期的收藏状态
 function mountFavButton(container, date, opts = {}) {
-  if (!date) return null;
-  const btn = ensureFavButton();
-  container.appendChild(btn);
+  if (!date || !container) return null;
 
   const label = opts.label || '收藏这一期';
   const onLabel = opts.onLabel || '已收藏 · 点击取消';
 
-  paintFavButton(btn, false, label);
-  btn.hidden = false;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'fav-btn';
+  container.appendChild(btn);
 
-  loadFavoritesIndex()
-    .then(idx => {
-      const on = isFavorited(idx, date);
-      paintFavButton(btn, on, on ? onLabel : label);
-    })
-    .catch(() => { btn.hidden = true; });
+  const on = has(loadFavorites().items, date);
+  paintFavButton(btn, on, on ? onLabel : label, false);
 
   btn.addEventListener('click', () => {
-    // 浏览器端不能写仓库（无凭据，前端也不该有 token）。
-    // 交给本机维护页，由本机 git 完成实际写入。
-    // 用 location.href 而不是 window.open：不弹窗、不打断阅读，
-    // 维护页上有完整命令与说明，看完再决定。
-    location.href = 'sw-edit.html?date=' + encodeURIComponent(date);
+    if (btn.dataset.busy === '1') return;
+    const wasOn = btn.dataset.fav === '1';
+    const next = toggleFavorite(date, wasOn ? 'remove' : 'add');
+    const nowOn = has(next, date);
+    paintFavButton(btn, nowOn, nowOn ? onLabel : label, false);
+    if (nowOn) toast('已收藏 ' + date);
+    document.dispatchEvent(new CustomEvent('favorites:changed', { detail: { items: next } }));
   });
 
   return btn;
@@ -126,54 +153,75 @@ function mountFavButton(container, date, opts = {}) {
 
 /* ---------- 收藏夹列表页 ---------- */
 
-function renderFavoritesPage(root, index) {
-  const items = (index && index.items ? index.items : []).slice()
-    .sort((a, b) => String(b.savedAt || b.date).localeCompare(String(a.savedAt || a.date)));
+function renderEmpty(root) {
+  root.innerHTML = `
+    <div class="empty">
+      <p class="big" aria-hidden="true">☆</p>
+      <p>收藏夹还是空的。</p>
+      <p class="empty-hint">在首页或文章页点「收藏这一期」，它就会出现在这里。</p>
+      <p class="empty-hint">收藏只存在这台设备上；换设备时用上面的「导出收藏 / 导入收藏」搬一次。</p>
+    </div>`;
+}
 
-  if (!items.length) {
-    root.innerHTML = `
-      <div class="empty">
-        <p class="big" aria-hidden="true">☆</p>
-        <p>收藏夹还是空的。</p>
-        <p class="empty-hint">在首页或文章页点「收藏这一期」，它就会出现在这里，全文也会一直留着。</p>
-      </div>`;
-    return;
-  }
-
-  const addParam = new URLSearchParams(location.search).get('add');
-  const openSet = readOpenDates();
-  const html = items.map(it => {
-    const d = esc(it.date);
-    const open = it.date === addParam || openSet.has(it.date);
-    return `
-    <article class="fav-item${open ? ' is-open' : ''}" data-date="${d}">
+function renderFavoriteItem(post, date, open) {
+  const m = post.meta || {};
+  return `
+    <article class="fav-item${open ? ' is-open' : ''}" data-date="${esc(date)}">
       <div class="fav-head">
         <div class="fav-main">
-          <p class="fav-date">${d}</p>
-          <h2 class="fav-title">${esc(it.title)}</h2>
-          <p class="fav-one">${esc(it.oneLiner)}</p>
+          <p class="fav-date">${esc(date)}</p>
+          <h2 class="fav-title">${esc(post.title || '万星日报')}</h2>
+          <p class="fav-one">${esc(post.oneLiner || '')}</p>
           <div class="fav-tags">
-            ${it.category ? `<span class="tag">${esc(it.category)}</span>` : ''}
-            ${Number(it.stars) > 0 ? `<span class="fav-stars">★ ${Number(it.stars).toLocaleString('zh-CN')}</span>` : ''}
+            ${post.category ? `<span class="tag">${esc(post.category)}</span>` : ''}
+            ${Number(m.stars) > 0 ? `<span class="fav-stars">★ ${Number(m.stars).toLocaleString('zh-CN')}</span>` : ''}
           </div>
         </div>
         <div class="fav-actions">
-          <button type="button" class="fav-open" data-date="${d}" aria-expanded="${open ? 'true' : 'false'}">
+          <button type="button" class="fav-open" data-date="${esc(date)}" aria-expanded="${open ? 'true' : 'false'}">
             ${open ? '收起全文' : '看全文'}
           </button>
-          <a class="fav-goto" href="article.html?d=${encodeURIComponent(it.date)}">原文页</a>
-          <button type="button" class="fav-drop" data-date="${d}">取消收藏</button>
+          <a class="fav-goto" href="article.html?d=${encodeURIComponent(date)}">原文页</a>
+          <button type="button" class="fav-drop" data-date="${esc(date)}">取消收藏</button>
         </div>
       </div>
-      <div class="fav-body" data-date="${d}" ${open ? '' : 'hidden'}>
-        <div class="fav-loading" role="status">正在调出归档全文<span class="dots"></span></div>
+      <div class="fav-body" data-date="${esc(date)}" ${open ? '' : 'hidden'}>
+        <div class="fav-loading" role="status">正在调出全文<span class="dots"></span></div>
       </div>
     </article>`;
-  }).join('');
+}
+
+function itemFailed(date) {
+  return `<article class="fav-item" data-date="${esc(date)}">
+     <div class="fav-head"><div class="fav-main">
+       <p class="fav-date">${esc(date)}</p>
+       <p class="fav-one">这一期的全文暂时读不到，可能网络不稳。</p>
+     </div>
+     <div class="fav-actions">
+       <a class="fav-goto" href="article.html?d=${encodeURIComponent(date)}">原文页</a>
+       <button type="button" class="fav-drop" data-date="${esc(date)}">取消收藏</button>
+     </div></div>
+   </article>`;
+}
+
+async function initFavoritesPage(root) {
+  const items = loadFavorites().items;
+
+  if (!items.length) { renderEmpty(root); return; }
+
+  root.innerHTML = `<div class="loading" role="status">正在读取收藏夹<span class="dots"></span></div>`;
+
+  const openSet = readOpenDates();
+  const pieces = [];
+  for (const date of items) {
+    let post = null;
+    try { post = await loadPostByDate(date); } catch { }
+    pieces.push(post ? renderFavoriteItem(post, date, openSet.has(date)) : itemFailed(date));
+  }
 
   root.innerHTML = `
-    <p class="fav-count">共 ${items.length} 期收藏</p>
-    <div class="fav-list">${html}</div>`;
+    <p class="fav-count"><span class="fav-count-text">共 ${items.length} 期收藏</span></p>
+    <div class="fav-list">${pieces.join('')}</div>`;
 
   root.querySelectorAll('.fav-open').forEach(btn => {
     btn.addEventListener('click', () => toggleFavBody(root, btn.dataset.date, btn));
@@ -186,6 +234,76 @@ function renderFavoritesPage(root, index) {
     fillFavBody(body, body.dataset.date);
   });
 }
+
+/* ---------- 导出 / 导入面板 ---------- */
+
+function initSyncPanel(panel, root) {
+  const body = panel.querySelector('.fav-sync-body');
+  let mode = null;
+
+  function render() {
+    if (!mode) { body.hidden = true; body.innerHTML = ''; return; }
+    body.hidden = false;
+
+    if (mode === 'export') {
+      body.innerHTML = `
+        <p class="fav-sync-title">把这段短码复制到新设备，点「导入收藏」粘贴进去即可。</p>
+        <textarea class="fav-sync-box" readonly rows="3">${esc(encodeFavorites(loadFavorites().items))}</textarea>
+        <p><button type="button" class="read-btn fav-sync-copy">复制短码</button></p>`;
+      body.querySelector('.fav-sync-copy').addEventListener('click', async () => {
+        const box = body.querySelector('.fav-sync-box');
+        try {
+          await navigator.clipboard.writeText(box.value);
+          toast('已复制，去新设备粘贴导入。');
+        } catch {
+          box.select();
+          toast('已选中，按 Ctrl+C 复制。');
+        }
+      });
+    } else {
+      body.innerHTML = `
+        <p class="fav-sync-title">粘贴在旧设备上导出的短码。导入会与当前收藏合并，不会覆盖。</p>
+        <textarea class="fav-sync-box" rows="3" placeholder="粘贴短码"></textarea>
+        <p>
+          <button type="button" class="read-btn fav-sync-do">导入</button>
+          <button type="button" class="fav-sync-cancel">取消</button>
+        </p>
+        <p class="fav-sync-err" role="alert"></p>`;
+      const box = body.querySelector('.fav-sync-box');
+      const errEl = body.querySelector('.fav-sync-err');
+
+      body.querySelector('.fav-sync-do').addEventListener('click', () => {
+        errEl.textContent = '';
+        let added;
+        try {
+          added = decodeFavorites(box.value);
+        } catch (e) {
+          errEl.textContent = e.message || '短码不对。';
+          return;
+        }
+        // 合并而不是替换：新设备上可能已经收藏了几期，直接覆盖会丢
+        saveFavorites([...new Set([...loadFavorites().items, ...added])]);
+        mode = null;
+        render();
+        initFavoritesPage(root);
+        toast('已导入 ' + added.length + ' 期。');
+      });
+      body.querySelector('.fav-sync-cancel').addEventListener('click', () => { mode = null; render(); });
+    }
+  }
+
+  panel.querySelectorAll('.fav-sync-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const act = btn.dataset.act;
+      mode = mode === act ? null : act;
+      render();
+    });
+  });
+
+  render();
+}
+
+/* ---------- 展开 / 取消 ---------- */
 
 async function toggleFavBody(root, date, btn) {
   const body = root.querySelector('.fav-body[data-date="' + CSS.escape(date) + '"]');
@@ -205,21 +323,69 @@ async function toggleFavBody(root, date, btn) {
 async function fillFavBody(body, date) {
   if (body.dataset.loaded === '1') return;
   try {
-    const post = await loadArchivedPost(date);
+    const post = await loadPostByDate(date);
     body.dataset.loaded = '1';
     body.innerHTML = renderPostHtml(post, { headingTag: 'h2' });
   } catch {
     body.innerHTML = `
       <div class="empty fav-miss">
-        <p>这一期的全文已经不在站点上了。</p>
-        <p class="empty-hint">每天生成新一期时会清理旧全文，被收藏的期次会保留归档。
-        若你刚收藏，请稍等发布完成后再刷新。</p>
+        <p>这一期的全文暂时读不到。</p>
+        <p class="empty-hint">可能是网络问题，稍后刷新再试。</p>
       </div>`;
   }
 }
 
-// 复用文章页的排版：把 post JSON 渲染成和 article.html 一致的正文结构。
-// opts.headingTag：文章页自己用 h1；收藏夹里就地展开时页面已有 h1，必须降到 h2，否则一页两个 h1。
+function dropFavorite(root, date, btn) {
+  const next = toggleFavorite(date, 'remove');
+  const item = root.querySelector('.fav-item[data-date="' + CSS.escape(date) + '"]');
+  if (item) {
+    item.classList.add('is-leaving');
+    setTimeout(() => {
+      item.remove();
+      if (!root.querySelectorAll('.fav-item').length) { initFavoritesPage(root); return; }
+      const t = root.querySelector('.fav-count-text');
+      if (t) t.textContent = `共 ${next.length} 期收藏`;
+    }, 260);
+  }
+  rememberOpen(date, false);
+  document.dispatchEvent(new CustomEvent('favorites:changed', { detail: { items: next } }));
+}
+
+/* ---------- 按日期取全文 ---------- */
+
+const POST_SOURCES = ['data/posts/', 'data/archive/'];
+
+async function loadPostByDate(date) {
+  for (const dir of POST_SOURCES) {
+    try {
+      const res = await fetch(dir + encodeURIComponent(date) + '.json', { cache: 'no-cache' });
+      if (!res.ok) continue;
+      return await res.json();
+    } catch { /* 换下一个来源 */ }
+  }
+  throw new Error('not found');
+}
+
+/* ---------- 展开状态记忆 ---------- */
+
+function readOpenDates() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(LS_OPEN) || '[]');
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function rememberOpen(date, open) {
+  const set = readOpenDates();
+  if (open) set.add(date); else set.delete(date);
+  writeCache(LS_OPEN, JSON.stringify([...set]));
+}
+
+/* ---------- 正文渲染（文章页与收藏夹共用） ---------- */
+
+// opts.headingTag：文章页自己用 h1；收藏夹里就地展开时页面已有 h1，必须降到 h2。
 // opts.afterTitle：插在标题与摘要之间的自定义内容（文章页用它放收藏按钮槽位）。
 function renderPostHtml(p, opts = {}) {
   const m = p.meta || {};
@@ -286,7 +452,7 @@ function renderPostHtml(p, opts = {}) {
   return html;
 }
 
-// 与 article.html 相同的行内处理：先摘出代码与链接，再整体转义
+// 先摘出行内代码和链接，再整体转义，避免 URL 吞掉后续中文/标点
 function inline(s) {
   const slots = [];
   const stash = (html) => {
@@ -303,36 +469,4 @@ function inline(s) {
   });
   text = esc(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   return text.replace(/\u0000(\d+)\u0000/g, (_, i) => slots[+i]);
-}
-
-/* ---------- 展开状态记忆 ---------- */
-
-function readOpenDates() {
-  try {
-    const arr = JSON.parse(localStorage.getItem(LS_OPEN) || '[]');
-    return new Set(Array.isArray(arr) ? arr : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function rememberOpen(date, open) {
-  const set = readOpenDates();
-  if (open) set.add(date); else set.delete(date);
-  writeCache(LS_OPEN, JSON.stringify([...set]));
-}
-
-/* ---------- 取消收藏 ---------- */
-
-// 同收藏一样，浏览器端不直接改仓库文件：交给本机维护页处理。
-// 先在本页给一个明确的「已标记」反馈再跳转 —— 直接闪走会让人以为点错了。
-function dropFavorite(root, date, btn) {
-  const item = root.querySelector('.fav-item[data-date="' + CSS.escape(date) + '"]');
-  if (item) item.classList.add('is-leaving');
-  btn.disabled = true;
-  btn.textContent = '已标记取消…';
-  rememberOpen(date, false);
-  setTimeout(() => {
-    location.href = 'sw-edit.html?date=' + encodeURIComponent(date) + '&drop=1';
-  }, 450);
 }

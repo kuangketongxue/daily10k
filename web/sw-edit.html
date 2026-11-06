@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>收藏操作 · 万星日报</title>
-<meta name="description" content="收藏夹写入说明：收藏动作由本机命令完成，浏览器端不持有任何凭据。">
+<title>收藏说明 · 万星日报</title>
+<meta name="description" content="万星日报的收藏已改为在网页上直接完成，收藏只存在你自己的设备上。">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0a3d6e">
@@ -23,28 +23,27 @@
 </header>
 
 <main class="wrap article-wrap">
-  <a class="back" href="favorites.html"><span aria-hidden="true">←</span> 回收藏夹</a>
-  <h1 class="a-title">这一期要收藏吗？</h1>
+  <a class="back" href="index.html"><span aria-hidden="true">←</span> 回首页</a>
+  <h1 class="a-title">收藏已经不用跑命令了</h1>
 
   <div class="a-summary">
-    <p class="a-oneliner"><strong>说明：</strong>网站本身是纯静态的，浏览器没有能力直接改仓库文件（也不该把 GitHub 密钥放进网页）。所以「收藏」这个写动作要在本机执行一次命令，之后收藏夹和全文归档会随站点一起发布上线。</p>
+    <p class="a-oneliner"><strong>说明：</strong>这个页面原本用来贴一条要在本机终端执行的收藏命令。现在收藏在网页上点一下就能完成，不再需要终端，也不需要提交代码。</p>
     <div class="a-metas">
-      <span id="edit-date">未指定日期</span>
-      <span id="edit-state">等待确认</span>
+      <span>旧链接仍可访问</span>
+      <span>无需任何本地操作</span>
     </div>
   </div>
 
-  <div class="edit-box">
-    <p class="edit-step">第 1 步 · 在仓库目录打开终端，执行下面这条命令：</p>
-    <pre class="a-code"><code id="cmd-add">node scripts/favorite.mjs add &lt;日期&gt;</code></pre>
-    <p class="edit-step">第 2 步 · 提交并推送，让收藏夹上线：</p>
-    <pre class="a-code"><code id="cmd-push">git add web/data &amp;&amp; git commit -m "收藏 &lt;日期&gt;" &amp;&amp; git push</code></pre>
-    <p class="edit-hint">取消收藏把 <code class="ic">add</code> 换成 <code class="ic">remove</code> 即可。想直接看当前收藏夹，执行
-      <code class="ic">node scripts/favorite.mjs list</code>。</p>
-    <p class="edit-hint">如果你是在手机或别的电脑上打开的这个页面，那台设备的命令行不方便用 ——
-      可以直接在 GitHub 网页上编辑 <code class="ic">web/data/favorites.json</code>，
-      再把对应全文放进 <code class="ic">web/data/archive/</code>，效果完全一样。</p>
-  </div>
+  <section class="a-sec">
+    <h2 data-num="01">现在怎么收藏</h2>
+    <p>在首页或任意一篇文章页，点「收藏这一期」即可，没有登录也没有口令。</p>
+    <p>想看收藏夹，直接打开<a class="src-link" href="favorites.html">我的收藏夹</a>。点「看全文」可以就地展开，不用跳页。</p>
+  </section>
+
+  <section class="a-sec">
+    <h2 data-num="02">数据存在哪</h2>
+    <p>收藏只存在你这台设备的浏览器里，不上传、不同步、不需要账号。所以换浏览器、换设备或清缓存会丢，收藏夹页提供了「导出收藏 / 导入收藏」：旧设备导出一段短码，新设备粘贴导入即可，两边的收藏会合并而不是覆盖。</p>
+  </section>
 </main>
 
 <footer class="foot">
@@ -57,57 +56,9 @@
 </footer>
 
 <script>
-const params = new URLSearchParams(location.search);
-const date = params.get('date') || '';
-const drop = params.get('drop') === '1';
-
-const dateEl = document.getElementById('edit-date');
-const stateEl = document.getElementById('edit-state');
-const cmdAdd = document.getElementById('cmd-add');
-const cmdPush = document.getElementById('cmd-push');
-
-if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-  dateEl.textContent = '未指定日期';
-  stateEl.textContent = '请从首页或文章页的收藏按钮进入';
-} else {
-  dateEl.textContent = date;
-  stateEl.textContent = drop ? '取消收藏' : '加入收藏';
-  const verb = drop ? 'remove' : 'add';
-  const label = drop ? '取消收藏' : '收藏';
-  cmdAdd.textContent = `node scripts/favorite.mjs ${verb} ${date}`;
-  cmdPush.textContent = `git add web/data && git commit -m "${label} ${date}" && git push`;
-}
-
-// 点一下复制命令，省得手动敲
-document.querySelectorAll('.a-code code').forEach(el => {
-  el.style.cursor = 'pointer';
-  el.title = '点击复制';
-  el.addEventListener('click', async () => {
-    const old = el.textContent;
-    let ok = false;
-    try {
-      // clipboard 只在 https / localhost 下可用，被权限拒绝时会抛错 —— 必须兜住，
-      // 否则点击后毫无反应，用户不知道到底复制成功没有
-      await navigator.clipboard.writeText(old);
-      ok = true;
-    } catch {
-      // 老浏览器或非安全上下文：退回选中文本，让用户自己按 Ctrl+C
-      try {
-        const r = document.createRange();
-        r.selectNodeContents(el);
-        const sel = getSelection();
-        sel.removeAllRanges();
-        sel.addRange(r);
-      } catch { /* 忽略 */ }
-    }
-    el.textContent = ok ? '已复制 ✓' : '已选中，按 Ctrl+C';
-    setTimeout(() => { el.textContent = old; }, ok ? 1200 : 2000);
-  });
-});
-
 // 浏览器不支持 WebP 时回落到 JPG 背景
 (function () {
-  const probe = new Image();
+  var probe = new Image();
   probe.onerror = function () { document.documentElement.classList.add('no-webp'); };
   probe.src = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
 })();

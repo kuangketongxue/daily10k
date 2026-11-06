@@ -56,7 +56,7 @@ const article = document.getElementById('article');
 const rawDate = new URLSearchParams(location.search).get('d') || '';
 
 // 全文可能有两处来源：posts/ 是当天池（会被每日清理），archive/ 是被收藏期次的永久归档。
-// 必须依次尝试，否则收藏夹里的「原文页」会 404 —— 站点只保留当天一篇时这是常态而非异常。
+// 必须依次尝试，避免往期链接 404（往期全文现在永久保留，这里只是兜底）。
 const SOURCES = ['data/posts/', 'data/archive/'];
 
 async function load(date) {
@@ -92,7 +92,7 @@ function fail(date) {
   document.title = '没有找到这一期的日报 · 万星日报';
   setMeta('robots', 'noindex');
   const hint = date && date !== bjToday()
-    ? '本站每天只保留当天一篇，往期只在被收藏后才保留全文。'
+    ? '往期全文都保留着，可能是这一期还没生成过。'
     : '今天的日报可能还在生成，5:30 前会更新。';
   article.innerHTML = `
     <div class="empty">

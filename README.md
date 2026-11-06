@@ -25,36 +25,38 @@
 
 ## 收藏夹
 
-站点每天只留当天一篇，往期全文会被清理。**被收藏的期次会把全文归档保留**，收藏夹里随时能点开看全文。
+**往期全文永久保留**：`pruneOldPosts()` 已停用，任何日期的 `article.html?d=<日期>` 都能打开。
+单篇约 14KB，一年 5MB 上下，GitHub Pages 完全扛得住；好处是收藏夹永远不会点开 404。
 
-- `web/data/favorites.json`：收藏索引（日期 / 标题 / 一句话 / 分类 / 星数 / 收藏时间），由生成管线和收藏脚本共同维护。
-- `web/data/archive/<日期>.json`：被收藏期次的全文归档，**不会被 `pruneOldPosts()` 删除**。生成时先把被收藏的往期挪进归档，再执行当天清，最后把仍被收藏的恢复回 `posts/`，保证 `article.html?d=<日期>` 一直能打开。
-- `web/favorites.html`：收藏夹页。点「看全文」就地展开正文（与文章页同一套排版），也可跳原文页；「取消收藏」移除条目。
-- `web/favorites.js`：收藏列表读取、收藏按钮、正文渲染的共享模块。
-- `web/sw.js` + `web/register-sw.js`：Service Worker。两个缓存分开管——骨架缓存带版本号（部署时由 `pages.yml` 注入 commit SHA，每次部署自动换新），归档全文单独一个缓存，**不随版本升级清空**。策略也不是一刀切：按日期的全文缓存优先（离线必读），`index.json` 与收藏索引网络优先 + 1.5 秒超时回落（保证当天内容新鲜，又不让弱网卡住首屏），页面骨架先用缓存后台更新。
-- `web/sw-edit.html`：收藏/取消收藏的操作说明页（含可复制的命令）。
-- `scripts/favorite.mjs`：收藏写入工具（本机专用）。
+- `web/favorites.html`：收藏夹页。顶部有「导出收藏 / 导入收藏」，点「看全文」就地展开正文（与文章页同一套排版），也可跳原文页；「取消收藏」移除条目。
+- `web/favorites.js`：收藏存储、收藏按钮、导出导入短码、正文渲染的共享模块。
+- `web/sw.js` + `web/register-sw.js`：Service Worker。两个缓存分开管——骨架缓存带版本号（部署时由 `pages.yml` 注入 commit SHA，每次部署自动换新），全文缓存单独一个，**不随版本升级清空**。策略也不是一刀切：按日期的全文缓存优先（离线必读），`index.json` 网络优先 + 1.5 秒超时回落（保证当天内容新鲜，又不让弱网卡住首屏），页面骨架先用缓存后台更新。
+- `web/sw-edit.html`：旧「跑命令收藏」页面的说明页（收藏已改为本机直接点），保留路径避免旧链接 404。
 
-### 为什么收藏要在本机执行命令
+### 收藏为什么存在本机，而不是云端
 
-GitHub Pages 是纯静态托管，浏览器端没有任何服务器可以代写入库；前端代码里也绝不能放 GitHub token。
-所以「收藏」这个写动作由本机 git 凭据完成，网页只负责跳转到 `sw-edit.html` 给出命令。
+收藏状态只存在访问者自己设备的 localStorage 里：点一下就增删，不需要登录、不需要网络、不需要任何密钥。
+
+原因是 GitHub Pages 是纯静态托管，**浏览器端拿不到任何能写入的通道**：
+
+- 前端放 GitHub token = 把密钥公开（仓库是 public，任何人 F12 就能看到），改私有仓库也一样。
+- 走 GitHub OAuth 需要跳 `github.com` 授权页，而该域名在当前网络下不通。
+- 结论：要么有个服务端代写（本方案没采用），要么用户自己搬运一次。
+
+所以跨设备用**短码**：旧设备「导出收藏」得到一段 base64url 文本，新设备「导入收藏」粘贴，两边收藏**合并**（不覆盖）。
+短码里只有日期，不含任何个人信息。
+
+### 收藏数据的边界
+
+- 只存日期（`daily10k:favorites`）与展开状态（`daily10k:favorites:open`），都只在本地。
+- 换浏览器、换设备、清缓存会丢 —— 这是纯本地方案的固有代价，用导出导入对冲。
+- 站点正文永远公开；收藏行为本身不产生任何网络请求（导出导入也是纯本地字符串转换）。
+
+`tests/local-favorites.test.mjs`：收藏增删、脏数据容错、短码往返与容错，18 项。
 
 ```bash
-node scripts/favorite.mjs add 2026-11-06      # 收藏（全文自动归档）
-node scripts/favorite.mjs remove 2026-11-06   # 取消收藏（归档保留）
-node scripts/favorite.mjs list                # 查看收藏夹
-node scripts/favorite.mjs sync                # 清理死链、重建索引（posts/ 与 archive/ 都算活着）
+node tests/local-favorites.test.mjs
 ```
-
-写完记得提交推送，Pages 才会更新：
-
-```bash
-git add web/data && git commit -m "收藏 2026-11-06" && git push
-```
-
-> 不想用命令行的话，也可以在 GitHub 网页上直接编辑 `web/data/favorites.json`，
-> 并把对应全文放进 `web/data/archive/`，效果完全一样。
 
 ## 站点基础文件
 

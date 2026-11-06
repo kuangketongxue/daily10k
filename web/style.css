@@ -608,38 +608,6 @@ main {
 .fav-miss { padding: 30px 22px; }
 
 /* ==========================================================
-   收藏操作说明页（本机写入入口）
-   ========================================================== */
-.edit-box {
-  margin-top: 34px;
-  padding: 26px 28px;
-  background: var(--card);
-  border: 1px dashed #b9d3ef;
-  border-radius: var(--r-lg);
-}
-
-.edit-step {
-  margin-bottom: 10px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.edit-box .a-code { margin-top: 0; margin-bottom: 22px; }
-.edit-box .a-code code { cursor: pointer; }
-
-.edit-hint {
-  margin-bottom: 10px;
-  font-size: 13.5px;
-  line-height: 1.85;
-  color: var(--ink-2);
-}
-
-.edit-hint:last-child { margin-bottom: 0; }
-
-.edit-hint .ic { font-size: 12px; }
-
-/* ==========================================================
    页脚
    ========================================================== */
 .loading {
@@ -1076,6 +1044,113 @@ blockquote p:last-child { margin-bottom: 0; }
 .foot .credit { color: #7fa0bf; }
 
 /* ==========================================================
+   收藏：导出导入 / 轻提示 / 计数行
+   ========================================================== */
+.fav-sync { margin-bottom: 18px; }
+
+.fav-sync-btns {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fav-sync-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .18s ease, color .18s ease;
+}
+
+.fav-sync-btn:hover {
+  border-color: var(--blue-500);
+  color: var(--blue-600);
+}
+
+.fav-sync-body {
+  margin-top: 14px;
+  padding: 18px 18px 14px;
+  border: 1px dashed #b9d3ef;
+  border-radius: var(--r-md);
+  background: var(--paper);
+}
+
+.fav-sync-title {
+  margin-bottom: 10px;
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--ink-2);
+}
+
+.fav-sync-box {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.fav-sync-box:focus-visible {
+  outline: 2px solid var(--blue-500);
+  outline-offset: 1px;
+}
+
+.fav-sync-body p { margin: 0 0 10px; }
+.fav-sync-body p:last-child { margin-bottom: 0; }
+
+.fav-sync-copy { padding: 9px 18px; font-size: 13.5px; }
+
+.fav-sync-cancel {
+  padding: 9px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink-3);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fav-sync-cancel:hover { color: var(--ink-2); }
+
+.fav-sync-err { font-size: 13px; color: #a24545; }
+
+.fav-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  z-index: 210;
+  transform: translate(-50%, 12px);
+  max-width: min(90vw, 420px);
+  padding: 11px 18px;
+  border-radius: 16px;
+  background: rgba(8, 26, 46, .94);
+  color: #fff;
+  font-size: 13.5px;
+  line-height: 1.6;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+
+.fav-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+
+.fav-count { margin-bottom: 18px; }
+
+/* ==========================================================
    响应式
    ========================================================== */
 @media (max-width: 640px) {
@@ -1122,7 +1197,6 @@ blockquote p:last-child { margin-bottom: 0; }
 
   .fav-open, .fav-drop, .fav-goto { flex: 1 1 0; min-width: 0; text-align: center; }
 
-  .edit-box { padding: 20px; }
 
   .article-band { min-height: 168px; }
   .masthead { padding-top: 18px; padding-bottom: 18px; }
