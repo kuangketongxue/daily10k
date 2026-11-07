@@ -1,6 +1,13 @@
 {
-  "updated": "2026-11-07",
+  "updated": "2026-11-08",
   "issues": [
+    {
+      "date": "2026-11-08",
+      "title": "OpenMausBot：把 AI 代理装进聊天应用，每个 bot 自带电脑和审批权",
+      "oneLiner": "开源 Grok Bot 替代品，让你用自己已有的 Claude、Codex 或 Grok 模型，在本地运行一支各怀技能的 AI 代理团队。",
+      "category": "AI 代理 · 本地优先 · 聊天界面 · 开源替代",
+      "stars": 16813
+    },
     {
       "date": "2026-11-07",
       "title": "claude-mem：让 AI 记住每一次会话，不再从零开始",

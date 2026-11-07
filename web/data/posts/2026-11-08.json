@@ -1,0 +1,248 @@
+{
+  "date": "2026-11-08",
+  "title": "OpenMausBot：把 AI 代理装进聊天应用，每个 bot 自带电脑和审批权",
+  "oneLiner": "开源 Grok Bot 替代品，让你用自己已有的 Claude、Codex 或 Grok 模型，在本地运行一支各怀技能的 AI 代理团队。",
+  "category": "AI 代理 · 本地优先 · 聊天界面 · 开源替代",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "当前个人 AI 助手通常是单机单模型，难以应对需要多角色协作的复杂任务。OpenMausBot 的定位是**把 AI 变成消息应用**：侧边栏里每个 bot 都是一个真实代理，拥有独立人格、模型、云端电脑和已连接的应用，你可以像联系人一样与它们对话，观察它们工作，并对关键操作进行审批。"
+        },
+        {
+          "type": "quote",
+          "text": "One assistant in one box is the wrong shape for agents."
+        },
+        {
+          "type": "p",
+          "text": "该项目旨在解决三个具体痛点：一是**模型锁定**，Grok Bot 等闭源产品只允许使用自家模型；二是**数据与隐私**，代理的对话、密钥和事件都保存在云端；三是**代理缺乏行动能力**，多数助手只能聊天，不能真正操作电脑或调用外部应用。"
+        },
+        {
+          "type": "p",
+          "text": "OpenMausBot 的答案是把这些能力拆开，让用户自己组装。它支持**自带代理**——bot 直接运行在你机器上已安装的 `claude`、`codex` 或 `grok` 命令行工具，沿用你现有的登录和订阅，无需新账户，也没有中间代理。所有数据默认存储在本地 `~/.openmausbot` 目录。"
+        },
+        {
+          "type": "p",
+          "text": "截至本次生成，该项目在 GitHub 上获得 **16,813 颗星**、2,383 个 fork，今日新增 1,986 星，位列 Trending 日榜第 9 名。最新版本为 v0.1.147（2026-11-07），采用 Apache-2.0 许可证。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "让代理真正动手：审批卡与电脑面板"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个任务，比如\"整理本周 GitHub Issue 并起草回复\""
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "代理在云端 Linux 桌面或本地虚拟机中执行命令、编辑文件，遇到敏感操作时在聊天中弹出审批卡，你选择 Allow / Deny 或直接回答。"
+        },
+        {
+          "type": "code",
+          "code": "# 启动代理并让它执行任务\nopenmausbot --agent \"codex\" --task \"整理本周 GitHub Issue 并起草回复\"",
+          "caption": "来源：README 的 Features 部分（命令为示意，实际用法见文档）"
+        },
+        {
+          "type": "sub",
+          "text": "连接 500+ 应用：Composio 市场一键接入"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "OAuth 授权一次，比如连接 Gmail 或 Slack"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "所有 bot 都能把这些应用当作工具使用，无需重复配置密钥。"
+        },
+        {
+          "type": "sub",
+          "text": "从 Markdown 文件安装整支团队"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个包含结构化 YAML frontmatter 的 `.md` 文件，或直接粘贴公开 GitHub URL"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "自动创建 bot、频道、playbook、连接器检查清单和例程，且连接默认关闭、例程默认暂停，不携带任何凭据或对话历史。"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "OpenMausBot 的架构核心是一个**本地优先的编排层**。一个轻量级 harness 服务器运行在 `127.0.0.1`，负责管理所有代理进程；对话记录、密钥和事件都存储在 `~/.openmausbot`，而不是云端。"
+        },
+        {
+          "type": "p",
+          "text": "每个 bot 的\"大脑\"由你指定——可以是 `claude`、`codex` 或 `grok` 的 CLI，甚至通过 **Settings → Engines** 指向自定义二进制或包装脚本。模型选择器提供 provider 栏，Claude 和 Codex 模型并排显示，不可用的 provider 会变暗并说明原因，支持在对话中途切换模型。"
+        },
+        {
+          "type": "p",
+          "text": "代理的\"手\"由**计算机面板**提供：可以启动云端 Linux 桌面，或使用隔离的本地虚拟机；在平台安全边界已认证的情况下（macOS 和 Ubuntu Xorg 需显式开启），也可以直接操作你的宿主机。Ubuntu Wayland 的主机控制因 issue #345 尚未解决而保持禁用。"
+        },
+        {
+          "type": "p",
+          "text": "权限控制由**审批代理**（permission broker）实现：每条 shell 命令、文件编辑和提问都会以内联卡片形式出现在聊天中，由你决定允许或拒绝。这种设计让代理在拥有行动能力的同时，始终保留人类对高风险操作的最终决定权。"
+        },
+        {
+          "type": "p",
+          "text": "项目基于 TypeScript（严格模式），使用 React 19 和 Electron，支持 macOS（Apple 芯片与 Intel）、Windows 和 Ubuntu 24.04。与同类项目相比，它强调\"自带代理\"和\"本地优先\"，而非绑定特定模型或云端服务。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "安装方式取决于你的系统。以下命令从官方 Releases 页面获取最新版本（v0.1.147）："
+        },
+        {
+          "type": "code",
+          "code": "# macOS（Apple 芯片）\ncurl -L -o OpenMausBot.dmg https://github.com/milind-soni/OpenMausBot/releases/latest/download/OpenMausBot.dmg\n\n# Windows\ncurl -L -o OpenMausBot-setup.exe https://github.com/milind-soni/OpenMausBot/releases/latest/download/OpenMausBot-setup.exe\n\n# Ubuntu 24.04 x64\ncurl -L -o OpenMausBot-amd64.deb https://github.com/milind-soni/OpenMausBot/releases/latest/download/OpenMausBot-amd64.deb",
+          "caption": "来源：README 顶部的下载链接"
+        },
+        {
+          "type": "p",
+          "text": "安装后，在 **App Settings** 中粘贴你的 API 密钥（或直接使用本机已有的 CLI 登录），密钥会持久化到本地，provider 列表会即时刷新。密钥是只写的——界面只会显示\"已配置\"状态，不会回显明文。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "首次运行前，请确保本机已安装 `claude`、`codex` 或 `grok` 中的至少一个 CLI，否则无法创建 bot。",
+            "若要启用主机控制（macOS 或 Ubuntu Xorg），必须在设置中显式开启；Ubuntu Wayland 暂不支持，因为 issue #345 尚未解决。",
+            "从 Markdown 文件导入团队时，连接默认关闭、例程默认暂停，且不会携带任何凭据、对话或权限——请按需手动审批。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭 Issue 与 PR 共 802 个**，而仓库创建于 2026-08-11，距今不足三个月。按此计算，平均每天新增约 9 个待处理事项，维护者回应压力较大。所以你要注意：提交 bug 或功能请求后，可能长时间得不到明确答复；重要问题建议在 [Issues 页面](https://github.com/milind-soni/OpenMausBot/issues) 中跟踪并主动参与讨论。",
+            "**最近推送为 2026-11-07，最新 Release 为 v0.1.147（同一天）**，说明项目仍在高频迭代，但版本号停留在 0.1.x，属于开发者预览阶段。所以你要注意：升级到新版本可能引入破坏性变更，生产环境部署前应先在测试环境验证，并锁定版本号。",
+            "**README 明确提到 Ubuntu Wayland 主机控制功能在 issue #345 解决前保持禁用**，且 macOS 与 Ubuntu Xorg 的主机控制需要用户显式开启。所以你要注意：若你的工作流依赖 Wayland 下的本地文件操作，当前版本无法满足，需等待该 issue 关闭或改用云桌面。",
+            "**README 声明与加密货币无关联，项目没有代币**，但明确警告存在冒用项目名称的虚假代币。所以你要注意：任何宣称与 OpenMausBot 相关的代币都是诈骗，不要参与其销售或投资。",
+            "**项目由 boat.dev 提供支持**，README 中多次出现该赞助商链接。虽然项目本身为 Apache-2.0 开源，但商业公司参与可能影响长期治理方向。所以你要注意：关注后续版本是否引入与商业产品绑定的功能或服务条款变更。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "同类项目筛选"
+        },
+        {
+          "type": "kv",
+          "k": "elie222/rakazo",
+          "v": "仓库：https://github.com/elie222/rakazo ｜ 星数：7444 ｜ 许可证：Apache-2.0 ｜ 最近推送：2026-11-07 ｜ 适用场景：需要选择自有模型与沙箱环境的开源 Grok Bot 替代品。"
+        },
+        {
+          "type": "kv",
+          "k": "Anil-matcha/open-duet",
+          "v": "仓库：https://github.com/Anil-matcha/open-duet ｜ 星数：6863 ｜ 许可证：Apache-2.0 ｜ 最近推送：2026-11-06 ｜ 适用场景：需要自托管、强调 AI 同事（命名代理）具备记忆、例程与独立隔离计算机，并在行动前征求批准的场景。"
+        },
+        {
+          "type": "p",
+          "text": "其余候选（gawkbot ★1547、AnyModelBot ★2733）虽也自称 Grok Bot 替代，但星数明显低于上述两者，且 gawkbot 未声明许可证，故不纳入。选择判据：若你要求**聊天式界面 + 每 bot 独立模型 + 本地优先**，选本项目；若你更看重**模型可替换性与沙箱隔离**，选 rakazo；若你更看重**命名代理的长期记忆与审批机制**，选 open-duet。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "已有 Claude、Codex 或 Grok CLI 登录，希望复用现有订阅、不新增账户的开发者——README 明确支持指向自定义 CLI 二进制，且密钥仅存于本地 `~/.openmausbot`。",
+            "需要多个代理并行工作、每个代理拥有独立模型与计算机（云桌面或本地 VM）的团队——项目提供频道、部门共享与 BotMRR 一键导入完整团队的能力。",
+            "重视数据主权与可审计性的组织——所有转录、密钥与事件均存储在本地，不经过第三方代理，且许可为 Apache-2.0，可自行审查与修改。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "不能接受频繁升级与破坏性变更的团队——版本仍为 0.1.x，802 个未关闭事项意味着稳定性尚未达到生产级，需自行承担回归风险。",
+            "依赖 Ubuntu Wayland 主机控制功能的工作流——该功能在 issue #345 修复前被禁用，当前只能在 macOS 或 Ubuntu Xorg 上显式开启。",
+            "需要正式支持渠道与明确 SLA 的企业——项目无商业支持承诺，且维护者回应速度受限于未关闭事项数量，关键问题可能无法及时解决。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/milind-soni/OpenMausBot)",
+            "[README](https://github.com/milind-soni/OpenMausBot#readme)",
+            "[Releases 页面](https://github.com/milind-soni/OpenMausBot/releases)",
+            "[Issues 页面](https://github.com/milind-soni/OpenMausBot/issues)",
+            "[项目主页](https://www.openmausbot.com/)",
+            "[rakazo 仓库](https://github.com/elie222/rakazo)",
+            "[open-duet 仓库](https://github.com/Anil-matcha/open-duet)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-08。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "repo": "milind-soni/OpenMausBot",
+    "stars": 16813,
+    "language": "TypeScript",
+    "license": "Apache-2.0",
+    "lastCommit": "2026-11-07",
+    "openIssues": 802,
+    "version": "v0.1.147",
+    "trending": {
+      "window": "日榜",
+      "rank": 9,
+      "gained": 1986,
+      "unit": "今日"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 1945,
+    "codeBlocks": 2,
+    "minutes": 6.4,
+    "asOf": "2026-11-08"
+  }
+}
