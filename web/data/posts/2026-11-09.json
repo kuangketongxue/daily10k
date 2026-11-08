@@ -1,0 +1,243 @@
+{
+  "date": "2026-11-09",
+  "title": "auto-ontology：给 AI 一张可信的数据地图",
+  "oneLiner": "NVIDIA 开源的 Python 框架，从企业元数据构建语义图谱，让 LLM 和智能体在查询数据前先理解数据的含义与来源。",
+  "category": "AI 基础设施 · 数据语义层 · 知识图谱",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "让智能体直接查数据库，结果往往不可靠。一个收入数字算得快，但如果算错了，这个速度毫无意义。问题不在于 SQL 生成能力，而在于智能体缺少一层上下文：它不知道数据在哪里、每个字段是什么意思、哪些定义是可信的、表之间怎么关联。"
+        },
+        {
+          "type": "p",
+          "text": "Auto Ontology 把这层上下文建出来。它从企业已有的元数据出发，自动生成本体（ontology），把分散在多个系统中的定义对齐，再通过 MCP、CLI 和 API 暴露给任何智能体框架。它不替代企业已有的语义模型，而是与它们互补。"
+        },
+        {
+          "type": "quote",
+          "text": "Agents can retrieve documents and query databases, but reliability gates agentic analytics: a revenue metric answered faster is worth nothing if the number is wrong. Agents need a context layer that tells them where data lives, what it means, whether to use it, how to use it, where it came from, and what is similar."
+        },
+        {
+          "type": "p",
+          "text": "这个框架的核心主张是：**先让智能体理解数据，再让它操作数据**。它把「生成本体」「人工认证」「查询验证」三步串起来，让每一次回答都带着出处和推理步骤返回，用户可以直接核对。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "自然语言查询结构化数据"
+        },
+        {
+          "type": "p",
+          "text": "这是最直接的用途。用户在 Chat 界面用自然语言提问，后端把问题翻译成 SQL 并执行。翻译过程不是靠提示词硬猜，而是先解析问题里的业务概念，再在本体里找到对应的列、表和连接路径。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一句业务问题，例如「2015 年 6 月宾夕法尼亚州 USB 寿司卷闪存盘的收入是多少」"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "答案、生成它的完整 SQL、以及解析和验证的步骤列表"
+        },
+        {
+          "type": "code",
+          "code": "Answer:  Revenue for USB food flash drive - sushi roll in Pennsylvania in\n         June 2015 was $588.80, from 3 invoice lines.\n\nSQL:     SELECT SUM(il.extendedprice) AS revenue, COUNT(*) AS invoice_lines\n         FROM sales.invoicelines il\n         JOIN sales.invoices i             ON il.invoiceid = i.invoiceid\n         JOIN warehouse.stockitems si      ON il.stockitemid = si.stockitemid\n         JOIN sales.customers c            ON i.customerid = c.customerid\n         JOIN application.cities ct        ON c.deliverycityid = ct.cityid\n         JOIN application.stateprovinces sp ON ct.stateprovinceid = sp.stateprovinceid\n         WHERE si.stockitemname = 'USB food flash drive - sushi roll'\n           AND sp.stateprovincename = 'Pennsylvania'\n           AND i.invoicedate >= '2015-06-01' AND i.invoicedate < '2015-07-01'\n\nSteps:   Resolved terms: Invoice Line (revenue), Stock Item, State Province, Invoice\n         Joined: invoice line -> invoice -> customer -> city -> state province\n         Validated the filter values against the data, then executed",
+          "caption": "来源：README Quickstart 第 5 步"
+        },
+        {
+          "type": "sub",
+          "text": "回答前先检查可回答性"
+        },
+        {
+          "type": "p",
+          "text": "不是每个问题都能被当前数据回答。Auto Ontology 提供 `check_answerable` 接口，让智能体在生成 SQL 之前先评估覆盖率。如果问题涉及的概念不在本体里，智能体不会硬编一个错误答案，而是主动向用户澄清。"
+        },
+        {
+          "type": "code",
+          "code": "You:    What was return on ad spend for the sushi roll flash drive in June 2015?\nAgent:  check_answerable -> coverage 0.5; no term covers \"ad spend\"\nAgent:  I can find revenue for that product, but this data has no\n         advertising spend, so I can't compute return on ad spend. Do you\n         want June 2015 revenue instead, or is ad spend tracked in another\n         source I should connect?",
+          "caption": "来源：README Quickstart 第 6 步"
+        },
+        {
+          "type": "sub",
+          "text": "作为语义层接入智能体框架"
+        },
+        {
+          "type": "p",
+          "text": "除了内置 Web UI，Auto Ontology 通过 MCP 服务器把本体暴露给外部智能体。这样，任何支持 MCP 的智能体框架都能获得同一套经过认证的业务定义，不需要每个智能体各自维护一套提示词。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个 MCP 客户端（如 Claude Desktop 或自研智能体）"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "可调用的工具：`check_answerable`、`ask_question` 等，附带本体上下文"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Auto Ontology 分三个阶段工作：**生成本体、人工认证、智能体基于本体回答问题**。整个过程围绕一个存储在 Postgres 里的语义目录（semantic catalog）展开，本体就存在这个目录旁边。"
+        },
+        {
+          "type": "p",
+          "text": "本体包含三类定义：**术语（Terms）**——业务概念如「客户」或「发票行」，每个术语有描述、同义词，并映射到承载它的列；**SQL 属性（SQL attributes）**——经过审查的 SQL 表达式，如利润率或滚动总计，智能体直接复用，保证每个指标的计算方式一致；**关系（Relationships）**——表如何连接，包括桥接表，从键和数据中推断出来。"
+        },
+        {
+          "type": "p",
+          "text": "生成阶段由摄取服务（ingestion worker）完成，分四步：读取源数据库的模式、剖析列并采样值写入目录；逐表提取实体并映射到列；推断表间连接和桥接表，从查询历史中建议 SQL 属性；把术语、关系和 SQL 属性写入 Postgres，并用 pgvector 存嵌入向量以便检索。"
+        },
+        {
+          "type": "p",
+          "text": "认证阶段由人完成：先用真实问题在 Chat 或通过 MCP 测试，再在 UI 或 API 中修正术语、描述和 SQL 属性，确认无误后标记为已认证。这一步是可信度的来源。"
+        },
+        {
+          "type": "p",
+          "text": "回答阶段，智能体先对问题做意图分类并抽取实体，再用嵌入搜索检索候选术语、列和 SQL 属性，最后基于这些写 SQL。整个过程有迹可循，用户可以检查每一步。"
+        },
+        {
+          "type": "p",
+          "text": "架构上，前端是 Next.js 16（React 19、TypeScript、Tailwind CSS 4），后端是 FastAPI（Python 3.12+）配合 LangChain，摄取服务也是 FastAPI。Postgres 同时存元数据、本体和向量。认证用 Better Auth，凭据可存 HashiCorp Vault。推理走 NVIDIA NIM，支持托管 API 或自托管。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "官方提供 Docker Compose 快速启动，内置微软示例销售数据库 Wide World Importers。需要 Docker Compose v2、uv 和 NVIDIA API 密钥。"
+        },
+        {
+          "type": "code",
+          "code": "git clone https://github.com/NVIDIA/auto-ontology.git && cd auto-ontology\ncp .env.example .env\n# 编辑 .env，设置 DEFAULT_MODELS_API_KEY、AUTH_SECRET、APP_URL、\n# POSTGRES_PASSWORD、CONNECTION_STRINGS、AUTO_ONTOLOGY_ADMIN_PASSWORD、PGADMIN_PASSWORD\n\ndocker compose up -d --wait postgres\ngit clone https://github.com/NVIDIA/auto-ontology-eval.git ../auto-ontology-eval\n(cd ../auto-ontology-eval && uv sync && cp .env.example .env && \\\n  POSTGRES_PASSWORD='<the same password>' \\\n  uv run python scripts/seed/seed_wwi.py --database-name wideworldimporters --drop)\n\ndocker compose up -d --build",
+          "caption": "来源：README Quickstart 步骤 1-3"
+        },
+        {
+          "type": "p",
+          "text": "启动后打开 http://localhost:3000，用 .env 里的管理员账号登录，在 Settings → Semantic Compilation 打开开关。摄取在启动时运行，编译立即开始，看到「Semantic compilation is ready」即完成。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "每个模型角色由一组环境变量三元组配置：`<PREFIX>_ENDPOINT`、`<PREFIX>_API_KEY`、`<PREFIX>_MODEL`。只设置 `DEFAULT_MODELS_*` 即可，其他角色会自动回退。",
+            "Compose 会发布 Postgres、pgAdmin 和 Web 应用到宿主机，启动前必须替换所有默认密码。",
+            "如果重启后左侧导航不显示，是浏览器持有过期会话 cookie，清除 localhost:3000 的站点数据后重新登录。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭 Issue 与 PR 达 87 个**，且项目无正式 Release，官方也未披露任何版本号。这意味着你部署的是持续变动的开发者预览版，接口和配置可能在一次 `git pull` 后失效，所以你要注意：锁定 commit 哈希，并建立回归测试，不要依赖 `main` 分支的稳定性。",
+            "**最近推送为 2026-11-07，距材料截止日仅 2 天**，说明提交活跃，但这也意味着破坏性变更可能随时进入主干。你要注意：在 CI 中固定镜像 tag，并关注 Release 页面——目前为空，说明没有可追溯的稳定版本。",
+            "**README 明确写着『This project is currently not accepting external contributions』**。你提的 Issue 或 PR 可能无人处理，社区修复无法指望。你要注意：内部需保留自己的补丁分支，并自行跟踪上游变更。",
+            "**运行依赖 NVIDIA NIM 端点**，需要 `DEFAULT_MODELS_API_KEY`（`nvapi-...`）或自托管 NIM，且默认模型为 `nvidia/nemotron-3.5-lightning-30b-a3b`。这意味着推理成本与供应商锁定，你要注意：评估自托管 NIM 的硬件成本，或确认你的数据合规允许调用外部 API。",
+            "**认证与 RBAC 基于 Better Auth，且需要 `AUTH_SECRET` 与多个密码**（`POSTGRES_PASSWORD`、`AUTO_ONTOLOGY_ADMIN_PASSWORD`、`PGADMIN_PASSWORD`）。README 要求你替换每个默认密码，否则 Compose 会以弱配置启动。你要注意：在部署前强制检查 `.env` 中是否还有 `your-api-key-here` 或默认密码。",
+            "**项目由 NVIDIA 维护，README 提及 NIM 与 API catalog**，虽然许可证为 Apache-2.0，但核心推理依赖其商业服务。你要注意：若你希望完全脱离 NVIDIA 生态，需自行替换模型端点，但这可能影响查询质量。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "按 GitHub 同类话题搜索，暂未找到成熟的同类项目。Auto Ontology 的定位是『从元数据生成语义层并暴露给任何代理』，这比单纯的 text-to-SQL 工具更宽——它包含本体生成、认证、RBAC 和 MCP 服务，目前没有直接竞争对手。"
+        },
+        {
+          "type": "p",
+          "text": "如果你的需求只是把自然语言翻译成 SQL 并执行，可以考虑 [ontology-sql-eval](https://github.com/NVIDIA/ontology-sql-eval/)（README 中提到的基准仓库），但它只是评估工具，不是完整框架。选择判据：需要完整的语义层、认证和 MCP 集成，选本项目；只需要跑 BIRD 类基准测试，用 ontology-sql-eval。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "该用的人"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**有企业元数据（如 Wide World Importers 这类样例数据库）的团队**，需要为 LLM 代理提供可追溯的业务术语和连接关系，且能接受 NVIDIA NIM 作为推理后端。",
+            "**需要可解释性的分析场景**——README 的示例返回 SQL 和步骤，能审计每个数字的来源，适合合规要求高的金融或零售分析。",
+            "**已经使用 NVIDIA 生态（API catalog 或自托管 NIM）的开发者**，能直接复用现有密钥和模型配置，降低集成成本。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "别用的人"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**需要稳定版本和社区支持的项目**——87 个未关闭 Issue、无 Release、不接受外部贡献，意味着你无法依赖上游修复。",
+            "**不能使用 NVIDIA NIM 或外部 API 的环境**——数据敏感或离线部署场景下，默认模型无法运行，且自托管 NIM 的硬件成本可能超出预算。",
+            "**只做简单 text-to-SQL 的团队**——Auto Ontology 的部署涉及 5 个组件（前端、后端、Ingestion worker、Postgres+pgvector、可选 Vault），对轻量查询来说过重。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/NVIDIA/auto-ontology) — 星数 10248，Fork 832，创建 2026-04-27，最近推送 2026-11-07，许可证 Apache-2.0",
+            "[README](https://github.com/NVIDIA/auto-ontology) — 包含 Quickstart、Benchmarks、Key Features、Software Components、NVIDIA NIM 配置和『not accepting external contributions』声明",
+            "[Issues 页面](https://github.com/NVIDIA/auto-ontology/issues) — 未关闭 Issue 与 PR 共 87 个",
+            "[Releases 页面](https://github.com/NVIDIA/auto-ontology/releases) — 无正式 Release",
+            "[ontology-sql-eval](https://github.com/NVIDIA/ontology-sql-eval/) — README 中引用的 text-to-SQL 基准仓库"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-09。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "repo": "NVIDIA/auto-ontology",
+    "stars": 10248,
+    "language": "Python",
+    "license": "Apache-2.0",
+    "lastCommit": "2026-11-07",
+    "openIssues": 87,
+    "trending": {
+      "window": "周榜",
+      "rank": 1,
+      "gained": 9044,
+      "unit": "本周"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 1960,
+    "codeBlocks": 3,
+    "minutes": 7.2,
+    "asOf": "2026-11-09"
+  }
+}

@@ -1,6 +1,13 @@
 {
-  "updated": "2026-11-08",
+  "updated": "2026-11-09",
   "issues": [
+    {
+      "date": "2026-11-09",
+      "title": "auto-ontology：给 AI 一张可信的数据地图",
+      "oneLiner": "NVIDIA 开源的 Python 框架，从企业元数据构建语义图谱，让 LLM 和智能体在查询数据前先理解数据的含义与来源。",
+      "category": "AI 基础设施 · 数据语义层 · 知识图谱",
+      "stars": 10248
+    },
     {
       "date": "2026-11-08",
       "title": "OpenMausBot：把 AI 代理装进聊天应用，每个 bot 自带电脑和审批权",
