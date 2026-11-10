@@ -1,0 +1,252 @@
+{
+  "date": "2026-11-10",
+  "title": "Astryx：让 AI 助手和人类用同一套组件库建界面",
+  "oneLiner": "Meta 开源的 React 19+ 设计系统，150+ 组件，主题可定制，API、文档与 CLI 为人机协作而设计。",
+  "category": "设计系统 · React · AI 工具链",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "当 AI 编程助手开始参与前端开发，一个常被忽视的痛点浮出水面：助手和人类遵循的组件约定往往不一致。人类可以靠经验补足文档缺失的细节，但助手只能依赖 API 签名和文档的明确表述。如果组件库的 API 不统一、文档不完整，AI 生成的代码就经常与项目既有风格冲突，需要反复人工修正。"
+        },
+        {
+          "type": "p",
+          "text": "Astryx 的回应是把这一点作为核心设计目标。README 的 Principles 一节明确写道：**「One system for humans and AI. The API, conventions, docs, and CLI are designed together so people and AI assistants build the same way.」** 这不是一句口号，而是有具体机制支撑的承诺——每个组件遵循相同的命名、prop 和组合规则，且全部有文档，因此「一旦你学会了几个，其余的就感到熟悉，人和 AI 都能预测不熟悉的组件行为」。"
+        },
+        {
+          "type": "p",
+          "text": "另一个痛点是样式体系的锁定。多数设计系统要求你接入它的样式方案，要么用 CSS-in-JS，要么用 Tailwind 插件，迁移成本高。Astryx 用 StyleX 写内部样式，但对使用者不可见：你可以直接用 `className` 覆盖，Tailwind、CSS Modules 或纯 CSS 都行。README 明确说「No styling lock-in」，这为既有项目渐进采用留出了空间。"
+        },
+        {
+          "type": "p",
+          "text": "还有一层是定制深度。很多系统只暴露顶层 API，想改一个内部结构就得 fork 整个库。Astryx 提供 `swizzle` 命令，可以把某个组件的完整源码 eject 到你的项目里直接改，同时保留了与上游同步更新的可能。README 把它描述为「Open internals」：组件被设计为可在任意层级组合，而不是锁在封闭的顶层 API 后面。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "让 AI 助手直接生成符合规范的界面代码"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个自然语言描述，例如「做一个带搜索和筛选的用户表格页」"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "可运行的 React 19 组件代码，使用 Astryx 的 Table、SearchInput、Filter 等组件，且样式与项目主题一致"
+        },
+        {
+          "type": "p",
+          "text": "Astryx 的 CLI 提供组件文档、模板和脚手架，AI 助手可以直接调用 `astryx component --list` 获取可用组件清单，再读取对应文档生成代码。README 特别提到，在 `package.json` 里加一个脚本可以避免路径错误——「This avoids path errors when AI assistants or new developers invoke the CLI directly.」"
+        },
+        {
+          "type": "sub",
+          "text": "快速搭建设计系统原型或内部工具"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个 React 19 项目，加上 `@astryxdesign/core` 和任意一个主题包"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "150+ 无障碍组件、暗色模式、品牌级主题，以及表格页、表单向导等常用模式模板"
+        },
+        {
+          "type": "p",
+          "text": "Astryx 在 Meta 内部已支撑 13,000+ 个应用，是公司最大、使用最广的设计系统。它提供 150+ 组件、七套预置主题（neutral、butter、chocolate、matcha、stone、gothic、y2k），以及 Patterns 层——针对表格页、详情页布局、表单向导等常见交互的成熟解决方案。"
+        },
+        {
+          "type": "sub",
+          "text": "深度定制组件而不 fork 整个库"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个想改的组件名，例如 `Button`"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "该组件的完整源码被复制到你的项目里，你可以直接改，同时保留与上游同步更新的能力"
+        },
+        {
+          "type": "p",
+          "text": "README 的「Open internals」一节写道：`swizzle` 会把组件完整源码 eject 到你的项目里让你拥有。这比 wrapping 或 fork 更彻底，适合需要改动组件内部结构的场景。"
+        },
+        {
+          "type": "code",
+          "code": "npm run astryx -- component --list\n# 列出所有可用组件\nnpm run astryx -- component --docs Button\n# 查看 Button 的完整文档",
+          "caption": "来源：README「Getting Started」与「Packages」节"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Astryx 的架构分为三层，对应 README 的 Architecture 节：**Foundations**（排版、颜色、布局、无障碍）、**Components**（150+ 带完整 TypeScript 类型的 React 组件）、**Patterns**（表格页、表单向导等常见交互的成熟方案）。这种分层让使用者可以从底层基石开始，逐级构建。"
+        },
+        {
+          "type": "p",
+          "text": "核心机制之一是**主题即 CSS 自定义属性覆盖**。README 说「A theme is a set of CSS custom property overrides」，因此设计师不需要 fork 或包装组件源码，只需覆盖一组 CSS 变量就能让整个系统变成自己的风格。这与「Customize without wrapping」的原则一致。"
+        },
+        {
+          "type": "p",
+          "text": "另一个关键机制是**组件可组合性**。Astryx 不把组件锁在封闭的顶层 API 后面，而是直接导出底层构建块，允许在任意层级组合。README 强调「The building blocks you'd reach for are exported directly」，这让开发者可以按需组装，而不是被迫使用预制的黑盒组件。"
+        },
+        {
+          "type": "p",
+          "text": "样式层面，Astryx 内部用 StyleX 编写，但消费者完全无感。你可以用 `className` 覆盖，Tailwind、CSS Modules 或纯 CSS 都行。README 明确说「No styling lock-in」，这是它与其他设计系统的重要区别。"
+        },
+        {
+          "type": "p",
+          "text": "项目结构也体现了这种开放性：`packages/` 存放发布的包（core、cli、build、themes），`internal/` 存放测试工具和 eslint 插件，`apps/` 是示例应用、文档站和 Storybook。CLI 本身是独立包 `@astryxdesign/cli`，可以全局安装，让 `astryx` 命令在任何文件夹都可用——README 说「every coding agent knows Astryx」。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Astryx 要求 React 19 或更高版本（`react` 和 `react-dom` 是 `@astryxdesign/core` 的 peer dependencies）。安装只需几条命令："
+        },
+        {
+          "type": "code",
+          "code": "# npm\nnpm install @astryxdesign/core @astryxdesign/theme-neutral @stylexjs/stylex\nnpm install -D @astryxdesign/cli\n\n# 或全局安装 CLI，让 astryx 在任何文件夹可用\nnpm i -g @astryxdesign/cli",
+          "caption": "来源：README「Getting Started」"
+        },
+        {
+          "type": "p",
+          "text": "最简单的设置是几个 CSS 导入加一个主题 Provider，不需要构建插件、PostCSS 或 Babel 配置。完整指南（Next.js、Tailwind、Vite 和 CDN）在 `@astryxdesign/core` 的 README 里。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "为了可靠的 CLI 访问，建议在 package.json 里加一个脚本：`\"astryx\": \"node node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs\"`，然后用 `npm run astryx -- component --list` 调用。README 指出这能避免 AI 助手或新开发者直接调用 CLI 时的路径错误。",
+            "项目安装和全局安装可以共存。用 `astryx docs global/project-global-or-both` 比较两者，README 推荐两者都装。",
+            "贡献代码需要 Node 22+ 和 pnpm 11。先运行 `corepack enable`，再 `pnpm install`。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**项目仍处于 Beta 阶段**，最新 Release 为 v0.7.11（2026-11-07），且 README 明确标注 \"Currently in Beta\"。Beta 意味着 API 可能发生破坏性变更，生产环境使用需谨慎锁定版本。",
+            "**未关闭的 Issue 与 PR 数量为 679**，这是一个相当高的数字，说明项目维护压力大，问题响应和修复速度可能受到影响。",
+            "**最近提交时间为 2026-11-10**，即文章撰写当天，说明项目维护活跃，但高活跃度也意味着变更频繁，需要持续关注更新日志。",
+            "**README 提到 `@astryxdesign/vega` 和 `@astryxdesign/charts` 仅发布在 `@canary` dist-tag 下，没有稳定版**。如果您的项目依赖图表功能，需注意这些组件可能不稳定。",
+            "**项目要求 React 19+ 作为 peer dependency**。如果您的项目仍在使用 React 18 或更早版本，无法直接采用。",
+            "**项目源自 Meta 内部**，README 称其已用于 13,000+ 应用。虽然开源，但企业背景可能影响社区治理的独立性，需关注其长期维护承诺。",
+            "**README 提到需要 Node 22+ 和 pnpm 11 进行贡献开发**。如果您的团队环境不满足这些要求，参与贡献会有额外门槛。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "同类项目评估"
+        },
+        {
+          "type": "p",
+          "text": "根据 GitHub 同类搜索，**xzf-thu/VoiceMem** 和 **thunder-id/thunderid** 均被列为候选，但它们解决的问题与 Astryx 不同。VoiceMem 专注于语音代理的存储基础设施，ThunderID 专注于身份管理，而 Astryx 是一个 UI 设计系统。因此，**没有找到真正同类的成熟替代项目**。"
+        },
+        {
+          "type": "p",
+          "text": "**选择判据**：如果您需要一个为 AI 代理时代设计的、可定制且无样式锁定的 React 设计系统，Astryx 是当前最直接的选择。若您需要的是语音代理存储或身份管理，则应分别考虑 VoiceMem 或 ThunderID，而非 Astryx。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "推荐使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**正在构建 React 19+ 应用，并希望集成 AI 辅助开发的团队**。Astryx 的 API、文档和 CLI 设计均考虑了 AI 代理的使用场景，能降低人机协作成本。",
+            "**需要高度可定制的设计系统，且不想被特定样式方案（如 Tailwind、CSS Modules）锁定的团队**。Astryx 支持通过 className 覆盖样式，并提供主题自定义能力。",
+            "**希望快速搭建界面，且重视无障碍和组件质量的团队**。Astryx 提供 150+ 组件，并强调可访问性。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**项目仍在使用 React 18 或更早版本的团队**。Astryx 要求 React 19+，无法兼容旧版本。",
+            "**需要稳定 API 且无法承受频繁变更的生产环境**。项目处于 Beta 阶段，且未关闭的 Issue/PR 数量较多，存在破坏性变更风险。",
+            "**需要图表组件稳定版的团队**。`@astryxdesign/charts` 和 `@astryxdesign/vega` 目前仅发布在 `@canary` 标签下，没有稳定版。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/meta/astryx)",
+            "[README](https://github.com/meta/astryx/blob/main/README.md)",
+            "[Releases 页面](https://github.com/meta/astryx/releases)",
+            "[Issues 页面](https://github.com/meta/astryx/issues)",
+            "[项目主页](http://astryx.atmeta.com)",
+            "[VoiceMem 仓库](https://github.com/xzf-thu/VoiceMem)",
+            "[ThunderID 仓库](https://github.com/thunder-id/thunderid)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-10。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "repo": "meta/astryx",
+    "stars": 19967,
+    "language": "TypeScript",
+    "license": "MIT",
+    "lastCommit": "2026-11-10",
+    "openIssues": 679,
+    "version": "v0.7.11",
+    "trending": {
+      "window": "日榜",
+      "rank": 2,
+      "gained": 3278,
+      "unit": "今日"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 1876,
+    "codeBlocks": 2,
+    "minutes": 6.2,
+    "asOf": "2026-11-10"
+  }
+}

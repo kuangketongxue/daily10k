@@ -1,6 +1,13 @@
 {
-  "updated": "2026-11-09",
+  "updated": "2026-11-10",
   "issues": [
+    {
+      "date": "2026-11-10",
+      "title": "Astryx：让 AI 助手和人类用同一套组件库建界面",
+      "oneLiner": "Meta 开源的 React 19+ 设计系统，150+ 组件，主题可定制，API、文档与 CLI 为人机协作而设计。",
+      "category": "设计系统 · React · AI 工具链",
+      "stars": 19967
+    },
     {
       "date": "2026-11-09",
       "title": "auto-ontology：给 AI 一张可信的数据地图",
