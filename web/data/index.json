@@ -1,6 +1,13 @@
 {
-  "updated": "2026-11-10",
+  "updated": "2026-11-11",
   "issues": [
+    {
+      "date": "2026-11-11",
+      "title": "anthropics/skills：让 Claude 按你的规范做事，Agent Skills 官方示例库",
+      "oneLiner": "Anthropic 开源的 Agent Skills 官方示例库，内含技能规范、模板与可复用的生产级技能，供开发者构建自定义 Claude 技能。",
+      "category": "AI Agent · 技能编排 · 官方示例",
+      "stars": 192212
+    },
     {
       "date": "2026-11-10",
       "title": "Astryx：让 AI 助手和人类用同一套组件库建界面",

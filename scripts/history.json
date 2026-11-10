@@ -18,5 +18,6 @@
   "thedotmack/claude-mem",
   "milind-soni/OpenMausBot",
   "NVIDIA/auto-ontology",
-  "meta/astryx"
+  "meta/astryx",
+  "anthropics/skills"
 ]

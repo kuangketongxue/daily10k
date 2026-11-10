@@ -1,0 +1,240 @@
+{
+  "date": "2026-11-11",
+  "title": "anthropics/skills：让 Claude 按你的规范做事，Agent Skills 官方示例库",
+  "oneLiner": "Anthropic 开源的 Agent Skills 官方示例库，内含技能规范、模板与可复用的生产级技能，供开发者构建自定义 Claude 技能。",
+  "category": "AI Agent · 技能编排 · 官方示例",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "让大模型执行专业任务时，最头疼的不是模型能力，而是它不知道你的品牌字体、你的数据口径、你的文档格式。每次都要在提示词里重写一遍规则，既冗长又容易漏。Anthropic 把这类问题收敛成一个概念：**技能（Skills）**。"
+        },
+        {
+          "type": "p",
+          "text": "README 开篇即定义：**“Skills are folders of instructions, scripts, and resources that Claude loads dynamically to improve performance on specialized tasks.”** 技能不是提示词补丁，而是一个自包含的目录——里面装着指令、脚本和资源，Claude 按需加载，从而在特定任务上稳定复现你的工作方式。"
+        },
+        {
+          "type": "p",
+          "text": "这个仓库本身不是产品，而是**官方示例库**。它展示技能能覆盖的广度：从艺术、音乐、设计等创意应用，到 Web 应用测试、MCP 服务器生成等技术任务，再到企业通信、品牌规范等流程。每个技能都是独立文件夹，内含 `SKILL.md` 作为入口。"
+        },
+        {
+          "type": "p",
+          "text": "对团队而言，价值在于**把个人经验变成组织资产**。你不需要让每个新人都背一遍品牌手册，也不需要把分析流程写进每个 prompt——把规范放进技能目录，Claude 就能按同一套标准重复执行。"
+        },
+        {
+          "type": "quote",
+          "text": "Skills teach Claude how to complete specific tasks in a repeatable way, whether that's creating documents with your company's brand guidelines, analyzing data using your organization's specific workflows, or automating personal tasks."
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "用途一：让 Claude 按你的文档规范产出文件"
+        },
+        {
+          "type": "p",
+          "text": "仓库里包含支撑 Claude 文档能力的四个生产级技能：`docx`、`pdf`、`pptx`、`xlsx`。它们不是玩具，而是 Claude 产品背后真正在用的实现，且以 Apache 2.0 开源。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一份包含品牌字体、配色、版式要求的 `SKILL.md`，以及一个“生成季度报告.docx”的指令。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "一份格式合规的 .docx 文件，标题层级、页眉页脚、表格样式都按你的规范生成。"
+        },
+        {
+          "type": "code",
+          "code": "/plugin install document-skills@anthropic-agent-skills\n# 然后直接说：\n# \"Use the PDF skill to extract the form fields from path/to/some-file.pdf\"",
+          "caption": "来源：README「Claude Code」节"
+        },
+        {
+          "type": "sub",
+          "text": "用途二：把内部流程固化为可复用的技能"
+        },
+        {
+          "type": "p",
+          "text": "技能的核心是“可重复”。你可以把团队的数据分析流程、代码审查规范、客户沟通模板都封装成技能。仓库里的 `example-skills` 插件集展示了多种模式，可作为参考起点。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个包含分析步骤、中间产物命名规则、输出格式要求的技能目录。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "Claude 每次执行都按同一套步骤走，结果可对比、可审计，不再依赖模型临场发挥。"
+        },
+        {
+          "type": "sub",
+          "text": "用途三：为特定软件定制操作技能"
+        },
+        {
+          "type": "p",
+          "text": "README 提到合作伙伴技能（Partner Skills），如 Notion 已发布针对 Claude 的技能。这暗示一个方向：软件厂商可以发布官方技能，让 AI 更准确地操作自家产品。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个第三方软件的官方技能包，比如 Notion 的。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "Claude 能按该软件的操作规范完成任务，减少误用接口或格式错误。"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "技能的本质是一个**自包含目录**，结构上类似“给 AI 用的说明书+工具箱”。README 明确每个技能“self-contained in its own folder with a `SKILL.md` file containing the instructions and metadata that Claude uses”。"
+        },
+        {
+          "type": "p",
+          "text": "入口是 `SKILL.md`，采用 YAML frontmatter + Markdown 正文。frontmatter 只要求两个字段：`name`（唯一标识，小写并用连字符）和 `description`（完整描述技能做什么、何时用）。正文部分就是给 Claude 的指令，包含示例（Examples）和准则（Guidelines）。"
+        },
+        {
+          "type": "code",
+          "code": "---\nname: my-skill-name\ndescription: A clear description of what this skill does and when to use it\n---\n\n# My Skill Name\n\n[Add your instructions here that Claude will follow when this skill is active]\n\n## Examples\n- Example usage 1\n- Example usage 2\n\n## Guidelines\n- Guideline 1\n- Guideline 2",
+          "caption": "来源：README「Creating a Basic Skill」节"
+        },
+        {
+          "type": "p",
+          "text": "仓库目录结构清晰对应三个角色：`skills/` 放示例技能（创意设计、开发技术、企业通信、文档技能四类）；`spec/` 放 Agent Skills 规范；`template/` 提供技能模板。这种“规范+模板+示例”的三件套，让开发者不必从零设计。"
+        },
+        {
+          "type": "p",
+          "text": "加载机制是**动态按需**：Claude 在遇到相关任务时加载对应技能目录，而不是把所有技能常驻上下文。这既节省 token，也让技能可以做得更厚——指令、脚本、资源都可以放进去，不必担心污染主对话。"
+        },
+        {
+          "type": "p",
+          "text": "仓库还包含文档技能的完整实现（`skills/docx`、`skills/pdf`、`skills/pptx`、`skills/xlsx`），这些是 Claude 生产环境在用的代码，对开发者来说是研究复杂技能架构的活样本。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "最直接的方式是在 Claude Code 中把本仓库注册为插件市场，然后安装技能集。"
+        },
+        {
+          "type": "code",
+          "code": "/plugin marketplace add anthropics/skills\n# 然后选择 Browse and install plugins -> anthropic-agent-skills\n# 选择 document-skills 或 example-skills -> Install now\n\n# 或者直接安装：\n/plugin install document-skills@anthropic-agent-skills\n/plugin install example-skills@anthropic-agent-skills",
+          "caption": "来源：README「Claude Code」节"
+        },
+        {
+          "type": "p",
+          "text": "安装后即可通过自然语言触发，例如安装 `document-skills` 后，直接说“Use the PDF skill to extract the form fields from `path/to/some-file.pdf`”。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Claude.ai 的付费方案已内置这些示例技能，也可按支持文档上传自定义技能；Claude API 则通过 Skills API 上传。",
+            "创建自定义技能时，用仓库里的 `template-skill` 作为起点，frontmatter 只需 `name` 和 `description` 两个字段。",
+            "注意免责声明：这些技能仅供演示与教育，生产环境使用前务必自行测试，实际行为可能与示例有差异。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭 Issue 与 PR 达 1517 个**，而仓库创建于 2025-09-22、最近推送为 2026-11-06，说明维护速度远跟不上社区反馈。所以你要注意：提的 issue 可能长期得不到回复，依赖此仓库的团队需自行跟踪上游变更。",
+            "**无正式 Release**，Releases 页面为空。所以你要注意：无法通过版本号锁定依赖，任何一次拉取都可能引入破坏性变更，生产环境需固定 commit 并做回归测试。",
+            "**README 明确声明这些 skills 仅供演示与教育用途**，并强调 Claude 的实际实现可能与仓库中的 skills 不同。所以你要注意：不能直接照搬文档生成、PDF 处理等技能到关键业务，必须先在自有环境充分测试。",
+            "**仓库许可证未声明**，尽管 README 提到部分技能采用 Apache 2.0，但整体授权边界不清晰。所以你要注意：若计划将技能集成进商业产品，需逐文件夹确认许可证，或联系 Anthropic 获取书面授权。",
+            "**仓库是 Anthropic 官方推广 Claude 生态的入口**，README 中大量链接指向 Claude 商业产品与支持文档。所以你要注意：它本质是生态示例库，而非中立的技术标准实现，评估时需区分产品宣传与工程事实。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "按 GitHub 同类话题搜索暂未找到成熟的同类项目。Agent Skills 是 Anthropic 主导的规范，仓库本身包含规范文档（`./spec`），目前没有规模与活跃度可比的独立实现。若你需要的是**遵循 Agent Skills 规范、能加载到 Claude 系列产品的技能集合**，本仓库是唯一事实标准；若你只是需要文档生成或数据分析能力，可考虑通用库（如 python-docx、pandas），但它们不解决“给 Claude 提供技能”这一核心问题。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**想为 Claude Code / Claude.ai / Claude API 快速添加现成技能**的开发者——仓库提供插件市场安装方式，一条命令即可注册。",
+            "**需要参考 Anthropic 官方技能实现模式**的团队——docx、pdf、pptx、xlsx 等技能展示了生产级技能的组织方式，可作为自研模板。",
+            "**需要 Agent Skills 规范文档**的集成方——`./spec` 目录提供规范内容，是构建兼容技能的基础。"
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            "**生产环境中直接依赖未固定版本的技能**——无 Release、1517 个未关闭 issue，变更不可控。",
+            "**期望获得技术支持或问题响应**的团队——issue 积压量过大，响应周期无法保证。",
+            "**需要明确开源许可证**的商用项目——仓库整体未声明许可证，法律风险未消除。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/anthropics/skills)",
+            "[README](https://github.com/anthropics/skills)",
+            "[Issues 页面](https://github.com/anthropics/skills/issues)",
+            "[Releases 页面](https://github.com/anthropics/skills/releases)",
+            "[Agent Skills 标准站点](http://agentskills.io)",
+            "[Claude 工程博客：为真实世界装备 Agent](https://anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-11。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "repo": "anthropics/skills",
+    "stars": 192212,
+    "language": "Python",
+    "lastCommit": "2026-11-06",
+    "openIssues": 1517,
+    "trending": {
+      "window": "日榜",
+      "rank": 2,
+      "gained": 1676,
+      "unit": "今日"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 1760,
+    "codeBlocks": 3,
+    "minutes": 6.7,
+    "asOf": "2026-11-11"
+  }
+}
