@@ -1,7 +1,8 @@
 # 注意：本站是 GitHub Pages 的「项目站点」，部署在 /daily10k/ 子路径下。
 # 爬虫只会读取域名根目录的 /robots.txt，子路径下的这一份是给人工查看与
-# Search Console 用的，不参与实际抓取规则。真正的「不被收录」靠各页的
-# <meta name="robots" content="noindex">。
+# Search Console 用的，不参与实际抓取规则。收录策略按页区分：首页 / 文章 /
+# 往期回顾是公开内容，允许收录（带 canonical 与 sitemap）；收藏夹 / 404 /
+# 收藏说明是个人化或工具页，靠各自的 <meta name="robots" content="noindex"> 排除。
 
 User-agent: *
 Allow: /
