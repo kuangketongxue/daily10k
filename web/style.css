@@ -65,6 +65,27 @@ button:focus-visible {
 
 img { max-width: 100%; display: block; }
 
+/* 滚动条沿用天空配色：轨道纸色、滑块雾蓝、hover 提亮到主蓝，不用浏览器默认灰 */
+html { scrollbar-width: thin; scrollbar-color: #b9cfe6 var(--paper); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--paper); }
+::-webkit-scrollbar-thumb {
+  background: #b9cfe6;
+  border-radius: 999px;
+  border: 2px solid var(--paper);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--blue-500); }
+/* 代码块是深底，滚动条换成同族深色，避免一条亮灰横在暗码上 */
+.a-code { scrollbar-width: thin; scrollbar-color: #33506e #0a2038; }
+.a-code::-webkit-scrollbar { height: 8px; }
+.a-code::-webkit-scrollbar-track { background: #0a2038; }
+.a-code::-webkit-scrollbar-thumb {
+  background: #33506e;
+  border-radius: 999px;
+  border: 2px solid #0a2038;
+}
+.a-code::-webkit-scrollbar-thumb:hover { background: var(--blue-500); }
+
 /* 阅读进度条 */
 .progress {
   position: fixed;
@@ -1414,7 +1435,13 @@ blockquote p:last-child { margin-bottom: 0; }
   color: inherit;
   text-decoration: none;
   transition: border-color .18s ease, transform .18s ease;
+  animation: rise .5s cubic-bezier(.2, .7, .2, 1) both;
 }
+.recent-item:nth-child(1) { animation-delay: .05s; }
+.recent-item:nth-child(2) { animation-delay: .10s; }
+.recent-item:nth-child(3) { animation-delay: .15s; }
+.recent-item:nth-child(4) { animation-delay: .20s; }
+.recent-item:nth-child(5) { animation-delay: .25s; }
 
 .recent-item:hover {
   border-color: #bcd7f2;
@@ -1544,7 +1571,6 @@ a.issue-nav-slot:hover { border-color: #bcd7f2; transform: translateY(-2px); }
   .today-title { font-size: 20px; line-height: 1.5; }
   .today-oneliner { font-size: 14.5px; line-height: 1.85; }
   .a-metas { gap: 6px 14px; font-size: 12px; }
-  .a-metas > span:not(:first-child)::before { margin-right: 9px; opacity: .38; }
   .hero-chip { padding: 4px 11px; font-size: 12px; }
   .read-btn { width: 100%; justify-content: center; margin-top: 22px; }
 
@@ -1605,6 +1631,7 @@ a.issue-nav-slot:hover { border-color: #bcd7f2; transform: translateY(-2px); }
   *, *::before, *::after {
     animation-duration: .001ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
     transition-duration: .001ms !important;
   }
 }
