@@ -25,6 +25,16 @@ function esc(s) {
   }[c]));
 }
 
+// 分类串（「AI Agent · 技能编排 · 官方示例」）拆成逐项标签，
+// 首页 / 归档 / 收藏三处共用同一套拆分口径，避免一处整串、一处逐项。
+function splitCategory(cat) {
+  return String(cat ?? '').split(/[·\/,，]/).map(s => s.trim()).filter(Boolean);
+}
+
+function categoryTags(cat) {
+  return splitCategory(cat).map(c => `<span class="tag">${esc(c)}</span>`).join('');
+}
+
 function readCache(key) {
   try { return localStorage.getItem(key); } catch { return null; }
 }
@@ -173,7 +183,7 @@ function renderFavoriteItem(post, date, open) {
           <h2 class="fav-title">${esc(post.title || '万星日报')}</h2>
           <p class="fav-one">${esc(post.oneLiner || '')}</p>
           <div class="fav-tags">
-            ${post.category ? `<span class="tag">${esc(post.category)}</span>` : ''}
+            ${categoryTags(post.category)}
             ${Number(m.stars) > 0 ? `<span class="fav-stars">★ ${Number(m.stars).toLocaleString('zh-CN')}</span>` : ''}
           </div>
         </div>
