@@ -1,0 +1,225 @@
+{
+  "date": "2026-11-12",
+  "title": "Sure：让个人财务自己长出一双 AI 眼睛",
+  "oneLiner": "Sure 是一个可自托管、带 AI 助手的开源个人财务应用，面向想掌控自己资产与现金流的个人投资者与家庭。",
+  "category": "个人财务 · 自托管 · AI 助手",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "个人财务管理长期处于两难：用记账 App 要忍受数据被平台锁死、功能被订阅绑架；自己用电子表格管，又很难把账户、预算、投资和净资产串成一张连贯的图。Sure 把这两条路合并成一条——**一个可以完全自己部署、数据不出自己服务器的财务工作台**。"
+        },
+        {
+          "type": "p",
+          "text": "这个项目不是从零开始的实验。它的前身是 Maybe Finance，一个在 2021–2022 年投入近 100 万美元开发、甚至内置了真人 CFP/CFA 顾问功能的商业应用。商业上没跑通之后，团队在 2023 年中停止开发并把代码开源。Sure 是社区接手的维护分支，**继承了那套完整功能，同时把商业模式的包袱卸掉了**。"
+        },
+        {
+          "type": "quote",
+          "text": "This repository is a community fork of the now-abandoned Maybe Finance project."
+        },
+        {
+          "type": "p",
+          "text": "对投资者而言，这意味着一个关键转变：你不再依赖某个 SaaS 公司的存续来决定自己财务数据的可访问性。Sure 提供 Docker 自托管，数据落在你自己的 PostgreSQL 里；同时它保留了 AI 助手能力，可以像对话一样询问自己的现金流、支出和净资产。截至本文写作时，该项目在 GitHub 上获得 **12,882 颗星**，日增 1,079 星，位列 Trending 日榜第 7 名，说明这个需求并非小众。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "用途一：把散落的账户和资产收拢成一张净资产图"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "银行账户、信用卡、投资账户的余额与交易记录（支持手动录入或通过 API 客户端接入）"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "一个双栏仪表盘：左侧显示现金流与净资产趋势，右侧显示支出与资金流出明细，并配有 AI 助手回答关于储蓄率、预算执行等自然语言问题。"
+        },
+        {
+          "type": "code",
+          "code": "rake demo_data:default\n# 然后访问 http://localhost:3000\n# 登录：user@example.com / Password1!",
+          "caption": "来源：README「Getting Started」节"
+        },
+        {
+          "type": "sub",
+          "text": "用途二：让 AI 助手成为你的财务问答入口"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个自然语言问题，例如“我这个月储蓄率是多少？”或“上季度投资回报如何？”"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "基于你本地数据的回答。AI 功能是可插拔的：可以选择不启用 AI、用 OpenAI 后端，或接入外部助手网关。"
+        },
+        {
+          "type": "sub",
+          "text": "用途三：从浏览器到 LLM Agent 的多端访问"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个 Sure 实例（Docker 或 Render 一键部署）"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "浏览器 Web 界面、macOS 桌面应用、移动端 App、API 客户端以及 LLM Agent 都能访问同一份数据。"
+        },
+        {
+          "type": "p",
+          "text": "对关注投资方向的读者，最直接的用法是**把 Sure 当作自托管的总账本**：所有账户余额与交易记录汇入一个 PostgreSQL 数据库，再通过仪表盘和 AI 问答做复盘。它不替你下单，但它让你对“钱在哪、怎么流动”这件事有完整的可见性。"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Sure 是一个 Ruby on Rails 应用，核心依赖是 **PostgreSQL（>9.3）与 Redis（>5.4）**。数据模型围绕账户、交易、投资持仓和预算展开，仪表盘通过服务端渲染生成，而不是依赖前端 SPA 的复杂状态管理。这种架构让自托管变得直接：一个 Rails 进程加一个 Sidekiq 后台 worker 即可跑起来。"
+        },
+        {
+          "type": "p",
+          "text": "AI 助手是可选模块，通过环境变量控制启用方式。Render 的一键部署模板给出了三种配置：**No AI**（AI token 留空）、**Simple AI**（OpenAI 后端 + pgvector 就绪的 Postgres）、**External AI**（外部助手网关，由 AlphaClaw 管理 OpenClaw 网关）。这种分层设计意味着你可以先跑纯本地版本，再按需接入 AI，而不会被迫承担额外依赖。"
+        },
+        {
+          "type": "p",
+          "text": "项目还维护了一个公开的性能仪表盘（Skylight），展示 demo 站点上出现问题的请求与堆栈追踪，方便贡献者定位性能瓶颈。这种透明度在个人财务类开源项目中并不多见。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "最快的路径是 Docker 自托管。官方文档提供了完整的 Docker 指南，本地开发则按以下步骤："
+        },
+        {
+          "type": "code",
+          "code": "cd sure\ncp .env.local.example .env.local\nbin/setup\nbin/dev\n\n# 可选：加载演示数据\nrake demo_data:default",
+          "caption": "来源：README「Getting Started」节"
+        },
+        {
+          "type": "list",
+          "items": [
+            "本地开发需要 Ruby（版本见 `.ruby-version`）、PostgreSQL >9.3 和 Redis >5.4，三者缺一不可。",
+            "加载演示数据后，登录凭据为 `user@example.com` / `Password1!`。",
+            "不想自己维护基础设施，可以用 Render 的一键部署模板（分 No AI / Simple AI / External AI 三档），或 PikaPods、Hostim 的托管入口。"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "注意许可证是 **AGPL-3.0**，且“Maybe”是 Maybe Finance Inc. 的商标，分叉时不得使用该名称或 Logo。如果你打算二次分发，务必保留原始 AGPLv3 许可证并在 README 中声明与 Maybe Finance 无隶属或背书关系。"
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭的 Issue 与 PR 达 897 个**，而项目创建于 2025-07-23，距今约 15 个月。这意味着平均每天新增约 2 个待处理事项，维护压力不小。所以你要注意：提交 bug 或功能请求后，响应时间可能较长，不要指望快速修复。",
+            "**最近推送为 2026-11-11**，距材料截止日仅 1 天，说明代码库仍在活跃开发。但最新 Release 是 v0.7.6（2026-10-31），版本号仍为 0.x，且 README 明确表示这是社区维护的 fork。所以你要注意：API 和界面可能随时变化，升级前务必查看 [Releases 页面](https://github.com/we-promise/sure/releases) 的破坏性变更说明。",
+            "**README 强调性能问题**：官方公开了演示站点的性能监控面板，列出高延迟请求及堆栈跟踪，并欢迎贡献优化。所以你要注意：自托管时若数据量较大，需自行评估性能瓶颈，并关注该面板了解已知问题。",
+            "**许可证为 AGPL-3.0**，且 README 明确要求 fork 时保留原许可证、声明与 Maybe Finance 无隶属关系，并禁止使用“Maybe”商标。所以你要注意：若计划二次分发或商业使用，务必咨询法律意见，避免商标和许可证合规风险。",
+            "**项目背景是商业失败后的开源**：原 Maybe Finance 团队投入近 100 万美元开发后停止运营，开源后又短暂推出托管版本但未形成可持续的 B2C 业务。所以你要注意：本项目没有明确的商业支持承诺，生产环境依赖需自担风险。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "按 GitHub 同类话题搜索，暂未找到成熟的同类项目。因此，若你需要一个可自托管的个人财务应用，本项目是当前最活跃的选择；但若你更看重长期稳定支持或商业保障，可考虑等待更成熟的项目，或评估其他非开源自托管方案。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**想自托管个人财务应用、且能接受 AGPL-3.0 约束的开发者**：项目提供 Docker 一键部署，且支持浏览器、macOS 桌面、移动端、API 和 LLM 代理等多种客户端。",
+            "**愿意参与社区维护、并能接受 0.x 版本频繁变更的用户**：项目处于活跃开发期，适合早期采用者，但需自行处理升级。",
+            "**对 AI 辅助财务分析感兴趣的用户**：README 提供多种 AI 配置选项（无 AI、简单 AI、外部 AI），可灵活选择。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**需要商业支持或 SLA 的生产环境用户**：项目是社区 fork，无官方商业支持，且原项目商业尝试已失败。",
+            "**不能接受商标和许可证限制的二次分发者**：AGPL-3.0 和“Maybe”商标限制可能增加合规成本。",
+            "**对性能要求极高或数据量巨大的用户**：README 公开了性能问题面板，且未提供大规模部署的官方优化指南。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/we-promise/sure)",
+            "[README](https://github.com/we-promise/sure)",
+            "[Releases 页面](https://github.com/we-promise/sure/releases)",
+            "[Issues 页面](https://github.com/we-promise/sure/issues)",
+            "[项目主页](https://sure.am)",
+            "[原 Maybe Finance 最终发布说明](https://github.com/maybe-finance/maybe/releases/tag/v0.6.0)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-12。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "repo": "we-promise/sure",
+    "stars": 12882,
+    "language": "Ruby",
+    "license": "AGPL-3.0",
+    "lastCommit": "2026-11-11",
+    "openIssues": 897,
+    "version": "v0.7.6",
+    "trending": {
+      "window": "日榜",
+      "rank": 7,
+      "gained": 1079,
+      "unit": "今日"
+    },
+    "lenses": [
+      "投资"
+    ]
+  },
+  "stats": {
+    "chars": 1780,
+    "codeBlocks": 2,
+    "minutes": 6,
+    "asOf": "2026-11-12"
+  }
+}

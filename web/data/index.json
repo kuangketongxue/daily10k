@@ -1,6 +1,17 @@
 {
-  "updated": "2026-11-11",
+  "updated": "2026-11-12",
   "issues": [
+    {
+      "date": "2026-11-12",
+      "title": "Sure：让个人财务自己长出一双 AI 眼睛",
+      "oneLiner": "Sure 是一个可自托管、带 AI 助手的开源个人财务应用，面向想掌控自己资产与现金流的个人投资者与家庭。",
+      "category": "个人财务 · 自托管 · AI 助手",
+      "stars": 12882,
+      "repo": "we-promise/sure",
+      "lenses": [
+        "投资"
+      ]
+    },
     {
       "date": "2026-11-11",
       "title": "anthropics/skills：让 Claude 按你的规范做事，Agent Skills 官方示例库",
