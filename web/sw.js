@@ -35,9 +35,13 @@ const SHELL = [
   'register-sw.js',
   'favicon.svg',
   'manifest.webmanifest',
+  'img/icon-192.png',
+  'img/icon-512.png',
+  'img/icon-maskable-512.png',
+  'img/apple-touch-icon.png',
   // 首页数据也预缓存：SW 是在首次页面加载之后才装好的，不预缓存的话
   // 用户「只访问过一次」就断网，会看到一片空白。
-  // 收藏列表已改为走后端 API（跨域，本 SW 不拦截），不再预缓存静态 favorites.json。
+  // 收藏已改为本机 localStorage（见 favorites.js），没有静态 favorites.json 需要预缓存。
   'data/index.json',
 ];
 
@@ -96,7 +100,7 @@ async function cacheFirst(req, cacheName) {
   const hit = await cache.match(req);
   if (hit) return hit;
   const res = await fetch(req);
-  if (res && res.ok) cache.put(req, res.clone());
+  if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
   return res;
 }
 
@@ -112,7 +116,7 @@ async function networkFirst(req, cacheName, fallbackUrl, ms = 1500) {
   let timer;
   const net = fetch(req, { cache: 'no-store' })
     .then(res => {
-      if (res && res.ok) cache.put(req, res.clone());
+      if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
       return res;
     })
     .catch(() => null);
@@ -136,9 +140,12 @@ async function networkFirst(req, cacheName, fallbackUrl, ms = 1500) {
 // 比先要「最新 HTML」重要得多 —— 弱网下直接要网络会把首页卡在加载态。
 async function navigateShell(req) {
   const cache = await caches.open(SHELL_CACHE);
-  const hit = await cache.match(req);
+  // 忽略 query：文章深链 article.html?d=<日期> 要能命中预缓存的 article.html 骨架。
+  // 否则离线打开一个「没在线访问过的日期」会匹配失败 → 回落到 index.html，
+  // 用户看到的是首页而不是那一期的文章（全文其实已在 ARCHIVE_CACHE 里）。
+  const hit = await cache.match(req, { ignoreSearch: true });
   const net = fetch(req).then(res => {
-    if (res && res.ok) cache.put(req, res.clone());
+    if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
     return res;
   }).catch(() => null);
 
@@ -157,7 +164,7 @@ async function staleWhileRevalidate(req, cacheName) {
   const cache = await caches.open(cacheName);
   const hit = await cache.match(req);
   const net = fetch(req).then(res => {
-    if (res && res.ok) cache.put(req, res.clone());
+    if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
     return res;
   }).catch(() => hit);
   return hit || net;
