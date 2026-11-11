@@ -81,7 +81,7 @@ function arcItemHtml(it) {
         <h3 class="arc-title">${esc(it.title || '万星日报')}</h3>
         ${it.oneLiner ? `<p class="arc-one">${esc(it.oneLiner)}</p>` : ''}
         <div class="arc-tags">
-          ${it.category ? `<span class="tag">${esc(it.category)}</span>` : ''}
+          ${categoryTags(it.category)}
           ${lenses}
         </div>
         <span class="arc-go">阅读全文<span class="go" aria-hidden="true">→</span></span>
