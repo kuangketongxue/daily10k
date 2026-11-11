@@ -76,8 +76,9 @@ node tests/local-favorites.test.mjs
 ## 站点基础文件
 
 - `web/robots.txt`、`web/sitemap.xml`：给搜索引擎看的入口。注意本站是 GitHub Pages 的**项目站点**，
-  爬虫只读域名根目录的 `/robots.txt`，`/daily10k/robots.txt` 不会生效；真正阻止收录靠各页的
-  `<meta name="robots" content="noindex">`。`sitemap.xml` 需要在 Search Console 里手动提交。
+  爬虫只读域名根目录的 `/robots.txt`，`/daily10k/robots.txt` 不会生效。收录按页区分：首页 / 文章 /
+  往期回顾是公开内容，允许收录（带 canonical、og 与 sitemap）；收藏夹 / 404 / 收藏说明是个人化或工具页，
+  靠各自的 `<meta name="robots" content="noindex">` 排除。`sitemap.xml` 需要在 Search Console 里手动提交。
 - `web/manifest.webmanifest`：PWA 清单，配合 Service Worker 可以「添加到主屏幕」。
 - `web/404.html`：GitHub Pages 的自定义 404，路径用绝对路径 `/daily10k/`（子路径下相对路径会解析错）。
 
