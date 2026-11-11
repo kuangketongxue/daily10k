@@ -31,7 +31,10 @@
   <div class="band-veil"></div>
   <div class="wrap masthead">
     <a class="logo" href="index.html">万星日报<span class="logo-en">DAILY 10K</span></a>
-    <a class="masthead-link" href="index.html">今天的日报</a>
+    <nav class="masthead-nav" aria-label="站点导航">
+      <a class="masthead-link" href="archive.html">往期回顾</a>
+      <a class="masthead-link" href="favorites.html">我的收藏夹</a>
+    </nav>
   </div>
 </header>
 
@@ -55,8 +58,8 @@
 const article = document.getElementById('article');
 const rawDate = new URLSearchParams(location.search).get('d') || '';
 
-// 全文可能有两处来源：posts/ 是当天池（会被每日清理），archive/ 是被收藏期次的永久归档。
-// 必须依次尝试，避免往期链接 404（往期全文现在永久保留，这里只是兜底）。
+// 往期全文永久保留在 posts/，任何日期都打得开。
+// archive/ 是早期「收藏即归档」留下的副本，只作兜底，新数据不再往里写。
 const SOURCES = ['data/posts/', 'data/archive/'];
 
 async function load(date) {
@@ -142,6 +145,49 @@ function render(p) {
     label: '收藏这一期',
     onLabel: '已收藏 · 点击取消',
   });
+  if (p.date) mountIssueNav(p.date);
+}
+
+// 读完一期接着翻旁边那期，不用回首页重新找。
+// 索引按日期倒序，所以数组里的「后一个」是更早一期、「前一个」是更晚一期。
+// 标签直接写「更早 / 更晚」并带上日期：「上一期」在回顾语境里指向哪边是有歧义的。
+async function mountIssueNav(date) {
+  let issues;
+  try {
+    const res = await fetch('data/index.json', { cache: 'no-cache' });
+    if (!res.ok) return;
+    issues = (await res.json()).issues;
+  } catch { return; }
+  if (!Array.isArray(issues)) return;
+
+  const i = issues.findIndex(x => x && x.date === date);
+  if (i === -1) return;
+
+  const slot = (it, label, emptyText) => {
+    if (!it || !DATE_RE.test(it.date || '')) {
+      return `<div class="issue-nav-slot is-off">
+        <span class="issue-nav-label">${esc(label)}</span>
+        <span class="issue-nav-title">${esc(emptyText)}</span>
+      </div>`;
+    }
+    return `<a class="issue-nav-slot" href="article.html?d=${encodeURIComponent(it.date)}">
+      <span class="issue-nav-label">${esc(label)}</span>
+      <span class="issue-nav-date">${esc(it.date)}</span>
+      <span class="issue-nav-title">${esc(it.title || '万星日报')}</span>
+    </a>`;
+  };
+
+  const nav = document.createElement('nav');
+  nav.className = 'issue-nav';
+  nav.setAttribute('aria-label', '相邻期次');
+  nav.innerHTML = slot(issues[i + 1], '← 更早一期', '已是最早一期')
+    + slot(issues[i - 1], '更晚一期 →', '已是最新一期');
+  article.appendChild(nav);
+
+  const all = document.createElement('p');
+  all.className = 'issue-nav-all';
+  all.innerHTML = '<a href="archive.html">浏览全部往期</a>';
+  article.appendChild(all);
 }
 
 // 入口放在所有定义之后：load() 在第一个 await 之前就会读 SOURCES，

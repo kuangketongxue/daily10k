@@ -40,6 +40,7 @@
       <span class="hero-chip">健身</span>
     </div>
     <div class="hero-fav">
+      <a class="hero-fav-link" href="archive.html">往期回顾</a>
       <a class="hero-fav-link" href="favorites.html">☆ 我的收藏夹</a>
     </div>
   </div>
@@ -68,12 +69,20 @@
     <p>今天的日报还没生成，5:30 前会更新，稍后再来看看。</p>
     <p class="empty-hint">热度榜每天现场抓取，往期全文都会保留。</p>
   </div>
+  <section class="recent" id="recent" hidden aria-labelledby="recent-heading">
+    <div class="recent-head">
+      <h2 class="recent-title" id="recent-heading">最近往期</h2>
+      <a class="recent-all" id="recent-all" href="archive.html">查看全部 →</a>
+    </div>
+    <div class="recent-list" id="recent-list"></div>
+    <p class="recent-note">每期全文永久保留，越积越多。<a href="archive.html">到往期回顾检索任意一天</a>。</p>
+  </section>
 </main>
 
 <footer class="foot">
   <div class="wrap">
     <div class="foot-row">
-      <p>由 GitHub Trending 实时热度 + AI 深读自动生成 · 每天 5:30 前更新 · 当天内容当天清</p>
+      <p>由 GitHub Trending 实时热度 + AI 深读自动生成 · 每天 5:30 前更新 · <a href="archive.html">往期全文永久保留</a></p>
       <p class="credit">背景图：Pexels（Pexels License，可免费商用）</p>
     </div>
   </div>
@@ -131,6 +140,7 @@ fetch('data/index.json', { cache: 'no-cache' })
       stale.hidden = false;
     }
     show('today');
+    renderRecent(idx.issues || [], it.date);
   })
   .catch(() => {
     document.getElementById('loading').textContent = '今日日报加载失败，请检查网络后刷新重试。';
@@ -139,6 +149,40 @@ fetch('data/index.json', { cache: 'no-cache' })
 function show(id) {
   document.getElementById('loading').hidden = true;
   document.getElementById(id).hidden = false;
+}
+
+// 首页只留最近 5 期做「往前翻」的引子，完整列表与检索在 archive.html。
+// 用 DOM 构造而不是拼 innerHTML：标题来自生成管线，与本页其余部分保持同一套安全写法。
+function renderRecent(issues, currentDate) {
+  const past = issues.filter(x => x && x.date && x.date !== currentDate);
+  if (!past.length) return;
+  const list = document.getElementById('recent-list');
+  list.textContent = '';
+  past.slice(0, 5).forEach(p => {
+    const a = document.createElement('a');
+    a.className = 'recent-item';
+    a.href = 'article.html?d=' + encodeURIComponent(p.date);
+
+    const d = document.createElement('span');
+    d.className = 'recent-date';
+    d.textContent = p.date.slice(5);
+
+    const n = document.createElement('span');
+    n.className = 'recent-name';
+    n.textContent = p.title || '万星日报';
+
+    a.append(d, n);
+    const stars = Number(p.stars);
+    if (Number.isFinite(stars) && stars > 0) {
+      const s = document.createElement('span');
+      s.className = 'recent-stars';
+      s.textContent = '★ ' + stars.toLocaleString('zh-CN');
+      a.appendChild(s);
+    }
+    list.appendChild(a);
+  });
+  document.getElementById('recent-all').textContent = '查看全部 ' + issues.length + ' 期 →';
+  document.getElementById('recent').hidden = false;
 }
 
 // 浏览器不支持 WebP 时回落到 JPG 背景

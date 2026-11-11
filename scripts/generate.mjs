@@ -6,22 +6,19 @@
  * 2. Trending 抓取失败或榜内无可写项目时，退到 Search API 实时查「近半年新晋的万星项目」
  * 3. 抓仓库事实（星数/issue/release/许可证/热度）与 README，再找 1-4 个真正同类的替代项目
  * 4. 调用 LLM 按固定 8 栏写正式深读稿，并逐个 HEAD 校验稿中链接，坏链降级为纯文本
- * 5. 输出 web/data/posts/<日期>.json 并重建 index.json（只保留当天）
+ * 5. 输出 web/data/posts/<日期>.json 并重建 index.json（列出全部往期，供回顾页检索）
+ *    往期全文一律不删：任何日期的 article.html?d=<日期> 永远打得开
  *
  * 零依赖，Node 18+。配置在 scripts/config.json，密钥可用环境变量覆盖：
  *   AI_API_KEY / AI_BASE_URL / AI_MODEL / GITHUB_TOKEN
  */
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync, copyFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = join(ROOT, 'web', 'data');
 const POSTS_DIR = join(DATA_DIR, 'posts');
-// 归档目录：被收藏的期次全文永久保留在这里，不随「当天清」规则删除。
-// 收藏夹页面点开某条时读的就是这份归档，所以收藏过的文章永远能看全文。
-const ARCHIVE_DIR = join(DATA_DIR, 'archive');
-const FAVORITES_FILE = join(DATA_DIR, 'favorites.json');
 const HISTORY_FILE = join(ROOT, 'scripts', 'history.json');
 const CONFIG_FILE = join(ROOT, 'scripts', 'config.json');
 
@@ -836,93 +833,30 @@ function computeStats(post) {
   return { chars, codeBlocks, minutes, asOf: today() };
 }
 
-function loadAllPosts() {
-  if (!existsSync(POSTS_DIR)) return [];
-  return readdirSync(POSTS_DIR)
+function loadAllPosts(postsDir = POSTS_DIR) {
+  if (!existsSync(postsDir)) return [];
+  return readdirSync(postsDir)
     .filter(f => f.endsWith('.json'))
-    .map(f => JSON.parse(readFileSync(join(POSTS_DIR, f), 'utf8')));
+    .map(f => JSON.parse(readFileSync(join(postsDir, f), 'utf8')));
 }
 
-// 读收藏夹索引。文件不存在（还没人收藏过）时返回空列表，不报错。
-function loadFavorites() {
-  if (!existsSync(FAVORITES_FILE)) return { updated: '', items: [] };
-  try {
-    const data = JSON.parse(readFileSync(FAVORITES_FILE, 'utf8'));
-    return { updated: data.updated || '', items: Array.isArray(data.items) ? data.items : [] };
-  } catch (e) {
-    log(`收藏索引解析失败，按空处理：${e.message}`);
-    return { updated: '', items: [] };
-  }
-}
-
-// 归档仍被收藏、但全文已经不在 posts/ 里的期次。
-// 站点是「当天清」，往期全文会被删；这里从归档目录把它恢复回 posts/，
-// 收藏夹里的链接才不会点开是 404。已归档的直接复用，没有归档的只能标记缺失。
-function restoreArchivedFavorites(favorites) {
-  if (!favorites.items.length) return;
-  mkdirSync(ARCHIVE_DIR, { recursive: true });
-  const archived = new Set(readdirSync(ARCHIVE_DIR).filter(f => f.endsWith('.json')));
-  const live = new Set(readdirSync(POSTS_DIR).filter(f => f.endsWith('.json')));
-
-  let restored = 0;
-  for (const it of favorites.items) {
-    const file = `${it.date}.json`;
-    if (live.has(file)) continue;              // 还在当天池里，不用管
-    if (!archived.has(file)) continue;         // 从没归档过，无从恢复
-    copyFileSync(join(ARCHIVE_DIR, file), join(POSTS_DIR, file));
-    restored++;
-  }
-  if (restored) log(`从归档恢复 ${restored} 期被收藏的文章全文`);
-}
-
-// 重建收藏索引：丢掉全文已不存在、也没归档的条目（点开必然 404 的死链不留）。
-// 判据必须同时看 posts/ 与 archive/ —— 只有归档没有当天副本是完全正常的状态。
-function rebuildFavorites(favorites) {
-  if (!existsSync(FAVORITES_FILE)) return;
-  const live = new Set([
-    ...readdirSync(POSTS_DIR).filter(f => f.endsWith('.json')),
-    ...(existsSync(ARCHIVE_DIR) ? readdirSync(ARCHIVE_DIR).filter(f => f.endsWith('.json')) : []),
-  ]);
-  const kept = favorites.items.filter(it => live.has(`${it.date}.json`));
-  const dropped = favorites.items.length - kept.length;
-  if (dropped) log(`清理 ${dropped} 条死链收藏（全文已不存在且无归档）`);
-  writeFileSync(FAVORITES_FILE, JSON.stringify({ updated: today(), items: kept }, null, 2) + '\n');
-}
-
-// 把仍被收藏的往期全文挪进归档目录，然后才执行「当天清」的删除。
-// 顺序不能反：先删后归档会把要保留的全文一起删掉。
-function archiveFavorites(date, favorites) {
-  if (!favorites.items.length) return;
-  mkdirSync(ARCHIVE_DIR, { recursive: true });
-  for (const it of favorites.items) {
-    if (it.date === date) continue;            // 当天这篇不会被 prune 删，不用归档
-    const file = `${it.date}.json`;
-    const src = join(POSTS_DIR, file);
-    if (existsSync(src)) copyFileSync(src, join(ARCHIVE_DIR, file));
-  }
-}
-
-function rebuildIndex() {
-  // 往期不再删除，索引只列最近 30 期：首页只取第一条，
-  // 但留一点历史给「往前翻」用，同时避免 index.json 随天数无限膨胀。
-  const posts = loadAllPosts().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
+// 索引列出全部往期，不设条数上限：回顾页要靠它检索任意一天，
+// 截断会让早期期次虽然文件还在、却再也找不到入口。
+// 单条约 400 字节，一年约 145KB（Pages 传输时还会压缩），完全扛得住。
+// lenses / repo 供回顾页做选题筛选与关键词搜索，不必逐篇拉全文。
+export function rebuildIndex(dataDir = DATA_DIR) {
+  const posts = loadAllPosts(join(dataDir, 'posts')).sort((a, b) => b.date.localeCompare(a.date));
   const issues = posts.map(p => ({
     date: p.date,
     title: p.title,
     oneLiner: p.oneLiner,
     category: p.category,
     stars: p.meta?.stars ?? '',
+    repo: p.meta?.repo || '',
+    lenses: p.meta?.lenses || [],
   }));
-  mkdirSync(DATA_DIR, { recursive: true });
-  writeFileSync(join(DATA_DIR, 'index.json'), JSON.stringify({ updated: today(), issues }, null, 2) + '\n');
-}
-
-// 只保留当天一条：删除往期文章 JSON，不做归档
-function pruneOldPosts(date) {
-  if (!existsSync(POSTS_DIR)) return;
-  for (const f of readdirSync(POSTS_DIR)) {
-    if (f.endsWith('.json') && f !== `${date}.json`) unlinkSync(join(POSTS_DIR, f));
-  }
+  mkdirSync(dataDir, { recursive: true });
+  writeFileSync(join(dataDir, 'index.json'), JSON.stringify({ updated: today(), issues }, null, 2) + '\n');
 }
 
 export async function main() {
@@ -976,12 +910,9 @@ export async function main() {
   mkdirSync(POSTS_DIR, { recursive: true });
   writeFileSync(join(POSTS_DIR, `${date}.json`), JSON.stringify(post, null, 2));
 
-  // 收藏状态已挪到线上后端（Cloudflare KV），生成管线不再知道「谁收藏了哪期」，
-  // 所以「按收藏归档 + 当天清」这条路走不通了 —— 一清，收藏夹点开就是 404。
-  // 改成永久保留全部往期：单篇约 14KB，一年 5MB 上下，GitHub Pages 完全扛得住。
-  // 好处是任何日期的链接永远打得开，也不再依赖「用户先收藏、我们才保留」。
-  // （下面的 archiveFavorites / pruneOldPosts / restoreArchivedFavorites /
-  //   rebuildFavorites 已停用，函数保留只为兼容历史数据，无人再调用。）
+  // 往期全文一律不删。收藏存在访问者本机的 localStorage 里，生成管线无从知道
+  // 「谁收藏了哪期」，所以「按收藏挑保留对象」这条路走不通。单篇约 14KB，
+  // 一年 5MB 上下，GitHub Pages 完全扛得住，索性全留：任何日期的链接永远打得开。
   const history = existsSync(HISTORY_FILE) ? JSON.parse(readFileSync(HISTORY_FILE, 'utf8')) : [];
   if (!history.includes(repo.full_name)) history.push(repo.full_name);
   writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2) + '\n');

@@ -6,49 +6,78 @@
       "title": "anthropics/skills：让 Claude 按你的规范做事，Agent Skills 官方示例库",
       "oneLiner": "Anthropic 开源的 Agent Skills 官方示例库，内含技能规范、模板与可复用的生产级技能，供开发者构建自定义 Claude 技能。",
       "category": "AI Agent · 技能编排 · 官方示例",
-      "stars": 192212
+      "stars": 192212,
+      "repo": "anthropics/skills",
+      "lenses": [
+        "AI"
+      ]
     },
     {
       "date": "2026-11-10",
       "title": "Astryx：让 AI 助手和人类用同一套组件库建界面",
       "oneLiner": "Meta 开源的 React 19+ 设计系统，150+ 组件，主题可定制，API、文档与 CLI 为人机协作而设计。",
       "category": "设计系统 · React · AI 工具链",
-      "stars": 19967
+      "stars": 19967,
+      "repo": "meta/astryx",
+      "lenses": [
+        "AI"
+      ]
     },
     {
       "date": "2026-11-09",
       "title": "auto-ontology：给 AI 一张可信的数据地图",
       "oneLiner": "NVIDIA 开源的 Python 框架，从企业元数据构建语义图谱，让 LLM 和智能体在查询数据前先理解数据的含义与来源。",
       "category": "AI 基础设施 · 数据语义层 · 知识图谱",
-      "stars": 10248
+      "stars": 10248,
+      "repo": "NVIDIA/auto-ontology",
+      "lenses": [
+        "AI"
+      ]
     },
     {
       "date": "2026-11-08",
       "title": "OpenMausBot：把 AI 代理装进聊天应用，每个 bot 自带电脑和审批权",
       "oneLiner": "开源 Grok Bot 替代品，让你用自己已有的 Claude、Codex 或 Grok 模型，在本地运行一支各怀技能的 AI 代理团队。",
       "category": "AI 代理 · 本地优先 · 聊天界面 · 开源替代",
-      "stars": 16813
+      "stars": 16813,
+      "repo": "milind-soni/OpenMausBot",
+      "lenses": [
+        "AI"
+      ]
     },
     {
       "date": "2026-11-07",
       "title": "claude-mem：让 AI 记住每一次会话，不再从零开始",
       "oneLiner": "一个为 Claude Code 等编码代理设计的持久记忆压缩系统，自动捕获会话中的工具使用，压缩成语义摘要，并在未来会话中注入相关上下文。",
       "category": "AI 代理 · 长期记忆 · 上下文工程",
-      "stars": 113966
+      "stars": 113966,
+      "repo": "thedotmack/claude-mem",
+      "lenses": [
+        "AI"
+      ]
     },
     {
       "date": "2026-11-06",
       "title": "DeepTutor：让 AI 家教记住你学过的每一页",
       "oneLiner": "DeepTutor 是一个开源的终身个性化 AI 家教，通过多智能体协作和长期记忆，为高考、考研等备考者提供持续跟踪的个性化辅导。",
       "category": "AI 教育 · 多智能体 · 终身学习",
-      "stars": 55416
+      "stars": 55416,
+      "repo": "HKUDS/DeepTutor",
+      "lenses": [
+        "高考/考研",
+        "AI"
+      ]
     },
     {
       "date": "2026-11-04",
       "title": "hallmark：给 AI 生成的网页立规矩，拒绝“一眼假”",
       "oneLiner": "一个面向 Claude Code、Cursor 与 Codex 的设计技能，让 AI 生成的网页通过真实浏览器审查，不再出现千篇一律的 AI 风格。",
       "category": "AI 开发工具 · 前端设计 · Claude Code",
-      "stars": 46892
+      "stars": 46892,
+      "repo": "Nutlope/hallmark",
+      "lenses": [
+        "AI"
+      ]
     }
   ]
 }

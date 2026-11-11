@@ -1,6 +1,6 @@
 # 万星日报（Daily 10K）
 
-每天只讲一个 GitHub 万星热门项目的中文深读日报。内容在北京时间 5:30 前自动更新，当天内容当天清，只保留一篇。
+每天只讲一个 GitHub 万星热门项目的中文深读日报。内容在北京时间 5:30 前自动更新，**往期全文永久保留**，越积越多，随时回顾检索任意一天。
 
 **线上地址**：https://kuangketongxue.github.io/daily10k/
 
@@ -11,7 +11,7 @@
   2. **按用途挑**：先按命中「高考/考研、求职、创业、AI、投资、健身」这六类实用方向的数量排序，同档再按日均新增星数（日榜 ÷1、周榜 ÷7）排序，取第一名做当日核心；
   3. 抓仓库事实（星数、未关闭 Issue/PR、最新 Release、许可证、Trending 排名与当日新增星数）与 README，再取 1-2 个真正同类的替代项目（按具体 topic 与描述关键词筛选，核心是 MCP/agent 工具时要求候选具备同类交付方式）；
   4. 调用 LLM 按固定 8 栏写正式深读稿：它解决什么问题 / 能用来干嘛 / 它是怎么做的 / 怎么上手 / 局限与风险 / 替代方案 / 谁该用谁别用 / 出处与日期；出稿前逐个探活正文链接，404/410 的降级为纯文本；
-  5. 输出 `web/data/posts/<日期>.json`，删除往期，重建 `web/data/index.json`，并写入页尾自检（字数/命令块/阅读时长）。
+  5. 输出 `web/data/posts/<日期>.json`，**不删任何往期**，重建 `web/data/index.json`（列出全部期次，含选题方向与仓库名供回顾页检索），并写入页尾自检（字数/命令块/阅读时长）。
 
 选品还会叠加两路「同行口碑」信号（命中才加权，不命中不扣分）：
 
@@ -23,10 +23,25 @@
 - `.github/workflows/pages.yml`：`web/` 有变更时自动发布到 GitHub Pages；因为 bot 用默认
   `GITHUB_TOKEN` 推送的提交不会触发 `push` 事件，它还会在 `daily-report` 跑完后直接发布一次。
 
+## 往期回顾
+
+**往期全文一律不删**：任何日期的 `article.html?d=<日期>` 都能打开，`data/index.json` 列出全部期次、**不设条数上限**（截断会让早期期次文件还在、却再也找不到入口）。
+单篇约 14KB，一年 5MB 上下；索引每条约 400 字节，一年约 145KB（Pages 传输时还会压缩），GitHub Pages 完全扛得住。
+
+- `web/archive.html` + `web/archive.js`：往期回顾页。按月分组列出全部期次，支持关键词搜索（标题 / 一句话 / 分类 / 仓库名 / 日期，多个词按 AND）与选题方向筛选，实时显示匹配数。搜索、筛选、分组都是纯函数；正文仍由 `article.html` 按日期去 `data/posts/` 取，这一页只管「找得到」。
+- 首页今日卡片下方有「最近往期」5 条与「查看全部 N 期」入口；文章页底部有「更早一期 / 更晚一期」导航，读完可以直接接着翻。标签不写「上一期」——在回顾语境里它指向哪边是有歧义的。
+
+为什么不再走「按收藏归档 + 当天清」：收藏状态存在访问者本机的 localStorage 里，生成管线无从知道谁收藏了哪期，挑保留对象这条路根本走不通。全留反而更简单，也不再依赖「用户先收藏、我们才保留」。
+
+`tests/archive-index.test.mjs`：索引无条数上限、字段完整性，以及搜索 / 筛选 / 按月分组的纯逻辑。
+
+```bash
+node tests/archive-index.test.mjs
+```
+
 ## 收藏夹
 
-**往期全文永久保留**：`pruneOldPosts()` 已停用，任何日期的 `article.html?d=<日期>` 都能打开。
-单篇约 14KB，一年 5MB 上下，GitHub Pages 完全扛得住；好处是收藏夹永远不会点开 404。
+往期全文永久保留，所以收藏夹里的任何一条都不会点开 404。
 
 - `web/favorites.html`：收藏夹页。顶部有「导出收藏 / 导入收藏」，点「看全文」就地展开正文（与文章页同一套排版），也可跳原文页；「取消收藏」移除条目。
 - `web/favorites.js`：收藏存储、收藏按钮、导出导入短码、正文渲染的共享模块。
@@ -86,27 +101,32 @@ AI_API_KEY=你的key AI_BASE_URL=https://token.sensenova.cn/v1 AI_MODEL=sensenov
 
 ```
 web/                  站点（纯静态，Pages 直接托管）
-  index.html          今日日报（首屏 hero + 今日卡片 + 收藏按钮）
-  article.html        文章页（图片头带 + 正文 + 收藏按钮）
+  index.html          今日日报（首屏 hero + 今日卡片 + 最近往期 5 条）
+  article.html        文章页（图片头带 + 正文 + 收藏按钮 + 相邻期次导航）
+  archive.html        往期回顾页（按月分组 + 关键词搜索 + 选题方向筛选）
   favorites.html      收藏夹页（就地展开全文）
   sw-edit.html        收藏操作说明页（本机写入入口）
   404.html            自定义 404
   favicon.svg
   style.css
-  favorites.js        收藏模块（列表 / 按钮 / 正文渲染）
+  favorites.js        收藏模块（列表 / 按钮 / 正文渲染 / esc 转义）
+  archive.js          往期回顾（搜索 / 筛选 / 分组纯函数 + 页面装配）
   sw.js               Service Worker（离线缓存归档全文）
   register-sw.js      Service Worker 注册
   img/                首屏背景图（Pexels License）
     hero-sky.webp       桌面 2000px
     hero-sky-sm.webp    移动 900px
     hero-sky.jpg        不支持 WebP 时的兜底
-  data/index.json     当日索引
-  data/posts/*.json   文章（当天池 + 被收藏期次的恢复副本）
-  data/archive/*.json 被收藏期次的全文归档（永久保留）
-  data/favorites.json 收藏索引
+  data/index.json     全部期次索引（不设上限，含 lenses / repo 供检索）
+  data/posts/*.json   文章全文（永久保留，不删往期）
+  data/archive/*.json 早期「收藏即归档」留下的副本（前端只作兜底，不再写入）
+  data/favorites.json 旧收藏索引（收藏已改本机 localStorage，不再使用）
 scripts/
   generate.mjs        生成管线
   favorite.mjs        收藏写入工具（本机专用）
   config.json         本地配置（含密钥，勿提交公开仓库）
   history.json        已写过的仓库清单（防重复）
+tests/
+  local-favorites.test.mjs  收藏增删 / 脏数据容错 / 短码往返
+  archive-index.test.mjs    索引无上限 / 搜索 / 筛选 / 按月分组
 ```

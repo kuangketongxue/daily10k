@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>往期回顾 · 万星日报</title>
+<meta name="description" content="万星日报往期回顾：每天一个 GitHub 万星项目的中文深读，全文永久保留，可按关键词与选题方向检索任意一天。">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0a3d6e">
+<meta property="og:site_name" content="万星日报">
+<meta property="og:type" content="website">
+<meta property="og:title" content="往期回顾 · 万星日报">
+<meta property="og:description" content="每天一个 GitHub 万星项目的中文深读，全文永久保留，随时回看任意一天。">
+<meta property="og:url" content="https://kuangketongxue.github.io/daily10k/archive.html">
+<meta property="og:image" content="https://kuangketongxue.github.io/daily10k/img/hero-sky.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="800">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://kuangketongxue.github.io/daily10k/img/hero-sky.jpg">
+<link rel="canonical" href="https://kuangketongxue.github.io/daily10k/archive.html">
+<link rel="preload" as="image" href="img/hero-sky.webp" type="image/webp" media="(min-width: 780px)">
+<link rel="preload" as="image" href="img/hero-sky-sm.webp" type="image/webp" media="(max-width: 779px)">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<header class="article-band">
+  <div class="band-bg" role="img" aria-label="晴朗蓝天下的大朵白云倒映在平静的水面上"></div>
+  <div class="band-veil"></div>
+  <div class="wrap masthead">
+    <a class="logo" href="index.html">万星日报<span class="logo-en">DAILY 10K</span></a>
+    <nav class="masthead-nav" aria-label="站点导航">
+      <a class="masthead-link" href="index.html">今天的日报</a>
+      <a class="masthead-link" href="favorites.html">我的收藏夹</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap article-wrap">
+  <a class="back" href="index.html"><span aria-hidden="true">←</span> 回首页</a>
+  <h1 class="a-title">往期回顾</h1>
+  <p class="fav-lead">每天一个 GitHub 万星项目，全文永久保留、越积越多。搜关键词或按选题方向筛，找到那天点进去读全文。</p>
+
+  <div class="arc-controls">
+    <div class="arc-search">
+      <label class="arc-label" for="arc-q">搜索往期</label>
+      <input class="arc-input" id="arc-q" type="search" placeholder="项目名、标题、关键词，或日期如 11-07" autocomplete="off">
+    </div>
+    <div class="arc-filter">
+      <span class="arc-label" id="arc-lens-label">选题方向</span>
+      <div class="arc-lenses" id="arc-lenses" role="group" aria-labelledby="arc-lens-label"></div>
+    </div>
+  </div>
+
+  <p class="arc-count" id="arc-count" role="status"></p>
+
+  <div class="loading" id="arc-loading" role="status">正在读取往期索引<span class="dots"></span></div>
+  <noscript><style>#arc-loading{display:none}</style><p class="empty">本站需要启用 JavaScript 才能检索往期回顾。</p></noscript>
+  <div id="arc-root"></div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-row">
+      <p>由 GitHub Trending 实时热度 + AI 深读自动生成 · 往期全文永久保留 · <a href="index.html">返回首页</a></p>
+      <p class="credit">背景图：Pexels（Pexels License，可免费商用）</p>
+    </div>
+  </div>
+</footer>
+
+<script src="favorites.js"></script>
+<script src="archive.js"></script>
+<script src="register-sw.js"></script>
+<script>
+initArchivePage();
+
+// 顶部阅读进度条
+(function () {
+  const bar = document.getElementById('progress');
+  const upd = () => {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.transform = 'scaleX(' + (max > 0 ? Math.min(window.scrollY / max, 1) : 0) + ')';
+  };
+  addEventListener('scroll', upd, { passive: true });
+  addEventListener('resize', upd);
+  upd();
+})();
+
+// 浏览器不支持 WebP 时回落到 JPG 背景
+(function () {
+  const probe = new Image();
+  probe.onerror = function () { document.documentElement.classList.add('no-webp'); };
+  probe.src = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+})();
+</script>
+</body>
+</html>
