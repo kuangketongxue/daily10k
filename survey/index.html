@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>审美画像调研 · 327 种视觉风格 + 25 张真实壁纸</title>
+<meta name="description" content="覆盖能用作壁纸、头像、设计配图的 327 种视觉风格，14 大类分层点选，图片可放大，最后生成可复制的审美画像与找图关键词。">
+<style>
+:root{--navy:#061a33;--cyan:#22d3ee;--teal:#0891b2;--ink:#122238;--muted:#5b7189;--line:#dbe6f0;--bg:#f4f8fc;--card:#fff;--accent:#0e7490;--soft:#eaf4fb;--shadow:0 10px 32px rgba(9,40,75,.09);--r:14px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+.wrap{max-width:1280px;margin:0 auto;padding:0 22px}
+.hero{color:#fff;padding:42px 0 36px;background:radial-gradient(700px 320px at 82% -20%,rgba(34,211,238,.3),transparent 65%),linear-gradient(135deg,#061a33,#0d3b66 60%,#0b5573)}
+.hero h1{margin:0 0 10px;font-size:clamp(26px,4vw,38px);font-weight:800}
+.hero p{margin:0;max-width:900px;color:rgba(255,255,255,.86);font-size:15px}
+.kicker{color:var(--cyan);font-size:12px;letter-spacing:.18em;font-weight:800;text-transform:uppercase;margin-bottom:10px}
+.stat{display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;font-size:13px}
+.stat b{font-size:20px;color:var(--cyan);display:block;line-height:1.2}
+main{padding:26px 0 60px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;margin-bottom:18px;box-shadow:var(--shadow)}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin:0 0 14px;flex-wrap:wrap}
+.sec-head h2{font-size:20px;margin:0;color:var(--navy);font-weight:800}
+.sec-head span{font-size:13px;color:var(--muted)}
+.search{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.q{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:15px;color:var(--ink)}
+.q:focus{border-color:var(--teal);background:#fff;outline:none;box-shadow:0 0 0 3px rgba(34,211,238,.18)}
+.tabs{display:flex;gap:7px;overflow-x:auto;padding:4px 0 10px;margin:0 0 4px}
+.tab{flex:none;border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 14px;font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap}
+.tab.is-on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tab i{font-style:normal;opacity:.7;margin-left:5px;font-size:11px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:.16s;position:relative}
+.card:hover{transform:translateY(-2px);border-color:#9fd9ea}
+.card.is-liked{border-color:var(--teal);box-shadow:0 0 0 3px rgba(34,211,238,.2)}
+.thumb{position:relative;display:block;width:100%;aspect-ratio:16/9;overflow:hidden;background:#dde8f1;border:0;padding:0;cursor:zoom-in}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+.thumb:hover img{transform:scale(1.05)}
+.zoom{position:absolute;right:8px;bottom:8px;background:rgba(6,26,51,.82);color:#fff;font-size:11px;padding:3px 8px;border-radius:99px;opacity:0;transition:.2s}
+.thumb:hover .zoom{opacity:1}
+.thumb-ph{display:flex;align-items:flex-end;justify-content:flex-start;cursor:default}
+.thumb-ph .ph-tag{font-size:11px;color:rgba(255,255,255,.92);background:rgba(6,26,51,.45);padding:3px 8px;border-radius:99px;margin:8px}
+.badge{position:absolute;left:8px;top:8px;background:rgba(6,26,51,.72);color:#fff;font-size:11px;padding:2px 7px;border-radius:99px}
+.imgnote{margin:6px 0 0;font-size:11px;line-height:1.5;color:#7a8b9c}
+.card-body{padding:11px 12px 12px}
+.card-body h3{font-size:14px;margin:0 0 3px;color:var(--navy);font-weight:800;line-height:1.35}
+.en{font-size:11px;color:var(--muted);display:block;margin-bottom:6px}
+.desc{font-size:12px;color:#42586e;margin:0 0 8px;line-height:1.55}
+.swatches{display:flex;gap:4px;margin-bottom:9px}
+.swatches i{width:22px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,.08);display:block}
+.kws{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.kws span{font-size:10.5px;background:var(--soft);color:var(--accent);border:1px solid #cfe7f2;border-radius:99px;padding:2px 7px}
+.acts{display:flex;gap:6px;align-items:center}
+.like,.zbtn{border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--muted)}
+.like.is-on{background:var(--teal);border-color:var(--teal);color:#fff}
+.zbtn:hover{border-color:var(--teal);color:var(--accent)}
+.note{font-size:11px;color:#8aa1b6;margin:9px 0 0}
+details.visual{margin-bottom:18px}
+details.visual>summary{cursor:pointer;font-weight:800;color:var(--navy);font-size:16px;padding:14px 18px;background:#fff;border:1px solid var(--line);border-radius:12px}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:14px}
+.vitem{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer}
+.vitem.is-liked{border-color:var(--teal);box-shadow:0 0 0 3px rgba(34,211,238,.2)}
+.vitem img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block}
+.vitem p{font-size:11.5px;margin:0;padding:7px 9px;color:var(--ink);font-weight:700;line-height:1.4}
+.qrow{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px dashed var(--line);flex-wrap:wrap}
+.qrow:last-child{border-bottom:0}
+.qtitle{font-size:14px;font-weight:800;color:var(--navy);flex:1 1 200px;margin:0}
+.qopts{display:flex;gap:8px;flex-wrap:wrap}
+.qopt{border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 14px;font-size:12.5px;color:var(--muted);font-weight:700}
+.qopt.is-on{background:var(--accent);border-color:var(--accent);color:#fff}
+.result-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:9px;padding:10px 18px;font-weight:800;font-size:14px}
+.btn:hover{background:#0c5f76}
+.btn.ghost{background:#fff;color:var(--accent);border:1px solid var(--line)}
+.btn.danger{background:#fff;color:#b42318;border:1px solid #f3b7b2}
+pre#out{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px;font:12.5px/1.85 ui-monospace,Consolas,"Microsoft YaHei",monospace;color:var(--ink);min-height:80px;margin:0;max-height:520px;overflow:auto}
+.hint{font-size:12.5px;color:var(--muted);margin:10px 0 0}
+.palette{display:flex;gap:5px;flex-wrap:wrap;margin:12px 0 0}
+.palette span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:6px;padding:3px 7px}
+.palette i{width:14px;height:14px;border-radius:3px;display:block}
+.empty{text-align:center;color:var(--muted);padding:26px;font-size:14px}
+.foot{border-top:1px solid var(--line);background:#fff;padding:22px 0;font-size:12.5px;color:var(--muted)}
+.foot p{margin:4px 0}
+#lb{position:fixed;inset:0;background:rgba(4,16,32,.95);z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+#lb.is-on{display:flex}
+#lb img{max-width:92vw;max-height:72vh;object-fit:contain;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.lb-bar{width:min(92vw,1100px);display:flex;align-items:center;gap:10px;color:#fff;margin-top:14px;flex-wrap:wrap}
+.lb-name{font-size:15px;font-weight:800;flex:1}
+.lb-nav,.lb-close{background:rgba(255,255,255,.14);border:0;color:#fff;border-radius:8px;padding:8px 14px;font-weight:800}
+.lb-close{position:absolute;top:18px;right:24px;width:40px;height:40px;border-radius:50%;font-size:22px;padding:0}
+.lb-like{background:var(--teal);border:0;color:#fff;border-radius:8px;padding:8px 14px;font-weight:800}
+.lb-meta{font-size:12px;color:rgba(255,255,255,.7);width:min(92vw,1100px);margin-top:6px}
+.lb-meta a{color:var(--cyan)}
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,16px);background:var(--navy);color:#fff;padding:10px 20px;border-radius:99px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:120}
+.toast.is-on{opacity:1;transform:translate(-50%,0)}
+@media(max-width:640px){.grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:9px}.vgrid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}.card-body{padding:9px}.desc{display:none}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="wrap">
+  <p class="kicker">Aesthetic Survey · full visual style map</p>
+  <h1>327 种视觉风格，挑出你喜欢的</h1>
+  <p>覆盖所有能拿来当壁纸、头像、设计配图的风格类型：氛围情绪、网络亚文化、年代复古、色系光线、摄影技法、自然景观、城市建筑、抽象图形、3D 渲染、艺术流派、东方地域、材质工艺、排版海报、用途取向。<br>
+  按大类分层浏览，图片可点开放大；喜欢的点「♡」。最后会生成一份审美画像，里面带**以后找图能直接复制去搜的关键词**。</p>
+  <div class="stat">
+    <div><b id="stat-total">327</b>种视觉风格</div>
+    <div><b id="stat-group">14</b>个大类</div>
+    <div><b id="stat-picked">0</b>已选风格</div>
+    <div><b>43</b>张本地真实壁纸</div>
+  </div>
+</div></header>
+
+<main class="wrap">
+  <section class="panel">
+    <div class="sec-head"><h2>找风格</h2><span>中文名 / 英文名 / 关键词都能搜，搜到后点卡片即可选中</span></div>
+    <div class="search"><input class="q" id="q" type="search" placeholder="例如：暗色、霓虹、minimal、留白、赛博、水彩、头像…"></div>
+    <div class="tabs" id="tabs"></div>
+    <p class="note" id="list-note"></p>
+    <div class="grid" id="grid"></div>
+    <p class="note">图片为本地真实壁纸（Unsplash / Pexels 免费可商用），多个相近风格会共用一张作氛围参考，<strong>不冒充该风格原作</strong>；放大后可看到原始链接。</p>
+  </section>
+
+  <details class="visual">
+    <summary>第一部分 · 25 张真实壁纸测色温与明暗（可展开，点图放大、点卡片选中）</summary>
+    <div class="panel" style="margin-top:12px">
+      <p class="hint">这一步测的是纯视觉偏好（冷/暖、明/暗、繁/简），和上面的「风格名」是两回事，两者一起进画像。</p>
+      <div class="vgrid" id="vgrid"></div>
+      <div id="questions" style="margin-top:16px"></div>
+    </div>
+  </details>
+
+  <section class="panel">
+    <div class="result-head">
+      <button class="btn" id="btn-gen">生成我的审美画像</button>
+      <button class="btn ghost" id="btn-copy">复制结果</button>
+      <button class="btn ghost" id="btn-json">导出 JSON</button>
+      <button class="btn danger" id="btn-clear">清空重选</button>
+      <span class="hint" id="gen-hint">选完点「导出 JSON」，再跑 merge 写进画像。</span>
+    </div>
+    <div class="palette" id="palette"></div>
+    <pre id="out">还没生成。先选几个喜欢的风格（或几张图），再点上面的按钮。</pre>
+    <p class="hint">结果里会包含：视觉偏好、风格大类分布、TOP 风格、代表色板、找图关键词；点「导出 JSON」可得到能被 profile_tool.py 直接合并的机器可读版本。</p>
+  </section>
+</main>
+
+<footer class="foot"><div class="wrap">
+  <p>图片来自 <a href="https://unsplash.com/license" target="_blank" rel="noopener noreferrer">Unsplash License</a> 与 <a href="https://www.pexels.com/license/" target="_blank" rel="noopener noreferrer">Pexels License</a> 免费可商用图库，全部下载到本地并逐张验证可打开；仅作个人审美调研，不重新分发原图。</p>
+  <p>风格清单为视觉素材分类（非艺术史百科），每条的关键词用于以后找图。生成时间 2026-11-12。</p>
+</div></footer>
+
+<div id="lb" role="dialog" aria-modal="true" aria-label="图片放大查看">
+  <button class="lb-close" id="lb-close" aria-label="关闭">×</button>
+  <img id="lb-img" src="" alt="">
+  <div class="lb-bar">
+    <button class="lb-nav" id="lb-prev">← 上一张</button>
+    <span class="lb-name" id="lb-name"></span>
+    <button class="lb-nav" id="lb-next">下一张 →</button>
+    <button class="lb-like" id="lb-like">♡ 喜欢这张</button>
+  </div>
+  <div class="lb-meta" id="lb-meta"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="picks.js"></script>
+<script src="styles.js"></script>
+<script>
+(function(){
+  'use strict';
+  var D = window.SURVEY_DATA || {picks:[],dimLabel:{}}, P = D.picks||[], LABEL = D.dimLabel||{};
+  var S = window.SURVEY_STYLES || {styles:[],groups:[],total:0}, STYLES = S.styles||[], GROUPS = S.groups||[];
+  var $ = function(id){return document.getElementById(id);};
+  var KEY='aesthetic-survey:v2';
+  var state={styleLikes:[],likes:[],answers:{},bg:'w11'};
+  try{var saved=JSON.parse(localStorage.getItem(KEY)||'null'); if(saved) state=saved;}catch(e){}
+  if(!Array.isArray(state.styleLikes)) state.styleLikes=[];
+  if(!Array.isArray(state.likes)) state.likes=[];
+  if(!state.answers) state.answers={};
+  var tab='全部', query='', lbList=[], lbIndex=0, lbKind='style', showCap=60;
+
+  var QUESTIONS=[
+    {id:'q1',title:'1. 同样好看，你更常被哪种颜色打动？',a:['冷色（蓝 / 青 / 紫）','暖色（橙 / 金 / 粉）'],dim:'temp',va:['cool','warm']},
+    {id:'q2',title:'2. 一张图里，你更偏好？',a:['大面积留白、主体少','细节丰富、信息量足'],dim:'density',va:['minimal','rich']},
+    {id:'q3',title:'3. 当壁纸用，你更想要？',a:['暗一点、不抢眼','明亮清爽、提神'],dim:'light',va:['dark','bright']},
+    {id:'q4',title:'4. 质感上，你更偏爱？',a:['真实拍摄的照片','抽象 / 3D / 平面图形'],dim:'texture',va:['photo','render']}
+  ];
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function toast(m){var t=$('toast');t.textContent=m;t.classList.add('is-on');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('is-on');},2200);}
+  function styleById(id){for(var i=0;i<STYLES.length;i++)if(STYLES[i].id===id)return STYLES[i];return null;}
+  function pickById(id){for(var i=0;i<P.length;i++)if(P[i].id===id)return P[i];return null;}
+
+  /* ---------- 风格库 ---------- */
+  function renderTabs(){
+    var html='<button class="tab'+(tab==='全部'?' is-on':'')+'" data-tab="全部">全部<i>'+STYLES.length+'</i></button>';
+    for(var i=0;i<GROUPS.length;i++){
+      var g=GROUPS[i];
+      html+='<button class="tab'+(tab===g.name?' is-on':'')+'" data-tab="'+esc(g.name)+'">'+esc(g.name)+'<i>'+g.count+'</i></button>';
+    }
+    $('tabs').innerHTML=html;
+  }
+  function matched(){
+    var q=query.trim().toLowerCase();
+    return STYLES.filter(function(s){
+      if(tab!=='全部'&&s.group!==tab)return false;
+      if(!q)return true;
+      return (s.cn+' '+s.en+' '+s.desc+' '+s.group+' '+s.kw.join(' ')).toLowerCase().indexOf(q)>=0;
+    });
+  }
+  function grad(colors){
+    var c=colors&&colors.length?colors:['#dfe7ef'];
+    if(c.length===1)return c[0];
+    var stops=c.map(function(x,i){return x+' '+(Math.round(i*100/(c.length-1)))+'%';}).join(',');
+    return 'linear-gradient(135deg,'+stops+')';
+  }
+  function styleCard(s){
+    var on=state.styleLikes.indexOf(s.id)>=0;
+    var sw=s.colors.map(function(c){return '<i style="background:'+esc(c)+'"></i>';}).join('');
+    var kw=s.kw.slice(0,3).map(function(k){return '<span>'+esc(k)+'</span>';}).join('');
+    var hasImg=!!s.img;
+    // 没有核实过的示例图就不放照片：只给配色示意，避免"图不对文"。
+    var visual=hasImg
+      ? '<button class="thumb" data-zoom="'+s.id+'" aria-label="放大 '+esc(s.cn)+'">'
+        +'<img src="'+esc(s.img)+'" alt="'+esc(s.cn)+'" loading="lazy">'
+        +'<span class="zoom">点击放大</span><span class="badge">示例</span></button>'
+      : '<div class="thumb thumb-ph" style="background:'+esc(grad(s.colors))+'" aria-hidden="true">'
+        +'<span class="ph-tag">配色示意 · 暂无示例图</span></div>';
+    var note=hasImg&&s.imgNote?'<p class="imgnote">'+esc(s.imgNote)+'</p>':'';
+    return '<article class="card'+(on?' is-liked':'')+'" data-card="'+s.id+'">'
+      +visual
+      +'<div class="card-body"><h3>'+esc(s.cn)+'</h3><span class="en">'+esc(s.en)+'</span>'
+      +'<p class="desc">'+esc(s.desc)+'</p><div class="swatches">'+sw+'</div>'+note
+      +'<div class="kws">'+kw+'</div><div class="acts">'
+      +'<button class="like'+(on?' is-on':'')+'" data-like="'+s.id+'">'+(on?'♥ 已喜欢':'♡ 喜欢')+'</button>'
+      +(hasImg?'<button class="zbtn" data-zoom="'+s.id+'">放大</button>':'')
+      +'</div></div></article>';
+  }
+  function renderGrid(){
+    var list=matched(), shown=list.slice(0,showCap);
+    $('list-note').textContent=(query.trim()?'搜索命中 '+list.length+' 种':'当前「'+tab+'」'+list.length+' 种')+(list.length>showCap?' · 只显示前 '+showCap+' 种，缩小范围可看更多':'');
+    $('grid').innerHTML=shown.length?shown.map(styleCard).join(''):'<div class="empty">没有匹配的风格，换个关键词试试。</div>';
+    if(list.length>showCap)$('grid').innerHTML+='<button class="btn ghost" id="btn-more" style="grid-column:1/-1">再显示 60 种</button>';
+  }
+  function toggleStyle(id){
+    var at=state.styleLikes.indexOf(id);
+    if(at>=0)state.styleLikes.splice(at,1);else state.styleLikes.push(id);
+    save();renderGrid();renderStats();
+  }
+
+  /* ---------- 25 张视觉偏好图 ---------- */
+  function renderVisual(){
+    var html='';
+    for(var i=0;i<P.length;i++){
+      var p=P[i],on=state.likes.indexOf(p.id)>=0,bgOn=state.bg===p.id;
+      html+='<div class="vitem'+(on?' is-liked':'')+'" data-vcard="'+p.id+'">'
+        +'<button class="thumb" data-vzoom="'+p.id+'" style="aspect-ratio:16/10"><img src="'+esc(p.file)+'" alt="'+esc(p.name)+'" loading="lazy"></button>'
+        +'<p>'+esc(p.name)+'</p><div style="padding:0 9px 9px;display:flex;gap:5px;flex-wrap:wrap">'
+        +'<button class="like'+(on?' is-on':'')+'" data-vlike="'+p.id+'" style="font-size:11px;padding:4px 8px">'+(on?'♥ 已喜欢':'♡ 喜欢')+'</button>'
+        +'<button class="zbtn" data-bg="'+p.id+'" style="font-size:11px;padding:4px 8px'+(bgOn?';background:#ecfdf3;color:#067647;border-color:#12b76a':'')+'">'+(bgOn?'✓ 当前背景':'设为背景')+'</button>'
+        +'</div></div>';
+    }
+    $('vgrid').innerHTML=html;
+  }
+  function renderQuestions(){
+    var html='';
+    for(var i=0;i<QUESTIONS.length;i++){
+      var q=QUESTIONS[i],cur=state.answers[q.id];
+      html+='<div class="qrow"><p class="qtitle">'+esc(q.title)+'</p><div class="qopts">'
+        +'<button class="qopt'+(cur===0?' is-on':'')+'" data-q="'+q.id+'" data-v="0">'+esc(q.a[0])+'</button>'
+        +'<button class="qopt'+(cur===1?' is-on':'')+'" data-q="'+q.id+'" data-v="1">'+esc(q.a[1])+'</button></div></div>';
+    }
+    $('questions').innerHTML=html;
+  }
+  function renderStats(){
+    $('stat-total').textContent=STYLES.length;
+    $('stat-group').textContent=GROUPS.length;
+    $('stat-picked').textContent=state.styleLikes.length;
+  }
+
+  /* ---------- 灯箱 ---------- */
+  function openLb(list,idx,kind){
+    lbList=list;lbIndex=idx;lbKind=kind;
+    $('lb').classList.add('is-on');document.body.style.overflow='hidden';paintLb();
+  }
+  function paintLb(){
+    var item=lbList[lbIndex];if(!item)return;
+    $('lb-img').src=item.img||item.file;
+    $('lb-img').alt=item.cn||item.name;
+    $('lb-name').textContent=(item.cn||item.name)+' · '+(lbIndex+1)+' / '+lbList.length;
+    var id=item.id,on=lbKind==='style'?state.styleLikes.indexOf(id)>=0:state.likes.indexOf(id)>=0;
+    $('lb-like').textContent=on?'♥ 已喜欢':'♡ 喜欢这张';
+    $('lb-meta').innerHTML=esc(item.group||item.source||'')+' · '+esc(item.desc||item.imgNote||'')
+      +(item.url?' · <a href="'+esc(item.url)+'" target="_blank" rel="noopener noreferrer">原始链接 ↗</a>':'')
+      +' · '+esc(S.imageNote||'氛围参考图');
+  }
+  function closeLb(){$('lb').classList.remove('is-on');document.body.style.overflow='';}
+  function step(n){lbIndex=(lbIndex+n+lbList.length)%lbList.length;paintLb();}
+
+  /* ---------- 生成画像 ---------- */
+  function topN(c,n){return Object.keys(c).map(function(k){return[k,c[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,n).map(function(x){return x[0]+'（'+x[1]+'）';}).join('、');}
+  function generate(){
+    if(!state.styleLikes.length&&!state.likes.length&&Object.keys(state.answers).length<2){
+      $('out').textContent='至少选几个喜欢的风格（或几张图、两道题）再生成。';return;
+    }
+    var dims=['temp','light','density','subject','texture'],C={};dims.forEach(function(d){C[d]={};});
+    state.likes.forEach(function(id){var p=pickById(id);if(!p)return;dims.forEach(function(d){var v=p.dims[d];C[d][v]=(C[d][v]||0)+1;});});
+    QUESTIONS.forEach(function(q){var a=state.answers[q.id];if(a==null)return;var v=q.va[a];C[q.dim][v]=(C[q.dim][v]||0)+2;});
+    function label(d,v){return (LABEL[d]||{})[v]||v;}
+    function lead(d){var c=C[d],best=null;Object.keys(c).forEach(function(k){if(!best||c[k]>c[best])best=k;});return best?label(d,best):'暂无倾向';}
+
+    var chosen=state.styleLikes.map(styleById).filter(Boolean);
+    var groupCount={},kwSet={},colorCount={};
+    chosen.forEach(function(s){
+      groupCount[s.group]=(groupCount[s.group]||0)+1;
+      s.kw.forEach(function(k){kwSet[k]=1;});
+      s.colors.forEach(function(c){colorCount[c]=(colorCount[c]||0)+1;});
+    });
+    var kws=Object.keys(kwSet);
+    var colors=Object.keys(colorCount).sort(function(a,b){return colorCount[b]-colorCount[a];}).slice(0,14);
+    var pickedImgs=state.likes.map(function(id){var p=pickById(id);return p?p.name:id;});
+    var bg=pickById(state.bg);
+    var answers=QUESTIONS.map(function(q){var a=state.answers[q.id];return a==null?'（未答）':q.a[a];});
+
+    // 色板可视化
+    $('palette').innerHTML=colors.map(function(c){return '<span><i style="background:'+esc(c)+'"></i>'+esc(c)+'</span>';}).join('')||'<span class="hint">选几个风格后这里会出现代表色板</span>';
+
+    var L=[];
+    L.push('【我的审美画像 · 2026-11-12】');L.push('');
+    L.push('一、视觉偏好（来自 25 张真实壁纸 + 四道二选一）');
+    L.push('  喜欢的图：'+(pickedImgs.length?pickedImgs.join(' / '):'（未选图）'));
+    L.push('  主色调：'+lead('temp')+'　｜　'+topN(C.temp,4));
+    L.push('  明暗：'+lead('light')+'　｜　'+topN(C.light,3));
+    L.push('  复杂度：'+lead('density')+'　｜　'+topN(C.density,3));
+    L.push('  题材：'+topN(C.subject,3)+'　｜　质感：'+topN(C.texture,2));
+    QUESTIONS.forEach(function(q,i){L.push('  '+q.title.slice(0,q.title.indexOf('.')+1)+' '+answers[i]);});
+    L.push('');
+    L.push('二、风格偏好（327 种里选了 '+chosen.length+' 种）');
+    L.push('  大类分布：'+(Object.keys(groupCount).length?topN(groupCount,14):'（未选风格）'));
+    L.push('  具体风格：'+(chosen.length?chosen.map(function(s){return s.cn+'('+s.en+')';}).join(' / '):'（未选）'));
+    L.push('');
+    L.push('三、代表色板（按出现次数）');
+    L.push('  '+(colors.join(' ')||'（选风格后生成）'));
+    L.push('');
+    L.push('四、以后找图直接复制这些关键词（'+kws.length+' 个，去重后）');
+    for(var i=0;i<kws.length;i+=4)L.push('  '+kws.slice(i,i+4).join(' | '));
+    if(!kws.length)L.push('  （选几个风格后生成）');
+    L.push('');
+    L.push('五、三个使用场景的建议');
+    L.push('  壁纸：优先「'+lead('temp')+' / '+lead('light')+' / '+lead('density')+'」，避开与上述相反的配色与高对比细节，保证图标和文字可读。');
+    L.push('  头像：同色温与明度，选干净背景、主体居中；风格上优先 '+(chosen.length?chosen.slice(0,3).map(function(s){return s.cn;}).join('、'):'按大类分布第一名')+'。');
+    L.push('  设计配图：用上面的色板定主色，用关键词搜 1 张低细节主视觉 + 1 张高饱和小面积点缀；需要文字的地方留白。');
+    L.push('');
+    L.push('六、想设为 AI 日报背景：'+(bg?bg.id+' '+bg.name:'（未选）'));
+    L.push('');
+    L.push('（把这段发给我，我会写进长期记忆。以后要壁纸、头像、设计配图，直接按色板 + 关键词找，不用重新调研。）');
+    L.push('[数据] 327 种视觉风格 / 14 大类；43 张本地真实壁纸（Unsplash / Pexels 免费可商用），逐张验证可打开。');
+    window.__surveyExport={
+      kind:'aesthetic-profile-survey',
+      schema_version:'1.0',
+      generated:new Date().toISOString().slice(0,10),
+      answers:Object.keys(state.answers).map(function(k){return {id:k,value:state.answers[k]};}),
+      style_likes:state.styleLikes.slice(),
+      image_likes:state.likes.slice(),
+      dims:C,
+      groups:groupCount,
+      palette:colors,
+      keywords:kws
+    };
+    $('out').textContent=L.join('\n');
+    $('gen-hint').textContent='已生成。点「复制结果」后发给我即可。';
+  }
+
+  /* ---------- 事件 ---------- */
+  document.addEventListener('click',function(e){
+    var t=e.target.closest('[data-tab],[data-like],[data-zoom],[data-vlike],[data-vzoom],[data-bg],[data-q],#btn-more');
+    if(!t)return;
+    if(t.id==='btn-more'){showCap+=60;renderGrid();return;}
+    if(t.dataset.tab){tab=t.dataset.tab;query='';$('q').value='';showCap=60;renderTabs();renderGrid();return;}
+    if(t.dataset.like){toggleStyle(t.dataset.like);return;}
+    if(t.dataset.zoom){var list=matched().filter(function(x){return !!x.img;});for(var i=0;i<list.length;i++)if(list[i].id===t.dataset.zoom){openLb(list,i,'style');break;}return;}
+    if(t.dataset.vlike){var id=t.dataset.vlike,at=state.likes.indexOf(id);if(at>=0)state.likes.splice(at,1);else state.likes.push(id);save();renderVisual();return;}
+    if(t.dataset.vzoom){for(var j=0;j<P.length;j++)if(P[j].id===t.dataset.vzoom){openLb(P,j,'visual');break;}return;}
+    if(t.dataset.bg){state.bg=t.dataset.bg;save();renderVisual();toast('已记为想要的日报背景，生成画像后告诉我即可。');return;}
+    if(t.dataset.q){var q=t.dataset.q,v=Number(t.dataset.v);if(state.answers[q]===v)delete state.answers[q];else state.answers[q]=v;save();renderQuestions();return;}
+  });
+  var timer=null;
+  $('q').addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(function(){query=$('q').value;tab='全部';showCap=60;renderTabs();renderGrid();},150);});
+  $('lb-close').addEventListener('click',closeLb);
+  $('lb').addEventListener('click',function(e){if(e.target===$('lb'))closeLb();});
+  $('lb-prev').addEventListener('click',function(){step(-1);});
+  $('lb-next').addEventListener('click',function(){step(1);});
+  $('lb-like').addEventListener('click',function(){
+    var item=lbList[lbIndex];if(!item)return;
+    if(lbKind==='style')toggleStyle(item.id);
+    else{var at=state.likes.indexOf(item.id);if(at>=0)state.likes.splice(at,1);else state.likes.push(item.id);save();renderVisual();}
+    paintLb();
+  });
+  document.addEventListener('keydown',function(e){
+    if(!$('lb').classList.contains('is-on'))return;
+    if(e.key==='Escape')closeLb();else if(e.key==='ArrowLeft')step(-1);else if(e.key==='ArrowRight')step(1);
+  });
+  $('btn-gen').addEventListener('click',generate);
+  $('btn-copy').addEventListener('click',function(){
+    var text=$('out').textContent;
+    if(!text||text.indexOf('还没生成')===0){toast('先点「生成我的审美画像」。');return;}
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){toast('已复制，粘贴发给我即可。');},function(){fallback(text);});}
+    else fallback(text);
+  });
+  function fallback(text){var ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('已复制，粘贴发给我即可。');}catch(e){toast('复制失败，请手动选中文本。');}ta.remove();}
+  $('btn-json').addEventListener('click',function(){
+    if(!window.__surveyExport){toast('先点「生成我的审美画像」。');return;}
+    var text=JSON.stringify(window.__surveyExport,null,1);
+    try{
+      var blob=new Blob([text],{type:'application/json'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='aesthetic-survey-'+window.__surveyExport.generated+'.json';
+      document.body.appendChild(a);a.click();
+      setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
+      toast('已保存 JSON，下一步：python scripts/profile_tool.py merge --input 该文件');
+    }catch(e){toast('下载失败，请改用「复制结果」。');}
+  });
+  $('btn-clear').addEventListener('click',function(){
+    state={styleLikes:[],likes:[],answers:{},bg:'w11'};save();renderGrid();renderVisual();renderQuestions();renderStats();
+    $('out').textContent='还没生成。先选几个喜欢的风格（或几张图），再点上面的按钮。';$('palette').innerHTML='';toast('已清空。');
+  });
+
+  renderTabs();renderGrid();renderVisual();renderQuestions();renderStats();
+})();
+</script>
+</body>
+</html>
