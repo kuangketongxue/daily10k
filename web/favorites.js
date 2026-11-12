@@ -68,7 +68,15 @@ function has(items, date) { return Array.isArray(items) && items.includes(date);
 function toggleFavorite(date, action) {
   const set = new Set(loadFavorites().items);
   if (action === 'add') set.add(date); else set.delete(date);
-  return saveFavorites([...set]);
+  const next = saveFavorites([...set]);
+  // 镜像到云端私有仓。没配令牌时 CloudFavorites 内部直接跳过，
+  // 所以这段不会影响「完全不想联网」的用法。
+  try {
+    if (window.CloudFavorites && DATE_RE.test(date)) {
+      window.CloudFavorites.toggle('issues', date, action, CLOUD_SITE);
+    }
+  } catch (e) { /* 云端出错不影响本机收藏 */ }
+  return next;
 }
 
 /* ---------- 导出 / 导入（跨设备短码） ---------- */
@@ -245,6 +253,43 @@ async function initFavoritesPage(root) {
   });
 }
 
+/* ---------- 云端同步（私有仓 kuangketongxue/kuangketongxue） ---------- */
+
+const CLOUD_SITE = 'daily10k';
+
+function cloudReady() {
+  return !!(window.CloudFavorites && window.CloudFavorites.hasToken());
+}
+
+// 从云端取回 → 与本机合并 → 落盘 → 重渲染。合并只增不减，绝不复活已取消的收藏。
+async function cloudPullIntoLocal(root) {
+  if (!window.CloudFavorites) throw new Error('云端模块未加载');
+  const doc = await window.CloudFavorites.pull();
+  const cloudDates = (doc && doc.sites && doc.sites[CLOUD_SITE] && doc.sites[CLOUD_SITE].issues) || [];
+  const local = loadFavorites().items;
+  const merged = [...new Set([...local, ...cloudDates])].sort().reverse();
+  if (merged.join('|') !== local.join('|')) {
+    saveFavorites(merged);
+    document.dispatchEvent(new CustomEvent('favorites:changed', { detail: { items: merged } }));
+    if (root) initFavoritesPage(root);
+  }
+  return merged;
+}
+
+// 只在已填令牌时自动拉一次；任何失败都静默降级（云端挂了不影响看收藏）
+async function initCloud(root) {
+  if (!window.CloudFavorites) return;
+  try { window.CloudFavorites.configure({ site: CLOUD_SITE }); } catch (e) { }
+  if (!cloudReady()) return;
+  try { await cloudPullIntoLocal(root); } catch (e) { }
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initCloud(document.getElementById('fav-root'));
+  });
+}
+
 /* ---------- 导出 / 导入面板 ---------- */
 
 function initSyncPanel(panel, root) {
@@ -254,6 +299,51 @@ function initSyncPanel(panel, root) {
   function render() {
     if (!mode) { body.hidden = true; body.innerHTML = ''; return; }
     body.hidden = false;
+
+    if (mode === 'cloud') {
+      const st = window.CloudFavorites ? window.CloudFavorites.state() : null;
+      const token = window.CloudFavorites ? window.CloudFavorites.getToken() : '';
+      const setupUrl = window.CloudFavorites ? window.CloudFavorites.tokenSetupUrl() : '#';
+      body.innerHTML = `
+        <p class="fav-sync-title">填一次令牌，收藏就存进你的私有仓；电脑重装后打开这里点「取回收藏」即可恢复。令牌只保存在这台设备的浏览器里，不会进代码、也不会进仓库。</p>
+        <p><a class="fav-sync-link" href="${esc(setupUrl)}" target="_blank" rel="noopener">① 生成令牌（已预填：只授权 kuangketongxue/kuangketongxue 这一个私有仓）</a></p>
+        <textarea class="fav-sync-box" rows="2" placeholder="② 粘贴令牌（github_pat_ 开头）">${esc(token)}</textarea>
+        <p>
+          <button type="button" class="read-btn fav-sync-save">③ 保存并同步</button>
+          <button type="button" class="fav-sync-btn-inline fav-sync-pull">取回收藏</button>
+          <button type="button" class="fav-sync-cancel">关闭</button>
+        </p>
+        <p class="fav-sync-hint">${esc(st ? ('状态：' + st.message + (st.pending ? '（待上传 ' + st.pending + ' 项）' : '')) : '云端模块未加载')}</p>
+        <p class="fav-sync-err" role="alert"></p>`;
+      const errEl = body.querySelector('.fav-sync-err');
+      const box = body.querySelector('.fav-sync-box');
+
+      body.querySelector('.fav-sync-save').addEventListener('click', async () => {
+        errEl.textContent = '';
+        const t = box.value.trim();
+        if (!t) { errEl.textContent = '先把令牌粘进来。'; return; }
+        window.CloudFavorites.setToken(t);
+        try {
+          await window.CloudFavorites.sync();
+          await cloudPullIntoLocal(root);
+          toast('已连上云端，收藏已同步。');
+          mode = null; render();
+        } catch (e) {
+          errEl.textContent = e.message || '同步失败，检查令牌权限。';
+        }
+      });
+      body.querySelector('.fav-sync-pull').addEventListener('click', async () => {
+        errEl.textContent = '';
+        try {
+          await cloudPullIntoLocal(root);
+          toast('已从云端取回收藏。');
+        } catch (e) {
+          errEl.textContent = e.message || '取回失败。';
+        }
+      });
+      body.querySelector('.fav-sync-cancel').addEventListener('click', () => { mode = null; render(); });
+      return;
+    }
 
     if (mode === 'export') {
       body.innerHTML = `
