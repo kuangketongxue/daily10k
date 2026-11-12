@@ -1,0 +1,324 @@
+{
+  "date": "2026-11-13",
+  "title": "openai/codex-security：让 AI 审代码，把漏洞从发现追到修复",
+  "oneLiner": "OpenAI 出品的 Codex Security CLI 与 TypeScript SDK，用 AI 扫描、验证并修复代码安全漏洞，面向开发者与 DevSecOps 团队。",
+  "category": "AI 安全 · 代码扫描 · DevSecOps · TypeScript",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "代码安全扫描不是新事，但传统 SAST 工具常被两个问题卡住：一是**误报太多**，安全团队没人力逐个复核；二是**只报不改**，开发者看到告警也不知从何下手。openai/codex-security 想把这整条链路——发现、验证、修复——交给 AI 代理去跑。"
+        },
+        {
+          "type": "p",
+          "text": "它的定位很直接：**帮你找到、调查并修复代码中的漏洞**。README 第一段就写明：\"Codex Security helps you find, investigate, and fix vulnerabilities in your code.\" 这不是一个只会列问题的扫描器，而是一个能**给出修复补丁**的工作流工具。"
+        },
+        {
+          "type": "p",
+          "text": "项目提供了三种入口：在 Codex 会话里用安全工作流、在终端里用 `cs` CLI、在自动化流水线里用 TypeScript SDK 或 GitHub Action。这意味着同一套扫描能力，既能让人交互式地追问，也能被 CI 静默调用。"
+        },
+        {
+          "type": "p",
+          "text": "从数据看，它上线不到四个月（2026-07-13 创建）就拿到 **12,353 星**，今日新增 663 星，位列 GitHub Trending 日榜第 2。这个热度说明开发者确实在找一个\"能动手\"的 AI 安全工具，而不是又一个只出报告的扫描器。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "用途一：在 CI 里自动扫描并导出 SARIF 报告"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个仓库路径，加上 `OPENAI_API_KEY` 环境变量"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "一份 Markdown 报告、JSON/SARIF 导出，以及可选的修复补丁"
+        },
+        {
+          "type": "code",
+          "code": "cs scan . --max-time 15\ncs export --scan SCAN_ID --artifact threat-model --output threatmodel.md",
+          "caption": "来源：README 的 Quick start 与 Save and export threat models 节"
+        },
+        {
+          "type": "p",
+          "text": "`--max-time 15` 给每次扫描一个 15 分钟的**建议性**调查预算，避免 CI 任务无限挂起。导出的 SARIF 可以直接喂给 GitHub Code Scanning 或其它支持该格式的门禁系统。"
+        },
+        {
+          "type": "sub",
+          "text": "用途二：在 Codex 会话里交互式追问漏洞细节"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一句自然语言指令，比如\"扫描这个仓库，聚焦认证和授权\""
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "一份带源码证据和排除项的报告，你可以继续要补丁或验证修复"
+        },
+        {
+          "type": "quote",
+          "text": "Run a Codex Security scan on this repository, focusing on authentication and authorization. Return the saved report, source evidence, and coverage limits."
+        },
+        {
+          "type": "p",
+          "text": "这是 README 给出的示例提示词。扫描完成后，报告里会包含**源码证据**和**排除项**，你可以接着让 Codex 生成补丁，或验证某个已有修复是否真的有效。"
+        },
+        {
+          "type": "sub",
+          "text": "用途三：批量扫描多个仓库，或审阅第三方扫描器结果"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个仓库列表，或第三方扫描器的 JSON/SARIF 输出"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "一份可恢复的批量扫描活动，或经过去重、严重度评级的本地发现列表"
+        },
+        {
+          "type": "p",
+          "text": "README 提到**批量扫描**（bulk scans）用于独立仓库审查，可在一次可恢复的活动中运行；**导入第三方扫描器发现**（scanner imports）则能把别家工具的告警接进来，统一去重、评估严重度并指派负责人。"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "架构上分三层：**CLI**（`cs` 命令）、**TypeScript SDK**（`@openai/codex-security` 包）、以及可选的 **GitHub Action**。三者共用同一套扫描引擎，README 明确说 `cs` 和 `codex-security` 跑的是同一个 CLI。"
+        },
+        {
+          "type": "p",
+          "text": "扫描模式分**标准**（Standard）和**深度**（Deep）两种。README 解释：深度扫描会重复标准扫描，并返回**去重后的发现**。这暗示标准模式可能因时间或成本预算提前收尾，深度模式则把同一批发现再查一遍，确保没有漏网。"
+        },
+        {
+          "type": "p",
+          "text": "核心机制不是简单的正则匹配，而是**多步工作流**：先扫描生成候选发现，再验证这些发现是否真实，然后生成补丁，最后验证已有修复。README 的 Features 列表把\"验证候选发现、生成补丁、验证已有修复\"并列，说明验证不是事后补丁，而是扫描流程的一等公民。"
+        },
+        {
+          "type": "p",
+          "text": "扫描范围可控：可以扫整个仓库、指定路径（`--path`），或只扫从某个基线到 HEAD 的提交差异（`--diff origin/main`）。这让它既能做全量审计，也能在 PR 里只查增量代码，节省时间和 token。"
+        },
+        {
+          "type": "p",
+          "text": "结果存储有**去重机制**。README 提到本地 findings 服务处理存储、去重，并支持通过 `publish scan --to custom` 和 `--findings-url` 连接到**独立部署的端点**。这意味着企业可以把发现数据存在自己的基础设施里，不必全量上云。"
+        },
+        {
+          "type": "p",
+          "text": "模型供应商不限于 OpenAI：README 列出 **Amazon Bedrock、OpenRouter、Fireworks AI 和 Cheaper Inference** 都可用。Bedrock 走 AWS 凭证，不需要单独的 OpenAI 登录。这对有合规要求、必须用自家云上模型的团队是个实际考量。"
+        },
+        {
+          "type": "p",
+          "text": "安全策略不是硬编码的，而是**从仓库里的 `SECURITY.md` 读取**。README 明确说扫描使用已有的根目录和组件级 `SECURITY.md` 指导；`cs policy .` 命令可以帮你起草或更新这份文件，但**不会改动现有文件**，只把草稿存在仓库外，等你审完再手动复制。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "环境要求：Node.js 22.13.0+（22.x 系列）、或 24.x / 26.x，以及 Python 3.10+（Python 3.10 还需 `tomli`）。"
+        },
+        {
+          "type": "code",
+          "code": "npm install --global @openai/codex-security\ncs login\ncs scan .",
+          "caption": "来源：README 的 Quick start 节"
+        },
+        {
+          "type": "p",
+          "text": "首次扫描完成后，终端会显示一个 **REPORT 路径**，打开那个 Markdown 文件即可看到结果。之后想再看，用 `cs scans show` 从同一仓库找到最近一次完成的扫描。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "如果 `cs` 与已有命令冲突，改用 `codex-security`；或者跳过全局安装，直接用 `npx @openai/codex-security` 代替 `cs` 执行登录和扫描。",
+            "CI 环境需要设置 `OPENAI_API_KEY` 或 `CODEX_API_KEY` 环境变量；无头机器（headless）请参考设备或 SSH 登录文档。",
+            "扫描会读取仓库里的 `SECURITY.md` 作为策略；如果还没有，先跑 `cs policy .` 生成草稿，审阅后再复制到目标位置。"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "对于 TypeScript 项目，可以本地安装 SDK 并直接调用："
+        },
+        {
+          "type": "code",
+          "code": "npm install @openai/codex-security\n\nimport { CodexSecurity } from \"@openai/codex-security\";\n\nconst security = new CodexSecurity();\ntry {\n  const result = await security.run(\"/path/to/repository\");\n  console.log(result.reportPath);\n} finally {\n  await security.close();\n}",
+          "caption": "来源：README 的 TypeScript SDK 节"
+        },
+        {
+          "type": "p",
+          "text": "注意 SDK 示例里用了 `try/finally` 来确保 `close()` 被调用——这暗示 SDK 持有底层资源（可能是模型连接或文件句柄），用完不关会有泄漏。"
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未解决事项多**：截至 2026-11-13，仓库有 142 个未关闭的 Issue 与 PR。考虑到项目创建于 2026-07-13，四个月内积累的未结事项数量不算少，说明维护节奏可能跟不上社区反馈。所以你要注意：提交 Issue 或 PR 前先搜索是否已有重复，并预留较长的等待时间。",
+            "**频繁破坏性变更**：最新 Release 为 npm-v0.10.0（2026-11-12），距上次推送仅一天，但版本号仍为 0.x，按语义化版本规则，0.x 阶段的次版本更新可能引入不兼容变更。所以你要注意：升级前务必阅读 Release Notes，并在 CI 中固定版本或使用锁文件。",
+            "**运行环境限制严格**：README 明确要求 Node.js 22.13.0+（22.x 系列）或 24.x/26.x，以及 Python 3.10+（Python 3.10 还需 `tomli`）。所以你要注意：在 CI 或容器中需预先安装这些精确版本，否则 CLI 可能无法启动。",
+            "**依赖外部 AI 服务**：扫描和修复依赖 AI 模型，README 提到需要设置 `OPENAI_API_KEY` 或 `CODEX_API_KEY`，部分请求还需 Trusted Access for Cyber。所以你要注意：在无网络或无法访问 OpenAI 服务的环境中，核心功能不可用；同时需评估 API 成本，README 示例中单次扫描预算约 5 美元，且实际请求可能超限。",
+            "**商业产品推广迹象**：README 多次提到 Codex Security Cloud、Daybreak 访问等，这些是 OpenAI 的商业服务。开源仓库承担了入口和引流功能。所以你要注意：区分本地开源功能与云端商业功能，后者可能涉及额外费用和数据出境。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "usestrix/strix"
+        },
+        {
+          "type": "kv",
+          "k": "仓库：",
+          "v": "[仓库首页](https://github.com/usestrix/strix)"
+        },
+        {
+          "type": "kv",
+          "k": "星数：",
+          "v": "75,175"
+        },
+        {
+          "type": "kv",
+          "k": "许可证：",
+          "v": "Apache-2.0"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新：",
+          "v": "2026-11-12（与 Codex Security 同日推送）"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景：",
+          "v": "需要开源 AI 渗透测试工具，可发现并修复应用漏洞；Python 生态，适合已有 Python 技术栈的团队。"
+        },
+        {
+          "type": "sub",
+          "text": "0xSteph/pentest-ai"
+        },
+        {
+          "type": "kv",
+          "k": "仓库：",
+          "v": "[仓库首页](https://github.com/0xSteph/pentest-ai)"
+        },
+        {
+          "type": "kv",
+          "k": "星数：",
+          "v": "1,823"
+        },
+        {
+          "type": "kv",
+          "k": "许可证：",
+          "v": "MIT"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新：",
+          "v": "2026-11-03"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景：",
+          "v": "需要可复现验证结果的 AI 渗透测试，每个发现都有可重放的证明胶囊；Python 生态。"
+        },
+        {
+          "type": "p",
+          "text": "**选择判据**：如果你的团队已深度使用 OpenAI Codex 生态，且需要与 Codex 工作流、TypeScript SDK 集成，选本项目；如果主要诉求是开源、无厂商锁定的 AI 渗透测试，且接受 Python 技术栈，选 strix（星数更高、更新更频繁）。若需要更强的可复现验证机制，可考虑 pentest-ai。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "已在 Codex 生态中开发、希望在同一工作流中完成安全扫描与修复的 TypeScript/Node.js 团队。",
+            "需要在 CI 中自动化扫描、且能接受 API 成本（README 示例单次约 5 美元）的团队。",
+            "需要生成或更新 SECURITY.md 策略、并保存威胁模型的 DevSecOps 团队。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "建议暂缓使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "无法满足 Node.js 22.13+/24/26 与 Python 3.10+ 精确版本要求的团队，CLI 可能无法启动。",
+            "对商业服务敏感、不允许代码或元数据发送到 OpenAI 云端（含 Codex Security Cloud）的团队。",
+            "需要完全离线运行、或无法访问 OpenAI API 的环境，核心扫描功能将不可用。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/openai/codex-security)",
+            "[README](https://github.com/openai/codex-security#readme)",
+            "[Releases 页面](https://github.com/openai/codex-security/releases)",
+            "[Issues 页面](https://github.com/openai/codex-security/issues)",
+            "[项目主页](https://developers.openai.com/codex/security)",
+            "[npm 包页面](https://www.npmjs.com/package/@openai/codex-security)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-13。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "repo": "openai/codex-security",
+    "stars": 12353,
+    "language": "TypeScript",
+    "license": "Apache-2.0",
+    "lastCommit": "2026-11-12",
+    "openIssues": 142,
+    "version": "npm-v0.10.0",
+    "trending": {
+      "window": "日榜",
+      "rank": 2,
+      "gained": 663,
+      "unit": "今日"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 2004,
+    "codeBlocks": 3,
+    "minutes": 7.3,
+    "asOf": "2026-11-13"
+  }
+}

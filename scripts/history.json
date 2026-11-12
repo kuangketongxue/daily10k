@@ -20,5 +20,6 @@
   "NVIDIA/auto-ontology",
   "meta/astryx",
   "anthropics/skills",
-  "we-promise/sure"
+  "we-promise/sure",
+  "openai/codex-security"
 ]

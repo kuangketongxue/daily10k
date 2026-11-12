@@ -1,6 +1,17 @@
 {
-  "updated": "2026-11-12",
+  "updated": "2026-11-13",
   "issues": [
+    {
+      "date": "2026-11-13",
+      "title": "openai/codex-security：让 AI 审代码，把漏洞从发现追到修复",
+      "oneLiner": "OpenAI 出品的 Codex Security CLI 与 TypeScript SDK，用 AI 扫描、验证并修复代码安全漏洞，面向开发者与 DevSecOps 团队。",
+      "category": "AI 安全 · 代码扫描 · DevSecOps · TypeScript",
+      "stars": 12353,
+      "repo": "openai/codex-security",
+      "lenses": [
+        "AI"
+      ]
+    },
     {
       "date": "2026-11-12",
       "title": "Sure：让个人财务自己长出一双 AI 眼睛",
