@@ -1,0 +1,282 @@
+{
+  "date": "2026-11-14",
+  "title": "Elephant-Goldfish Model：让 AI 先设计再评审，用“新鲜眼睛”挑出盲点",
+  "oneLiner": "一个开源插件，让 AI 助手先像大象一样记住上下文起草规格，再像金鱼一样用全新视角评审，帮你发现设计盲点。",
+  "category": "AI 代理 · 规格驱动开发 · 代码评审",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "软件设计常卡在“没想清楚就动手”。你让 AI 助手直接写代码，它往往基于对话历史里的零散上下文，生成一份看似合理、实则漏掉关键假设的方案。等实现到一半，才发现接口对不上、边界条件没定义，返工成本已经付出。"
+        },
+        {
+          "type": "p",
+          "text": "Elephant-Goldfish Model（EGM）把流程拆成两个角色：**Elephant** 负责“记住”——它持有你的项目上下文、需求和之前做过的决策，起草规格文档；**Goldfish** 负责“忘记”——评审者只拿到文档和它引用的源码，**不继承之前的对话**，因此能像第一次看一样审视草案。"
+        },
+        {
+          "type": "quote",
+          "text": "Goldfish reviewers examine the draft and referenced source material without the earlier conversation, helping expose unstated assumptions and blind spots."
+        },
+        {
+          "type": "p",
+          "text": "这种“记忆”与“遗忘”的分工，正是为了对抗 LLM 最典型的失败模式：**过早锚定**。如果评审者带着起草时的对话上下文，它很容易顺着原思路走，难以发现起草者自己都没意识到的漏洞。EGM 用全新的子代理上下文强制“失忆”，把评审变成一次独立的、对抗性的检查。"
+        },
+        {
+          "type": "p",
+          "text": "最终决定权仍然在你手里。README 明确写道：**You** make the architectural trade-offs and approve the specification before implementing。AI 负责探索和质疑，人负责拍板。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "从零设计新功能：先讨论，再成文，后评审"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一句功能描述，例如“给这个项目加上 webhook 投递，失败或重复事件怎么办？”"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "一份经过评审的 `design_draft.md` 规格，其中包含评审发现的问题清单，供你逐条决定是否修改。"
+        },
+        {
+          "type": "p",
+          "text": "这个流程分三步：先用 `/egm-brainstorm` 让 Elephant 和 Goldfish 一起探索想法，产出 `concepts_brief.md`；再用 `/egm-draft` 把 brief 变成 `design_draft.md`，每写完一节暂停，等你在对话里反馈；最后用 `/egm-review` 让全新评审者检查草案。"
+        },
+        {
+          "type": "code",
+          "code": "/egm-brainstorm Add webhook delivery to this project.\n/egm-draft\n/egm-review design_draft.md",
+          "caption": "来源：README「Try your first design」"
+        },
+        {
+          "type": "sub",
+          "text": "评审已有文档：不写新规格也能查"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一份现有设计文档、README 或 PR 计划的路径。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "评审意见，覆盖文档清晰度、与代码的契合度、实现计划是否可行。"
+        },
+        {
+          "type": "p",
+          "text": "你不需要先走完 brainstorm 和 draft 流程。直接对已有的 `docs/designs/webhooks.md` 执行 `/egm-review`，就能让“新鲜评审者”对照当前代码检查它。"
+        },
+        {
+          "type": "code",
+          "code": "/egm:egm-review docs/designs/webhooks.md",
+          "caption": "来源：README「Try a 60-second review on existing code」"
+        },
+        {
+          "type": "sub",
+          "text": "检查文档与代码脱节：drift report"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个存放设计文档的目录，例如 `docs/designs/`。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "每个文档与当前源码的差异报告，标出哪些地方已经过时。"
+        },
+        {
+          "type": "p",
+          "text": "代码改着改着，设计文档就落后了。`/egm-drift-report` 逐份对比文档和源码，把分歧点列出来，由你决定是更新文档还是改代码。"
+        },
+        {
+          "type": "code",
+          "code": "/egm:egm-drift-report docs/designs/",
+          "caption": "来源：README「Check for drift」"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "EGM 的架构围绕三个角色展开，README 用一张表明确划分了它们的**上下文**和**责任**："
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Elephant**：上下文是你的项目、需求和早期决策，负责探索问题、起草规格。",
+            "**Goldfish**：上下文是文档和它引用的源码，**不含之前的对话**，负责找出缺失假设、不清晰的需求、实现风险。",
+            "**You**：上下文是真正重要的目标和约束，负责解决权衡、批准设计、决定建什么。"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "关键机制是 **Goldfish 评审必须使用全新的子代理上下文**。README 明确写道：“Goldfish reviews require fresh subagent contexts. If your agent cannot create them, EGM stops the review.”——如果宿主代理（如某些 CLI 版本）不支持创建子代理，EGM 会直接中止评审，而不是降级运行。"
+        },
+        {
+          "type": "p",
+          "text": "EGM 以插件形式分发，内部按技能（skills）组织。每个技能是一个独立目录，包含自己的 `SKILL.md` 和图标。目前提供七个技能：`egm-brainstorm`、`egm-draft`、`egm-resolve`、`egm-bootstrap`、`egm-review`、`egm-review-loop`、`egm-drift-report`。其中 `egm-review` 内部又分五个评审阶段，`egm-review-loop` 则允许你配置一组评审者，针对特定评审任务运行。"
+        },
+        {
+          "type": "p",
+          "text": "这种设计让 EGM 能适配多种宿主：ChatGPT 桌面版、Codex CLI、Claude Code、Antigravity CLI 等。安装方式因宿主而异，但核心技能逻辑是同一套。"
+        },
+        {
+          "type": "p",
+          "text": "与同类项目相比，EGM 的差异在于**强制上下文隔离**。例如 wshobson/agents（★42486）提供的是跨工具的插件、代理和技能集合，重点在“写一次、多工具适配”；而 EGM 更关注“设计—评审”这个特定工作流中的上下文工程，用“新鲜眼睛”作为核心机制。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "安装取决于你用的编码代理。以 Claude Code 和 Codex CLI 为例："
+        },
+        {
+          "type": "code",
+          "code": "# Claude Code\nclaude plugin marketplace add google/elephant-goldfish-model\nclaude plugin install egm@egm\n\n# Codex CLI\ncodex plugin marketplace add google/elephant-goldfish-model\ncodex plugin add egm@egm",
+          "caption": "来源：README「Install」"
+        },
+        {
+          "type": "p",
+          "text": "Antigravity CLI 用一条命令：`agy plugin install https://github.com/google/elephant-goldfish-model`。ChatGPT 和 Codex 桌面版则通过已发布的插件页安装，该列表仅限桌面端。"
+        },
+        {
+          "type": "p",
+          "text": "安装后**必须新开一个会话**，让插件技能被加载。然后你可以直接对已有文档执行 `/egm:egm-review docs/designs/webhooks.md`，60 秒内得到第一份评审。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**命令前缀**：在 Antigravity（agy CLI）和 Claude Code 中，命令要加 `/egm:` 前缀，例如 `/egm:egm-brainstorm`。agy CLI 1.4.10 支持不带前缀自动补全，但 1.4.8 不行，所以建议始终带前缀。",
+            "**子代理能力**：brainstorm 和 review 需要会话能创建全新子代理。如果宿主不支持，EGM 会停止评审，不会降级。",
+            "**评审不替代测试**：README 明确说明“A review does not replace tests or human judgment”，它只是设计阶段的辅助检查。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭的 Issue 与 PR 共 103 个**，而项目创建仅两个月（2026-09-13），说明维护节奏跟不上反馈速度。你需要注意：提交 bug 或 PR 前先查现有 issue，避免重复；重要问题不要只依赖 GitHub，可同时在项目主页（egm.dev）反馈。",
+            "**最近推送为 2026-11-13**，距今天（2026-11-14）仅一天，维护活跃，但最新 Release 停留在 v0.1.1（2026-11-06），且 README 明确标注“This is not an officially supported Google product”。你需要注意：生产环境使用前要自行测试，Google 不提供官方支持承诺。",
+            "**项目处于 v0.1.x 开发者预览阶段**，README 中多处提到版本敏感行为，例如 agy CLI 1.4.10 支持无前缀命令补全（issue #220），而 1.4.8 不支持（issue #196），需要显式加 `/egm:` 前缀。你需要注意：升级 agent 或插件版本后，必须重新验证命令是否仍按预期工作，破坏性变更可能频繁出现。",
+            "**README 明确要求“Goldfish 评审需要能创建全新子代理的会话”**，如果 agent 无法创建，EGM 会直接停止评审；同时“评审不能替代测试或人工判断”。你需要注意：在 CI 或自动化流程中集成前，先确认你的 agent 支持子代理，且评审结果只能作为辅助，不能作为唯一质量门禁。",
+            "**项目由 Google 开源但非官方支持产品**，且主页与 README 链接到外部服务（如 Medium 上的原始文章），存在借开源推广商业生态的嫌疑。你需要注意：评估是否依赖 Google 的长期维护意愿，以及外部链接的可用性。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "真正同类的候选"
+        },
+        {
+          "type": "kv",
+          "k": "wshobson/agents",
+          "v": "★42486，MIT，Python，最近推送 2026-11-09。提供面向 Claude Code、Codex CLI、Cursor 等工具的插件、代理、技能和命令，用 Markdown 编写一次，通过生成器适配各工具，并带验证与评测。与 EGM 同属“为 AI 编码代理提供结构化技能/插件”的范畴，但更侧重跨工具适配而非设计评审流程。"
+        },
+        {
+          "type": "kv",
+          "k": "openqodex/openqodex",
+          "v": "★1181，Apache-2.0，TypeScript，最近推送 2026-11-11。为编码代理提供独立的代码评审，在推送前由单独评审器检查每次变更，支持 Claude Code、Codex、Cursor 和 Cline，无需自有账户或密钥。与 EGM 的 Goldfish 评审环节同类，但聚焦代码变更而非设计文档。"
+        },
+        {
+          "type": "p",
+          "text": "选择判据：如果你需要的是**跨多种编码代理统一管理技能与插件**，选 wshobson/agents；如果你只需要**推送前的独立代码评审**，选 openqodex/openqodex；如果你需要**设计文档的起草与新鲜视角评审**（Elephant 与 Goldfish 的完整流程），则选本项目。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "推荐使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "团队已有明确的规格驱动开发（spec-driven）流程，需要将设计文档与代码实现对齐，且 agent 支持创建子代理的团队。",
+            "需要定期审查既有设计文档与代码是否漂移（drift）的维护者，可用 `/egm-drift-report` 快速定位不一致。",
+            "希望在不引入额外评审服务（如 openqodex）的前提下，用现有 agent 完成设计评审的开发者。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "使用不支持子代理的编码代理（如某些受限的 CLI 或 IDE 集成），因为评审功能会直接停止，无法获得核心价值。",
+            "需要官方支持或长期维护承诺的生产环境关键路径，该项目明确标注非 Google 官方支持产品，且处于 v0.1.x 预览阶段。",
+            "仅需代码级评审（如 PR 检查）而非设计文档评审的团队，可考虑 openqodex/openqodex 等更聚焦的工具。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/google/elephant-goldfish-model)",
+            "[README](https://github.com/google/elephant-goldfish-model#readme)",
+            "[Releases 页面](https://github.com/google/elephant-goldfish-model/releases)",
+            "[Issues 页面](https://github.com/google/elephant-goldfish-model/issues)",
+            "[项目主页](https://egm.dev)",
+            "[wshobson/agents 仓库](https://github.com/wshobson/agents)",
+            "[openqodex/openqodex 仓库](https://github.com/openqodex/openqodex)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-14。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "repo": "google/elephant-goldfish-model",
+    "stars": 18574,
+    "language": "Python",
+    "license": "Apache-2.0",
+    "lastCommit": "2026-11-13",
+    "openIssues": 103,
+    "version": "v0.1.1",
+    "trending": {
+      "window": "周榜",
+      "rank": 5,
+      "gained": 5555,
+      "unit": "本周"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 2026,
+    "codeBlocks": 4,
+    "minutes": 8.1,
+    "asOf": "2026-11-14"
+  }
+}

@@ -1,6 +1,17 @@
 {
-  "updated": "2026-11-13",
+  "updated": "2026-11-14",
   "issues": [
+    {
+      "date": "2026-11-14",
+      "title": "Elephant-Goldfish Model：让 AI 先设计再评审，用“新鲜眼睛”挑出盲点",
+      "oneLiner": "一个开源插件，让 AI 助手先像大象一样记住上下文起草规格，再像金鱼一样用全新视角评审，帮你发现设计盲点。",
+      "category": "AI 代理 · 规格驱动开发 · 代码评审",
+      "stars": 18574,
+      "repo": "google/elephant-goldfish-model",
+      "lenses": [
+        "AI"
+      ]
+    },
     {
       "date": "2026-11-13",
       "title": "openai/codex-security：让 AI 审代码，把漏洞从发现追到修复",

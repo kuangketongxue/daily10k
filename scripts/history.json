@@ -21,5 +21,6 @@
   "meta/astryx",
   "anthropics/skills",
   "we-promise/sure",
-  "openai/codex-security"
+  "openai/codex-security",
+  "google/elephant-goldfish-model"
 ]
