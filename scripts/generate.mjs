@@ -513,96 +513,48 @@ function relevance(core, r) {
 
 const starRecency = (s) => (s ? new Date(s).getTime() : 0);
 
-// 第一优先：收藏夹。
-// 用户亲手点的 star 是他唯一的显式偏好标注，比任何公共榜单都准。
-// 但不是「收藏了就推」——高星老项目要过信息增量闸门，
-// 否则又会推出 anthropics/skills 这种 192K 星、人人皆知的库。
-async function fromStarred(history) {
-  const all = loadStarred();
-  const watch = loadWatchlist().filter(x => !history.has(x.full_name));
-  if (!all.length && !watch.length) {
-    log('无收藏夹信号（scripts/starred.json 缺失），跳过第一优先');
-    return null;
-  }
-
+// ── 候选收集：四个来源平等排队，谁也不许插队 ───────────────────────
+// 收藏和口头提名只保证「能进入评审」，不保证「能胜出」。
+// 唯一的判据是：它到底解决了什么实际问题（见 reviewUtility）。
+async function collectCandidates(history) {
   const pool = [];
+  const seen = new Set();
+  const add = (c) => {
+    if (!c?.repo?.full_name || seen.has(c.repo.full_name) || history.has(c.repo.full_name)) return;
+    seen.add(c.repo.full_name);
+    c.crude = crudeUtility(c.repo, c.themes);
+    pool.push(c);
+  };
 
-  // 口头提名优先：他明确说过不错的，直接进候选，不等星数门槛
-  let nominated = 0;
+  // ① 口头提名：他明确说过「这个不错」的
+  const watch = loadWatchlist().filter(x => !history.has(x.full_name));
   for (const w of watch.slice(0, 4)) {
     try {
       const repo = await gh(`/repos/${w.full_name}`);
       if (repo.archived || repo.disabled || repo.fork) continue;
-      pool.push({ repo, heat: null, themes: topicLenses(repo), from: '提名', wPriority: true });
-      nominated++;
+      add({ repo, heat: null, themes: topicLenses(repo), from: '提名' });
     } catch (e) {
-      log(`提名项目 ${w.full_name} 拉取失败：${e.message}`);
+      log(`提名 ${w.full_name} 拉取失败：${e.message}`);
     }
   }
-  if (nominated) log(`口头提名 ${nominated} 个项目进入候选`);
 
-  const cands = all
-    .filter(x => !history.has(x.full_name))
-    .filter(x => !x.archived && !x.fork)
-    .filter(x => Number(x.stars) >= SIDE_MIN_STARS)
-    .filter(x => fresh(x.pushed_at, 240))
-    .map(x => ({
-      ...x,
-      themes: topicLenses({ name: String(x.full_name).split('/').pop(), description: x.description, topics: x.topics || [] }),
-    }));
-  if (!cands.length && !pool.length) {
-    log(`收藏夹 ${all.length} 个里没有可写的（已推过 / 归档 / 不足 ${SIDE_MIN_STARS} 星 / 半年没动）`);
-    return null;
-  }
-  cands.sort((a, b) => starRecency(b.star) - starRecency(a.star));
-  const shortlist = cands.slice(0, 6);
-  for (const c of shortlist) {
-    // 同一项目可能既被口头提名又在收藏夹里，别让它占两个名额、被加权两次
-    if (pool.some(p => p.repo.full_name === c.full_name)) continue;
+  // ② 收藏夹：只当候选来源之一，取最近收藏的 12 个
+  const starred = loadStarred()
+    .filter(x => !history.has(x.full_name) && !x.archived && !x.fork)
+    .filter(x => Number(x.stars) >= SIDE_MIN_STARS && fresh(x.pushed_at, 240));
+  starred.sort((a, b) => starRecency(b.star) - starRecency(a.star));
+  for (const c of starred.slice(0, 12)) {
     try {
       const repo = await gh(`/repos/${c.full_name}`);
       if (repo.archived || repo.fork || repo.disabled || isListRepo(repo)) continue;
-      pool.push({ repo, heat: null, themes: topicLenses(repo), from: '收藏夹' });
-    } catch (e) {
-      log(`收藏夹候选 ${c.full_name} 复核失败：${e.message}`);
-    }
+      add({ repo, heat: null, themes: topicLenses(repo), from: '收藏夹' });
+    } catch { /* 拉到失败就跳过 */ }
   }
-  if (!pool.length) return null;
 
-  // 收藏时间越近越代表当下兴趣，但两年前的收藏不该被彻底埋没；
-  // 口头提名的权重压过一切，因为那是他能给出的最强信号。
-  const starredAt = new Map(cands.map(c => [c.full_name, c.star]));
-  const heatScore = (c) => {
-    const s = starredAt.get(c.repo.full_name);
-    const days = s ? (Date.now() - new Date(s).getTime()) / 864e5 : 400;
-    const base = Math.max(0.55, 1 - days / 730) * 1000;
-    return c.wPriority ? base * 1.6 : base;
-  };
-  const ranked = await rankCandidates(pool, heatScore);
-  const pick = ranked[0];
-  log(`提名 ${watch.length} 个、收藏夹可写 ${cands.length} 个，进入体检 ${pool.length} 个`);
-  log('候选体检：\n  ' + ranked.slice(0, 5).map(describe).join('\n  '));
-  log(`当日核心：${describe(pick)}`);
-  return pick;
-}
-
-// 选题偏好优先，其次才是热度；返回 { repo, heat, themes, from }
-export async function findCandidate() {
-  const history = new Set(existsSync(HISTORY_FILE) ? JSON.parse(readFileSync(HISTORY_FILE, 'utf8')) : []);
-  AI_SHARE = aiShareRecent(7);
-  log(`近 7 天 AI 占比 ${Math.round(AI_SHARE * 100)}%（>60% 压 AI，<35% 补 AI）`);
-
-  const fromFav = await fromStarred(history);
-  if (fromFav) return fromFav;
-
+  // ③ Trending 现场
   const trend = await scrapeTrending();
-  const poolOld = loadPool();
-  const pool = [];
-  const seen = new Set();
-  let written = 0, small = 0, dead = 0;
-
+  let written = 0, small = 0;
   for (const t of trend) {
-    seen.add(t.fullName);
     if (history.has(t.fullName)) { written++; continue; }
     let repo;
     try {
@@ -611,30 +563,30 @@ export async function findCandidate() {
       log(`复核 ${t.fullName} 失败：${e.message}`);
       continue;
     }
-    if (repo.archived || repo.fork || repo.disabled) { dead++; continue; }
-    if (isListRepo(repo)) continue;
+    if (repo.archived || repo.fork || repo.disabled || isListRepo(repo)) continue;
     if (repo.stargazers_count < MIN_STARS) { small++; continue; }
-    pool.push({ repo, heat: t, themes: topicLenses(repo), from: 'trend' });
+    add({ repo, heat: t, themes: topicLenses(repo), from: 'trend' });
   }
 
-  // 池子里的旧候选：今天没上榜，但一个月内见过的仍有资格再竞争
+  // ④ 候选池沉淀：掉榜一个月内仍有资格
+  const poolOld = loadPool();
   let revived = 0;
   for (const [name, e] of Object.entries(poolOld)) {
     if (seen.has(name) || history.has(name)) continue;
     if (!e.seenAt || Date.now() - new Date(e.seenAt).getTime() > POOL_KEEP_DAYS * 864e5) continue;
     const perDay = decayed(e);
-    if (perDay < 5) continue;   // 热度衰减到没有意义，不再续命
+    if (perDay < 5) continue;
     try {
       const repo = await gh(`/repos/${name}`);
       if (repo.archived || repo.fork || repo.disabled || isListRepo(repo)) continue;
       if (repo.stargazers_count < MIN_STARS) continue;
-      pool.push({ repo, heat: { ...e, perDay }, themes: topicLenses(repo), from: `池${Math.round(perDay)}/日` });
+      add({ repo, heat: { ...e, perDay }, themes: topicLenses(repo), from: '池' });
       revived++;
-    } catch { /* 仓库没了就算了 */ }
+    } catch { /* 仓库没了 */ }
   }
-  if (revived) log(`候选池复活 ${revived} 个（一个月内掉榜但仍有热度）`);
+  if (revived) log(`候选池复活 ${revived} 个（掉榜但一个月内仍有热度）`);
 
-  // 沉淀今天见到的候选
+  // 沉淀今天见到的 trending
   const nextPool = {};
   for (const t of trend) {
     if (history.has(t.fullName)) continue;
@@ -643,26 +595,148 @@ export async function findCandidate() {
       gained: t.gained, perDay: t.perDay, label: t.label, rank: t.rank, unit: t.unit,
     };
   }
-  for (const [n, e] of Object.entries(poolOld)) {
-    if (!nextPool[n] && !history.has(n)) nextPool[n] = e;
-  }
+  for (const [n, e] of Object.entries(poolOld)) if (!nextPool[n] && !history.has(n)) nextPool[n] = e;
   savePool(nextPool);
 
-  if (pool.length) {
-    // 先按热度排（日均新增星数 × 每命中一类选题 +50%），
-    // 再对热门前 10 做深度体检与口碑加权——热度只决定谁进决赛，不再决定谁当选
-    const heatScore = (c) => (c.heat ? c.heat.perDay : 0) * (1 + 0.5 * c.themes.length);
-    const hottest = Math.max(...pool.map(c => (c.heat ? c.heat.perDay : 0)));
-    const preferred = pool.filter(c => c.themes.length && (c.heat ? c.heat.perDay : 0) >= hottest * 0.25);
-    const source = preferred.length ? preferred : pool;
-    const ranked = await rankCandidates(source, heatScore);
-    const pick = ranked[0];
-    log(`热度榜 ${trend.length} 个，可写 ${pool.length} 个（已写过 ${written}，不足万星 ${small}，已归档 ${dead}）`);
-    log('候选体检：\n  ' + ranked.slice(0, 5).map(describe).join('\n  '));
-    log(`当日核心：${describe(pick)}`);
-    return pick;
+  const byFrom = {};
+  for (const c of pool) byFrom[c.from] = (byFrom[c.from] || 0) + 1;
+  log(`候选汇总 ${pool.length} 个（${Object.entries(byFrom).map(([k, v]) => `${k} ${v}`).join('，')}；已写过 ${written}，不足万星 ${small}）`);
+  return pool;
+}
+
+// ── 粗筛：只看「描述有没有说清自己解决什么问题」─────────────────
+// 不看星数、不看来源、不看是谁做的。说清了就上评审台，说不清就等下次。
+// 星数在这里不但不加分，超过 5 万的还倒扣——那多半是「听说过但不用」。
+const VAGUE_DESC = /platform|ecosystem|framework for|one-?stop|all-?in-?one|everything you need|empower|赋能|一站式|生态|重新定义|颠覆/i;
+
+export function crudeUtility(repo, themes) {
+  let s = 0;
+  const d = String(repo.description || '').trim();
+  if (d.length >= 25) s += 2;
+  if (d.length >= 60) s += 1;
+  // 说清了「把 A 变成 B」「不用 C 也能做 D」这类具体作用
+  if (/\b(to|for|without|instead of|so you can|never again|from .+ to)\b|把|让|帮|替代|转成|扫出|批量|自动|一键/i.test(d)) s += 3;
+  if (VAGUE_DESC.test(d)) s -= 3;
+  s += themes.length;
+  const issues = repo.open_issues_count || 0;
+  if (issues > 0 && issues < 600) s += 1;   // 有人在提 issue，说明真有人在用
+  if ((repo.stargazers_count || 0) < 50000) s += 1;
+  return s;
+}
+
+function shortlistForReview(pool, cap = 10) {
+  return [...pool].sort((a, b) => (b.crude || 0) - (a.crude || 0)).slice(0, cap);
+}
+
+// ── 价值评审：让 AI 判断「到底解决了什么实际问题」───────────────
+// 这是选品的主判据。星数、热度、是否被收藏，都只是走到这一步的门票。
+async function reviewUtility(cands) {
+  const out = new Map();
+  if (!cands.length) return out;
+
+  const brief = cands.map((c, i) => {
+    const d = String(c.repo.description || '').slice(0, 220) || '（无描述）';
+    return `${i + 1}. ${c.repo.full_name}（★${c.repo.stargazers_count}，${c.repo.language || '无主语言'}）
+   描述：${d}
+   创建 ${c.repo.created_at?.slice(0, 10)} / 最近推送 ${c.repo.pushed_at?.slice(0, 10)} / 未关闭 issue ${c.repo.open_issues_count}`;
+  }).join('\n');
+
+  const prompt = `下面是今天进入候选的 ${cands.length} 个开源项目。请逐个判断：它到底解决了什么实际问题。
+
+评判要求：
+- 只看它能不能解决一个具体、真实、常见的问题，不看它热不热、星多不多、谁做的
+- 描述里出现「平台」「生态」「框架」「赋能」「一站式」「重新定义」这类词，说明作者没想清受众，要扣分
+- 必须先装别的工具、要注册账号、要自己改代码才能用的，上手成本高，要扣分
+- 只服务极少数人的边角需求，realness 给低分
+- 已经众所周知、装了也不会改变任何人工作方式的（比如大厂官方示例库），score 给低分
+
+对每个项目输出一条：
+{"i":序号,"problem":"它解决的具体问题，15~30字，必须落到场景","realness":0到10的整数,"barrier":"上手要做什么，一句话","score":0到100的整数,"verdict":"为什么是这个分数，一句话"}
+
+score 构成：问题真实性 40% + 解决方案具体度 30% + 上手可行性 20% + 适用范围 10%。
+不要客套话，不要重复仓库描述。严格输出 JSON：{"reviews":[...]}
+
+${brief}`;
+
+  try {
+    const data = await callLLM([
+      { role: 'system', content: '你是资深工程师，只判断项目能不能真的解决问题。输出严格 JSON，不要任何解释文字。' },
+      { role: 'user', content: prompt },
+    ]);
+    for (const r of data?.reviews || []) {
+      const c = cands[Number(r.i) - 1];
+      if (!c) continue;
+      out.set(c.repo.full_name, {
+        problem: String(r.problem || '').slice(0, 60),
+        realness: Math.max(0, Math.min(10, Number(r.realness) || 0)),
+        barrier: String(r.barrier || '').slice(0, 60),
+        score: Math.max(0, Math.min(100, Number(r.score) || 0)),
+        verdict: String(r.verdict || '').slice(0, 80),
+      });
+    }
+    log(`实用性评审完成 ${out.size}/${cands.length} 个`);
+  } catch (e) {
+    log(`实用性评审失败（本轮按中性分处理）：${e.message}`);
   }
-  return findRisingFallback(history);
+  return out;
+}
+
+async function inspectShortlist(list) {
+  const buzzMap = await webBuzz();
+  for (const c of list) {
+    const info = await inspectRepo(c.repo.full_name);
+    const { factor, notes } = productionFactor(info);
+    c.quality = factor;
+    c.notes = notes;
+    const buzz = await hnBuzz(c.repo.full_name);
+    c.buzz = buzz;
+    const boost = buzz.points >= 100 ? 1.15 : buzz.points >= 30 ? 1.06 : 1;
+    c.quality *= boost;
+    c.webMentions = buzzMap.get(c.repo.full_name.toLowerCase()) || 0;
+  }
+}
+
+function describeReviewed(c) {
+  const r = c.review;
+  const u = r ? `问题「${r.problem}」真 ${r.realness}/10 分` : '未评审';
+  const ai = c.aiQuota && c.aiQuota !== 1 ? `，AI ${c.aiQuota.toFixed(2)}` : '';
+  return `${c.from}:${c.repo.full_name} ★${c.repo.stargazers_count} → 综合 ${Math.round(c.score * 100)}｜${u}｜质量 ${(c.quality || 1).toFixed(2)}，新颖 ${(c.novelty || 1).toFixed(2)}${ai}`;
+}
+
+// 选品总入口：四路候选先汇成一池，再由「解决了什么实际问题」定胜负。
+export async function findCandidate() {
+  const history = new Set(existsSync(HISTORY_FILE) ? JSON.parse(readFileSync(HISTORY_FILE, 'utf8')) : []);
+  AI_SHARE = aiShareRecent(7);
+  log(`近 7 天 AI 占比 ${Math.round(AI_SHARE * 100)}%（>60% 压 AI，<35% 补 AI）`);
+
+  const pool = await collectCandidates(history);
+  if (!pool.length) {
+    log('候选池为空，退到万星兜底检索');
+    return findRisingFallback(history);
+  }
+
+  const shortlist = shortlistForReview(pool, 10);
+  log(`进入复审 ${shortlist.length} 个：${shortlist.map(c => `${c.from}/${c.repo.full_name}`).join('、')}`);
+
+  await inspectShortlist(shortlist);
+  const reviews = await reviewUtility(shortlist);
+
+  for (const c of shortlist) {
+    const r = reviews.get(c.repo.full_name) || null;
+    c.review = r;
+    // 评审失败时给中性分 0.6，不让整期因为一次 LLM 抖动而报废
+    const utility = r ? 0.25 + r.score / 100 : 0.6;
+    c.utility = utility;
+    c.novelty = noveltyFactor(c.repo.stargazers_count);
+    c.aiQuota = aiQuotaFactor(c.themes);
+    c.score = utility * (c.quality || 1) * c.novelty * c.aiQuota;
+  }
+  shortlist.sort((a, b) => b.score - a.score);
+
+  log('复审结果：\n  ' + shortlist.map(describeReviewed).join('\n  '));
+  const pick = shortlist[0];
+  log(`当日核心：${pick.repo.full_name} → ${pick.review?.problem || '未评审'}｜门槛：${pick.review?.barrier || '-'}`);
+  return pick;
 }
 
 // 热度榜抓取失败/全被写过时的兜底：现场查「近半年新晋的万星项目」，仍是运行时数据
