@@ -149,6 +149,9 @@ scripts/
   favorite.mjs        收藏写入工具（本机专用）
   config.json         本地配置（含密钥，勿提交公开仓库）
   history.json        已写过的仓库清单（防重复）
+  starred.json        收藏夹选品信号（本机归档任务每日写入）
+  watchlist.json      口头提名池（手工维护）
+  pool.json           候选池（运行时自动维护，保留 30 天）
 tests/
   local-favorites.test.mjs  收藏增删 / 脏数据容错 / 短码往返
   archive-index.test.mjs    索引无上限 / 搜索 / 筛选 / 按月分组
