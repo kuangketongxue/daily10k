@@ -1,10 +1,10 @@
 {
-  "updated": "2026-11-14T23:39:43.156+08:00",
+  "updated": "2026-11-14T23:40:26.206+08:00",
   "note": "由 star-archive 生成，供 daily10k 选品读取。不要手改。",
   "items": [
     {
       "full_name": "storytold/craft-anything",
-      "stars": 32420,
+      "stars": 32421,
       "description": "Craft Anything: understand how any software works, and craft your own.",
       "language": "Rust",
       "topics": [],
@@ -445,7 +445,7 @@
     },
     {
       "full_name": "stablyai/orca",
-      "stars": 124790,
+      "stars": 124791,
       "description": "Orca lets you run a fleet of coding agents (e.g. Claude Code, Codex) with your own subscription. Available on desktop, mobile and remote runtime.",
       "language": "TypeScript",
       "topics": [
@@ -781,7 +781,7 @@
     },
     {
       "full_name": "Genymobile/scrcpy",
-      "stars": 154803,
+      "stars": 154804,
       "description": "Display and control your Android device",
       "language": "C",
       "topics": [
@@ -2047,7 +2047,7 @@
     },
     {
       "full_name": "Alishahryar1/free-claude-code",
-      "stars": 70112,
+      "stars": 70113,
       "description": "Use Claude Code, Codex, Antigravity, VSCode, Pi, and OpenCode (and 6 other harnesses) for free (1.3B+ free tokens) from your terminal, app, IDE, or phone, and now from the browser with native browser sessions (multi-harness + multi-model) like OpenClaw (voice supported + ToS friendly)",
       "language": "Python",
       "topics": [],
@@ -2130,7 +2130,7 @@
     },
     {
       "full_name": "VoltAgent/awesome-design-md",
-      "stars": 127494,
+      "stars": 127495,
       "description": "A collection of DESIGN.md files analysis by popular brand design systems. Drop one into your project and let coding agents generate a matching UI.",
       "language": "",
       "topics": [
@@ -2162,7 +2162,7 @@
     },
     {
       "full_name": "webadderallorg/Recordly",
-      "stars": 36735,
+      "stars": 36736,
       "description": "Create polished demo videos without editing skills. Mac/Windows/Linux",
       "language": "TypeScript",
       "topics": [
@@ -2478,7 +2478,7 @@
         "vision",
         "webui"
       ],
-      "pushed_at": "2026-11-14T15:38:23Z",
+      "pushed_at": "2026-11-14T15:39:39Z",
       "archived": false,
       "star": "2026-03-27T15:19:02Z",
       "url": "https://github.com/LibreChat-AI/LibreChat"
@@ -2652,7 +2652,7 @@
         "own-your-data",
         "personal"
       ],
-      "pushed_at": "2026-11-14T15:38:58Z",
+      "pushed_at": "2026-11-14T15:40:06Z",
       "archived": false,
       "star": "2026-03-02T09:53:43Z",
       "url": "https://github.com/openclaw/openclaw"
@@ -2896,7 +2896,7 @@
         "nextjs",
         "personal-website"
       ],
-      "pushed_at": "2026-11-14T15:26:52Z",
+      "pushed_at": "2026-11-14T15:39:45Z",
       "archived": false,
       "star": "2025-05-25T06:12:35Z",
       "url": "https://github.com/kuangketongxue/kuangketongxue.github.io"
