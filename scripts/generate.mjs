@@ -164,10 +164,13 @@ const LIST_TOPICS = new Set([
   'books', 'book', 'ebook', 'free-programming-books',
 ]);
 const isListRepo = (r) =>
-  !r.language ||
   r.language === 'Markdown' ||
   (r.topics || []).some(t => LIST_TOPICS.has(t)) ||
-  LISTISH.test(`${r.name} ${r.description || ''}`);
+  LISTISH.test(`${r.name} ${r.description || ''}`) ||
+  // 无主语言 ≠ 清单：纯配置/脚本类工具（代理配置模板、dotfiles 之类）本来就没有语言统计。
+  // 旧规则一刀切把这类全判成清单，恰好误杀小众工具。
+  // 只有「无语言 + 连描述都没有」才真的是没有信息量的空壳。
+  (!r.language && !String(r.description || '').trim());
 
 // 深度体检：语言构成 + 根目录清单。两次 API，只对排名靠前的候选做
 export async function inspectRepo(fullName) {
