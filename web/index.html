@@ -31,7 +31,7 @@
   <div class="wrap hero-inner">
     <p class="hero-kicker">Daily 10K · 每日一项目</p>
     <h1 class="hero-title">万星日报<span class="en">One Repo · Read Deep · Every Day</span></h1>
-    <p class="hero-sub">每天只讲一个 GitHub <b>万星热门项目</b>。<br class="br-wide">它解决什么问题，能用来干嘛，怎么上手。</p>
+    <p class="hero-sub">每天只讲一个 GitHub <b>万星热门项目</b>。<br class="br-wide">它解决什么问题，能用来干嘛，怎么上手。<br class="br-wide">文末另附一个小众工具——星少，可能正是你缺的。</p>
     <div class="hero-chips">
       <span class="hero-chip">高考 / 考研</span>
       <span class="hero-chip">求职</span>
@@ -65,6 +65,19 @@
       <span class="today-fav-slot" id="t-fav"></span>
     </div>
   </article>
+  <a class="side" id="side" hidden aria-label="今日小众精选">
+    <div class="side-top">
+      <span class="side-badge">小众精选</span>
+      <span class="side-kind" id="s-kind"></span>
+      <span class="side-stars" id="s-stars"></span>
+    </div>
+    <div class="side-name" id="s-repo"></div>
+    <p class="side-why" id="s-why"></p>
+    <div class="side-foot">
+      <span id="s-lang"></span>
+      <span class="side-go" aria-hidden="true">看仓库 →</span>
+    </div>
+  </a>
   <div class="empty" id="empty" hidden>
     <p class="big" aria-hidden="true">☁</p>
     <p>今天的日报还没生成，5:30 前会更新，稍后再来看看。</p>
@@ -133,6 +146,7 @@ fetch('data/index.json', { cache: 'no-cache' })
       });
     document.getElementById('t-link').href = 'article.html?d=' + encodeURIComponent(it.date);
     mountFavButton(document.getElementById('t-fav'), it.date);
+    renderSide(it.side);
     // 生成失败或还没跑完时，首页不能把旧文章冒充成今天的
     const bjToday = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
     if (it.date !== bjToday) {
@@ -150,6 +164,22 @@ fetch('data/index.json', { cache: 'no-cache' })
 function show(id) {
   document.getElementById('loading').hidden = true;
   document.getElementById(id).hidden = false;
+}
+
+// 小众精选：主稿之外每天多给一个千星级的小工具。
+// 数据缺失或当日没挑到就整块隐藏，不占版面。
+function renderSide(s) {
+  if (!s || !s.repo) return;
+  const card = document.getElementById('side');
+  document.getElementById('s-repo').textContent = s.repo;
+  document.getElementById('s-why').textContent = s.why || s.description || '';
+  const n = Number(s.stars);
+  document.getElementById('s-stars').textContent =
+    Number.isFinite(n) && n > 0 ? '★ ' + n.toLocaleString('zh-CN') : '';
+  document.getElementById('s-kind').textContent = s.kind || '';
+  document.getElementById('s-lang').textContent = s.language || '';
+  card.href = s.url || ('https://github.com/' + s.repo);
+  card.hidden = false;
 }
 
 // 首页只留最近 5 期做「往前翻」的引子，完整列表与检索在 archive.html。

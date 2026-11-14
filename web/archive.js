@@ -71,11 +71,16 @@ function starsText(stars) {
 function arcItemHtml(it) {
   const stars = starsText(it.stars);
   const lenses = (it.lenses || []).map(l => `<span class="arc-lens">${esc(l)}</span>`).join('');
+  // 该期带小众精选副位时给个标记，方便回顾时认出「工具类」的那几期
+  const sideTag = it.side && it.side.repo
+    ? `<span class="arc-side" title="附小众精选：${esc(it.side.repo)}">＋小众</span>`
+    : '';
   return `
     <article class="arc-item">
       <a class="arc-link" href="article.html?d=${encodeURIComponent(it.date)}">
         <div class="arc-top">
           <time class="arc-date" datetime="${esc(it.date)}">${esc(it.date.slice(5))}</time>
+          ${sideTag}
           ${stars ? `<span class="arc-stars">${esc(stars)}</span>` : ''}
         </div>
         <h3 class="arc-title">${esc(it.title || '万星日报')}</h3>

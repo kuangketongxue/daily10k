@@ -21,6 +21,10 @@ const DATA_DIR = join(ROOT, 'web', 'data');
 const POSTS_DIR = join(DATA_DIR, 'posts');
 const HISTORY_FILE = join(ROOT, 'scripts', 'history.json');
 const CONFIG_FILE = join(ROOT, 'scripts', 'config.json');
+// 候选池：把每天见到的候选沉淀下来，避免「落榜一次就永别」
+const POOL_FILE = join(ROOT, 'scripts', 'pool.json');
+// 收藏夹信号：由本机归档任务写入，是选品的第一优先来源
+const STARRED_FILE = join(ROOT, 'scripts', 'starred.json');
 
 const cfg = existsSync(CONFIG_FILE) ? JSON.parse(readFileSync(CONFIG_FILE, 'utf8')) : {};
 const AI_KEY = process.env.AI_API_KEY || cfg.apiKey;
@@ -65,7 +69,11 @@ const TRENDING_WINDOWS = [
   { since: 'daily', label: '日榜', unit: '今日', perDay: 1 },
   { since: 'weekly', label: '周榜', unit: '本周', perDay: 7 },
 ];
-const MIN_STARS = 10000; // 万星日报的门槛
+const MIN_STARS = 10000; // 万星日报的主稿门槛
+// 小众精选通道：万星是常态，但小而精的工具常常一辈子到不了万星。
+// 老板的判据是「能解决我的问题」，不是「够不够热闹」。
+const SIDE_MIN_STARS = 1000;
+const POOL_KEEP_DAYS = 30;   // 候选池保留期：掉榜的项目还能再竞争一个月
 
 // ── 生产可用度判据 ────────────────────────────────────────────────
 // 这两年的新坑：一批「某个 AI 编程工具的配置包」（代理集合、提示词库、技能包、钩子）
@@ -206,7 +214,12 @@ export function productionFactor(info) {
     }
   }
 
-  if (info.codeBytes >= 2 * 1024 * 1024) {
+  if (info.codeBytes >= 500 * 1024 * 1024) {
+    // 半 GB 以上的"代码"几乎都是数据集、语料或形式化库（如 openai/math 的 1.8GB Lean），
+    // 不是能装能用的软件。旧规则反而给它加分，等于奖励体量大。
+    f *= 0.45;
+    notes.push(`代码 ${Math.round(info.codeBytes / 1048576)}MB，疑似数据集仓库`);
+  } else if (info.codeBytes >= 2 * 1024 * 1024) {
     f *= 1.15;
     notes.push(`代码 ${Math.round(info.codeBytes / 1024)}KB`);
   } else if (info.codeBytes < 300 * 1024) {
@@ -217,6 +230,81 @@ export function productionFactor(info) {
   if (info.hasCI) f *= 1.08;
 
   return { factor: f, notes };
+}
+
+// ── 候选池：让落榜的项目还有下一次机会 ──────────────────────────────
+// 旧逻辑每天只认「此刻的 Trending」，项目只在冲榜那一两天有资格参选。
+// storytold/craft-anything 32K 星、15 天建起来，被当天更热的项目挤掉一次就再没出现过。
+// 现在把见过的候选存 30 天，热度按天衰减，持续参与竞争。
+function loadPool() {
+  if (!existsSync(POOL_FILE)) return {};
+  try {
+    const p = JSON.parse(readFileSync(POOL_FILE, 'utf8'));
+    return p && typeof p === 'object' ? p : {};
+  } catch { return {}; }
+}
+
+function savePool(pool) {
+  writeFileSync(POOL_FILE, JSON.stringify(pool, null, 2) + '\n');
+}
+
+// 池子里的历史热度按天衰减：今天的 perDay 只值昨天的 85%
+function decayed(entry) {
+  const days = Math.max(0, (Date.now() - new Date(entry.seenAt).getTime()) / 864e5);
+  return (entry.perDay || 0) * Math.pow(0.85, days);
+}
+
+// ── 收藏夹信号 ──────────────────────────────────────────────────
+// 用户在 GitHub 上点的 star 是他亲手做的偏好标注，比任何公共榜单都准。
+// 该文件由本机归档任务（star-archive）每天写入，GitHub Actions 只读。
+function loadStarred() {
+  if (!existsSync(STARRED_FILE)) return [];
+  try {
+    const j = JSON.parse(readFileSync(STARRED_FILE, 'utf8'));
+    const items = Array.isArray(j) ? j : (j.items || []);
+    return items.filter(x => x && x.full_name);
+  } catch {
+    log('scripts/starred.json 解析失败，本日不启用收藏夹信号');
+    return [];
+  }
+}
+
+const fresh = (iso, days) => {
+  if (!iso) return false;
+  const t = new Date(iso).getTime();
+  return Number.isFinite(t) && Date.now() - t < days * 864e5;
+};
+
+// ── 信息增量：大家都知道的东西，再讲一遍是浪费版面 ────────────────
+// anthropics/skills 192K 星，对本站读者近乎零新增信息；
+// 3K 星的专用工具反而可能是他真没见过、真能用的。
+export function noveltyFactor(stars) {
+  if (stars >= 80000) return 0.65;
+  if (stars >= 40000) return 0.82;
+  if (stars >= 10000) return 1.0;
+  return 1.18;   // 小项目的稀缺性加分
+}
+
+// ── AI 配额：要多，但不要那么多 ──────────────────────────────────
+// 用户原话：「AI 是最值得学的板块」——所以不降 AI 权重，只防它独占版面。
+// 近 7 天 AI 占比超 60% 时给 AI 候选打折，低于 35% 时反而补一点，
+// 把比例拉回 40~60% 的合理带。
+let AI_SHARE = 0.5;
+
+export function aiQuotaFactor(themes, share = AI_SHARE) {
+  if (!themes.includes('AI')) return 1;
+  if (share > 0.6) return 0.65;
+  if (share < 0.35) return 1.15;
+  return 1;
+}
+
+function aiShareRecent(days = 7) {
+  const posts = loadAllPosts();
+  if (!posts.length) return 0.5;
+  const since = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
+  const recent = posts.filter(p => p.date >= since);
+  if (!recent.length) return 0.5;
+  return recent.filter(p => (p.meta?.lenses || []).includes('AI')).length / recent.length;
 }
 
 // 圈内口碑：近 120 天 Hacker News 上的讨论热度。
@@ -333,7 +421,10 @@ export async function rankCandidates(pool, heatScore) {
     const webBoost = c.webMentions ? Math.min(1 + 0.12 * c.webMentions, 1.36) : 1;
     c.buzzBoost = boost;
     c.webBoost = webBoost;
-    c.score = c.base * c.quality * boost * webBoost;
+    // 三道新闸：信息增量（超高的星数反而降权）、AI 配额（防独占）、选题命中
+    c.novelty = noveltyFactor(c.repo.stargazers_count);
+    c.aiQuota = aiQuotaFactor(c.themes);
+    c.score = c.base * c.quality * boost * webBoost * c.novelty * c.aiQuota;
   }
   // 没体检到的深度降级：只有在体检过的候选全被判定为配置包时才轮到它们
   for (const c of ranked.slice(10)) c.score = c.base * 0.15;
@@ -347,7 +438,10 @@ function describe(c) {
   const b = c.buzz && c.buzz.stories ? `，HN ${c.buzz.stories} 帖 ${c.buzz.points} 分` : '，HN 无讨论';
   const w = c.webMentions ? `，推荐文点名 ${c.webMentions} 次` : '';
   const n = c.notes ? `（${c.notes.join('，')}）` : '';
-  return `${c.repo.full_name} ★${c.repo.stargazers_count} 日均${c.heat ? c.heat.perDay : '-'} → 综合 ${Math.round(c.score)}｜${q}${n}${b}${w}`;
+  const nv = c.novelty ? `，新颖 ${c.novelty.toFixed(2)}` : '';
+  const ai = c.aiQuota && c.aiQuota !== 1 ? `，AI 配额 ${c.aiQuota.toFixed(2)}` : '';
+  const src = c.from ? `[${c.from}] ` : '';
+  return `${src}${c.repo.full_name} ★${c.repo.stargazers_count} 日均${c.heat ? Math.round(c.heat.perDay * 10) / 10 : '-'} → 综合 ${Math.round(c.score)}｜${q}${n}${nv}${ai}${b}${w}`;
 }
 
 
@@ -398,14 +492,77 @@ function relevance(core, r) {
   return specific * 3 + generic + words;
 }
 
-// 选题偏好优先，其次才是热度；返回 { repo, heat, themes }
-async function findCandidate() {
-  const history = new Set(existsSync(HISTORY_FILE) ? JSON.parse(readFileSync(HISTORY_FILE, 'utf8')) : []);
-  const trend = await scrapeTrending();
+const starRecency = (s) => (s ? new Date(s).getTime() : 0);
+
+// 第一优先：收藏夹。
+// 用户亲手点的 star 是他唯一的显式偏好标注，比任何公共榜单都准。
+// 但不是「收藏了就推」——高星老项目要过信息增量闸门，
+// 否则又会推出 anthropics/skills 这种 192K 星、人人皆知的库。
+async function fromStarred(history) {
+  const all = loadStarred();
+  if (!all.length) {
+    log('无收藏夹信号（scripts/starred.json 缺失），跳过第一优先');
+    return null;
+  }
+  const cands = all
+    .filter(x => !history.has(x.full_name))
+    .filter(x => !x.archived && !x.fork)
+    .filter(x => Number(x.stars) >= SIDE_MIN_STARS)
+    .filter(x => fresh(x.pushed_at, 240))
+    .map(x => ({
+      ...x,
+      themes: topicLenses({ name: String(x.full_name).split('/').pop(), description: x.description, topics: x.topics || [] }),
+    }));
+  if (!cands.length) {
+    log(`收藏夹 ${all.length} 个里没有可写的（已推过 / 归档 / 不足 ${SIDE_MIN_STARS} 星 / 半年没动）`);
+    return null;
+  }
+  cands.sort((a, b) => starRecency(b.star) - starRecency(a.star));
+  const shortlist = cands.slice(0, 6);
   const pool = [];
-  let written = 0;
-  let small = 0;
+  for (const c of shortlist) {
+    try {
+      const repo = await gh(`/repos/${c.full_name}`);
+      if (repo.archived || repo.fork || repo.disabled || isListRepo(repo)) continue;
+      pool.push({ repo, heat: null, themes: topicLenses(repo), from: '收藏夹' });
+    } catch (e) {
+      log(`收藏夹候选 ${c.full_name} 复核失败：${e.message}`);
+    }
+  }
+  if (!pool.length) return null;
+
+  // 收藏时间越近越代表当下兴趣，但两年前的收藏不该被彻底埋没
+  const starredAt = new Map(cands.map(c => [c.full_name, c.star]));
+  const heatScore = (c) => {
+    const s = starredAt.get(c.repo.full_name);
+    const days = s ? (Date.now() - new Date(s).getTime()) / 864e5 : 400;
+    return Math.max(0.55, 1 - days / 730) * 1000;
+  };
+  const ranked = await rankCandidates(pool, heatScore);
+  const pick = ranked[0];
+  log(`收藏夹可写 ${cands.length} 个，进入体检 ${pool.length} 个`);
+  log('候选体检：\n  ' + ranked.slice(0, 5).map(describe).join('\n  '));
+  log(`当日核心：${describe(pick)}`);
+  return pick;
+}
+
+// 选题偏好优先，其次才是热度；返回 { repo, heat, themes, from }
+export async function findCandidate() {
+  const history = new Set(existsSync(HISTORY_FILE) ? JSON.parse(readFileSync(HISTORY_FILE, 'utf8')) : []);
+  AI_SHARE = aiShareRecent(7);
+  log(`近 7 天 AI 占比 ${Math.round(AI_SHARE * 100)}%（>60% 压 AI，<35% 补 AI）`);
+
+  const fromFav = await fromStarred(history);
+  if (fromFav) return fromFav;
+
+  const trend = await scrapeTrending();
+  const poolOld = loadPool();
+  const pool = [];
+  const seen = new Set();
+  let written = 0, small = 0, dead = 0;
+
   for (const t of trend) {
+    seen.add(t.fullName);
     if (history.has(t.fullName)) { written++; continue; }
     let repo;
     try {
@@ -414,21 +571,53 @@ async function findCandidate() {
       log(`复核 ${t.fullName} 失败：${e.message}`);
       continue;
     }
-    if (repo.archived || repo.fork || repo.disabled) continue;
+    if (repo.archived || repo.fork || repo.disabled) { dead++; continue; }
     if (isListRepo(repo)) continue;
     if (repo.stargazers_count < MIN_STARS) { small++; continue; }
-    pool.push({ repo, heat: t, themes: topicLenses(repo) });
+    pool.push({ repo, heat: t, themes: topicLenses(repo), from: 'trend' });
   }
+
+  // 池子里的旧候选：今天没上榜，但一个月内见过的仍有资格再竞争
+  let revived = 0;
+  for (const [name, e] of Object.entries(poolOld)) {
+    if (seen.has(name) || history.has(name)) continue;
+    if (!e.seenAt || Date.now() - new Date(e.seenAt).getTime() > POOL_KEEP_DAYS * 864e5) continue;
+    const perDay = decayed(e);
+    if (perDay < 5) continue;   // 热度衰减到没有意义，不再续命
+    try {
+      const repo = await gh(`/repos/${name}`);
+      if (repo.archived || repo.fork || repo.disabled || isListRepo(repo)) continue;
+      if (repo.stargazers_count < MIN_STARS) continue;
+      pool.push({ repo, heat: { ...e, perDay }, themes: topicLenses(repo), from: `池${Math.round(perDay)}/日` });
+      revived++;
+    } catch { /* 仓库没了就算了 */ }
+  }
+  if (revived) log(`候选池复活 ${revived} 个（一个月内掉榜但仍有热度）`);
+
+  // 沉淀今天见到的候选
+  const nextPool = {};
+  for (const t of trend) {
+    if (history.has(t.fullName)) continue;
+    nextPool[t.fullName] = {
+      seenAt: new Date().toISOString(),
+      gained: t.gained, perDay: t.perDay, label: t.label, rank: t.rank, unit: t.unit,
+    };
+  }
+  for (const [n, e] of Object.entries(poolOld)) {
+    if (!nextPool[n] && !history.has(n)) nextPool[n] = e;
+  }
+  savePool(nextPool);
+
   if (pool.length) {
     // 先按热度排（日均新增星数 × 每命中一类选题 +50%），
-    // 再对热门前 8 做深度体检与圈内口碑加权——热度只决定谁进决赛，不再决定谁当选
-    const heatScore = (c) => c.heat.perDay * (1 + 0.5 * c.themes.length);
-    const hottest = Math.max(...pool.map(c => c.heat.perDay));
-    const preferred = pool.filter(c => c.themes.length && c.heat.perDay >= hottest * 0.25);
+    // 再对热门前 10 做深度体检与口碑加权——热度只决定谁进决赛，不再决定谁当选
+    const heatScore = (c) => (c.heat ? c.heat.perDay : 0) * (1 + 0.5 * c.themes.length);
+    const hottest = Math.max(...pool.map(c => (c.heat ? c.heat.perDay : 0)));
+    const preferred = pool.filter(c => c.themes.length && (c.heat ? c.heat.perDay : 0) >= hottest * 0.25);
     const source = preferred.length ? preferred : pool;
     const ranked = await rankCandidates(source, heatScore);
     const pick = ranked[0];
-    log(`热度榜 ${trend.length} 个，可写 ${pool.length} 个（已写过 ${written}，不足万星 ${small}）`);
+    log(`热度榜 ${trend.length} 个，可写 ${pool.length} 个（已写过 ${written}，不足万星 ${small}，已归档 ${dead}）`);
     log('候选体检：\n  ' + ranked.slice(0, 5).map(describe).join('\n  '));
     log(`当日核心：${describe(pick)}`);
     return pick;
@@ -458,6 +647,95 @@ async function findRisingFallback(history) {
   log('候选体检：\n  ' + ranked.slice(0, 5).map(describe).join('\n  '));
   log(`当日核心：${describe(pick)}`);
   return pick;
+}
+
+// ── 小众精选（副位）─────────────────────────────────────────────
+// 主稿仍是万星，但每天再给一个千星级的小东西。
+// 老板的抱怨是「好用的工具没人推」——这个位置就是给它们的。
+export async function pickSide(history, mainRepo) {
+  const taken = new Set([...history, mainRepo.full_name]);
+  const favs = loadStarred()
+    .filter(x => !taken.has(x.full_name))
+    .filter(x => !x.archived && !x.fork)
+    .filter(x => {
+      const s = Number(x.stars);
+      return s >= SIDE_MIN_STARS && s < MIN_STARS;
+    })
+    .filter(x => fresh(x.pushed_at, 240))
+    .sort((a, b) => starRecency(b.star) - starRecency(a.star));
+
+  const picks = [];
+  for (const c of favs.slice(0, 5)) {
+    try {
+      const repo = await gh(`/repos/${c.full_name}`);
+      if (repo.archived || repo.fork || repo.disabled || isListRepo(repo)) continue;
+      picks.push(repo);
+    } catch { /* 跳过拉不到的 */ }
+  }
+
+  // 收藏夹里没有合适的小项目，就去 Search API 现查
+  if (!picks.length) {
+    const since = new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10);
+    const q = `stars:${SIDE_MIN_STARS}..${MIN_STARS - 1} pushed:>=${since} archived:false fork:false`;
+    try {
+      const data = await gh(`/search/repositories?q=${encodeURIComponent(q)}&sort=updated&order=desc&per_page=30`);
+      for (const repo of data.items || []) {
+        if (taken.has(repo.full_name) || isListRepo(repo) || repo.archived || repo.fork) continue;
+        picks.push(repo);
+        if (picks.length >= 4) break;
+      }
+    } catch (e) {
+      log(`小众精选搜索失败：${e.message}`);
+    }
+  }
+
+  if (!picks.length) {
+    log('小众精选：本日无候选');
+    return null;
+  }
+
+  // 不按星数挑：9K 星的 cloudflare/computer 他自己八成早就知道，谈不上「小众」。
+  // 按收藏时间取（favs 已倒序），最近收藏的小工具才最贴近他当下想解决的问题。
+  const repo = picks[0];
+  const blurb = await sideBlurb(repo);
+  log(`小众精选：${repo.full_name} ★${repo.stargazers_count}`);
+  return {
+    repo: repo.full_name,
+    url: repo.html_url,
+    stars: repo.stargazers_count,
+    language: repo.language || '',
+    description: repo.description || '',
+    why: blurb.why,
+    kind: blurb.kind || '',
+    pushedAt: repo.pushed_at?.slice(0, 10) || '',
+  };
+}
+
+// 副位的推荐语：只要一段，失败就用仓库原描述兜底，绝不拖垮主稿
+async function sideBlurb(repo) {
+  const fallback = repo.description || `${repo.full_name}，${repo.language || '多语言'}项目，★${repo.stargazers_count}。`;
+  try {
+    const out = await callLLM([
+      { role: 'system', content: '你是《万星日报》的编辑。只输出严格 JSON，不要任何解释文字。' },
+      {
+        role: 'user',
+        content: `下面这个仓库星数不到一万，但可能对个人开发者真有用。用 70~110 个中文字符写一段推荐语，说清三件事：它具体解决什么问题、什么人现在就该用它、用之前要注意什么。不要营销腔，不要「赋能/颠覆/革命性」，不要照抄仓库描述，要给出判断。
+输出 JSON：{"why":"推荐语","kind":"一句话概括它属于哪类工具，不超过12字"}
+
+仓库：${repo.full_name}
+描述：${repo.description || '（无）'}
+语言：${repo.language || '未知'} / 星数：${repo.stargazers_count} / 最近推送：${repo.pushed_at?.slice(0, 10)}
+主页：${repo.homepage || '无'}`,
+      },
+    ]);
+    const why = String(out?.why || '').trim();
+    const kind = String(out?.kind || '').trim();
+    if (why.length < 20) return { why: fallback, kind };
+    return { why, kind };
+  } catch (e) {
+    log(`小众精选推荐语生成失败（用原描述兜底）：${e.message}`);
+    return { why: fallback, kind: '' };
+  }
 }
 
 async function fetchReadme(fullName) {
@@ -835,9 +1113,16 @@ function computeStats(post) {
 
 function loadAllPosts(postsDir = POSTS_DIR) {
   if (!existsSync(postsDir)) return [];
-  return readdirSync(postsDir)
-    .filter(f => f.endsWith('.json'))
-    .map(f => JSON.parse(readFileSync(join(postsDir, f), 'utf8')));
+  const out = [];
+  for (const f of readdirSync(postsDir).filter(f => f.endsWith('.json'))) {
+    try {
+      out.push(JSON.parse(readFileSync(join(postsDir, f), 'utf8')));
+    } catch {
+      // 单个坏文件不该让整条管线崩（历史上有过 0 字节残留）
+      log(`跳过无法解析的往期文件：${f}`);
+    }
+  }
+  return out;
 }
 
 // 索引列出全部往期，不设条数上限：回顾页要靠它检索任意一天，
@@ -854,6 +1139,8 @@ export function rebuildIndex(dataDir = DATA_DIR) {
     stars: p.meta?.stars ?? '',
     repo: p.meta?.repo || '',
     lenses: p.meta?.lenses || [],
+    // 小众精选：首页与往期页的副位卡片靠它渲染
+    side: p.side || undefined,
   }));
   mkdirSync(dataDir, { recursive: true });
   writeFileSync(join(dataDir, 'index.json'), JSON.stringify({ updated: today(), issues }, null, 2) + '\n');
@@ -873,17 +1160,25 @@ export async function main() {
   const { repo, heat, themes } = await findCandidate();
   log(`当日核心项目：${repo.full_name} ★${repo.stargazers_count}`);
 
-  const [readme, release, alternatives] = await Promise.all([
+  // 副位（小众精选）与主稿资料并行跑；副位任何失败都不能拖垮主稿
+  const histSet = new Set(existsSync(HISTORY_FILE) ? JSON.parse(readFileSync(HISTORY_FILE, 'utf8')) : []);
+  const [readme, release, alternatives, side] = await Promise.all([
     fetchReadme(repo.full_name),
     fetchLatestRelease(repo.full_name),
     findAlternatives(repo),
+    pickSide(histSet, repo).catch(e => {
+      log(`小众精选环节失败（不影响主稿）：${e.message}`);
+      return null;
+    }),
   ]);
+  if (side) log(`今日小众精选：${side.repo} ★${side.stars}`);
   log(`README ${readme.length} 字符，Release：${release ? release.tag : '无'}，替代候选 ${alternatives.length} 个，开始写稿…`);
 
   const article = await writeArticle(repo, readme, release, alternatives, heat, themes);
   const post = {
     date,
     ...article,
+    ...(side ? { side } : {}),
     meta: {
       repo: repo.full_name,
       stars: repo.stargazers_count,

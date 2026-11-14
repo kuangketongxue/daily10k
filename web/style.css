@@ -1635,3 +1635,62 @@ a.issue-nav-slot:hover { border-color: #bcd7f2; transform: translateY(-2px); }
     transition-duration: .001ms !important;
   }
 }
+
+/* ==========================================================
+   小众精选（主稿下方的副位卡片）
+   与今日主稿视觉同源，但用左侧色条区分主次：
+   主稿是当天的主角，这里是一个「顺带发现」。
+   ========================================================== */
+.side {
+  display: block;
+  margin: 18px 0 0;
+  padding: 20px 22px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--blue-500);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-soft);
+  text-decoration: none;
+  color: inherit;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.side:hover { transform: translateY(-2px); border-left-color: var(--blue-600); }
+.side[hidden] { display: none; }
+
+.side-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.side-badge {
+  font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  color: var(--blue-700); background: var(--blue-050);
+  padding: 3px 9px; border-radius: 999px;
+}
+.side-kind { font-size: 12px; color: var(--ink-3); }
+.side-stars {
+  margin-left: auto; font-size: 13px; color: var(--gold);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.side-name {
+  margin: 10px 0 6px;
+  font-size: 16.5px; font-weight: 650; line-height: 1.5;
+  color: var(--ink); font-family: var(--mono); word-break: break-all;
+}
+.side-why { font-size: 14.5px; color: var(--ink-2); line-height: 1.8; }
+.side-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 12px; font-size: 12.5px; color: var(--ink-3);
+}
+.side-go { color: var(--blue-600); font-weight: 600; }
+
+@media (max-width: 520px) {
+  .side { padding: 17px 16px; }
+  .side-name { font-size: 15.5px; }
+  .side-stars { margin-left: 0; }
+}
+
+/* 往期列表里的「＋小众」标记 */
+.arc-side {
+  display: inline-block;
+  font-size: 11.5px; font-weight: 700; line-height: 1.6;
+  color: var(--blue-700); background: var(--blue-050);
+  padding: 2px 7px; border-radius: 999px;
+  white-space: nowrap;
+}
