@@ -22,5 +22,6 @@
   "anthropics/skills",
   "we-promise/sure",
   "openai/codex-security",
-  "google/elephant-goldfish-model"
+  "google/elephant-goldfish-model",
+  "ZhuLinsen/daily_stock_analysis"
 ]

@@ -1,0 +1,314 @@
+{
+  "date": "2026-11-15",
+  "title": "daily_stock_analysis：让 AI 每天替你盯盘，零成本推送决策仪表盘",
+  "oneLiner": "一个 LLM 驱动的多市场股票智能分析系统，覆盖 A股、港股、美股等六市场，自动生成决策报告并推送到企业微信、飞书等渠道，支持零成本定时运行。",
+  "category": "量化投资 · AI Agent · 多市场行情",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "对个人投资者而言，每天复盘多只自选股，需要手动搜集行情、新闻、公告，再结合技术指标做判断。这个过程耗时且容易遗漏关键信息，尤其在市场波动剧烈时，人工盯盘的效率远低于机器。"
+        },
+        {
+          "type": "p",
+          "text": "daily_stock_analysis 把这件事交给 LLM 驱动的自动化流水线：它聚合多源行情与实时新闻，生成结构化的「决策仪表盘」，包含核心结论、评分、趋势、买卖点位、风险警报、催化因素和操作检查清单，并通过企业微信、飞书、Telegram 等渠道推送到你的手机。"
+        },
+        {
+          "type": "quote",
+          "text": "基于 AI 大模型的 A股/港股/美股/日股/韩股/台股自选股智能分析系统，每日自动分析并推送「决策仪表盘」到企业微信/飞书/Telegram/Discord/Slack/邮箱"
+        },
+        {
+          "type": "p",
+          "text": "项目默认内置 AkShare、Baostock、YFinance 等免费行情源，可零配置运行；配合 GitHub Actions，用户可以在不购买服务器的情况下实现每个工作日 18:00（北京时间）自动执行，真正实现零成本定时分析。"
+        },
+        {
+          "type": "p",
+          "text": "截至本次抓取，该项目在 GitHub 上获得 72,228 颗星和 57,470 个 Fork，登上 Trending 周榜第 7 名，本周新增 3,778 星。高热度背后，是个人投资者对「AI 辅助决策」这一需求的真实体现。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "每日自选股决策仪表盘"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一份自选股列表（如 `600519,hk00700,AAPL,2330.TW`），以及至少一个 AI 模型 API Key"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "每只股票的评分、看多看空倾向、风险警报（如主力资金净流出、筹码集中度）、利好催化（如业绩预增、AI 概念绑定）和操作检查清单，推送到你的企业微信或飞书"
+        },
+        {
+          "type": "code",
+          "code": "python main.py --stocks 600519,hk00700,AAPL,2330.TW",
+          "caption": "来源：README「快速开始」常用命令"
+        },
+        {
+          "type": "sub",
+          "text": "Agent 策略问股"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个自然语言问题，比如「茅台最近为什么跌？」"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "基于均线、缠论、波浪、热点题材、事件驱动、成长质量等 15 种内置策略的多轮追问回答，支持实时行情、K 线、技术指标、新闻和风险信息调用"
+        },
+        {
+          "type": "sub",
+          "text": "大盘复盘与市场情绪扫描"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一条命令 `python main.py --market-review`"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "主要指数涨跌幅、上涨/下跌家数、涨停/跌停数、板块领涨领跌，形成每日市场全景图"
+        },
+        {
+          "type": "code",
+          "code": "python main.py --market-review",
+          "caption": "来源：README「快速开始」常用命令"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "系统采用模块化架构，核心分为四层：数据接入层、AI 分析层、报告生成层和通知推送层。数据接入层通过可插拔的数据源适配器（AkShare、Tushare、Pytdx、Baostock、YFinance、Longbridge 等）获取行情，通过搜索服务（SerpAPI、Tavily、博查等）获取实时新闻与舆情。"
+        },
+        {
+          "type": "p",
+          "text": "AI 分析层是系统的中枢，支持多种 LLM 提供商（Modelflare、AIHubMix、Gemini、OpenAI 兼容、DeepSeek、通义千问、Claude、Ollama 本地模型等），通过统一的接口调用，将行情、新闻、公告、基本面数据组织成结构化的提示词，让模型输出标准化的决策报告。"
+        },
+        {
+          "type": "p",
+          "text": "报告生成层把模型输出渲染为「决策仪表盘」——一个包含评分、趋势、买卖点位、风险警报和催化因素的 Markdown 文档；通知推送层则通过企业微信、飞书、Telegram、Discord、Slack 或邮件机器人将报告送达用户。"
+        },
+        {
+          "type": "p",
+          "text": "整个流程可以运行在 GitHub Actions 上，利用其定时任务能力实现每个工作日 18:00（北京时间）自动触发，无需服务器；也可以本地运行、Docker 部署或作为 FastAPI 服务常驻。"
+        },
+        {
+          "type": "p",
+          "text": "项目还提供了 Web/桌面工作台（`python main.py --webui`），包含任务进度、历史报告、回测、持仓管理、配置管理和智能导入（图片、CSV/Excel、剪贴板），方便用户进行更深入的手动分析和策略验证。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "最推荐的方式是 GitHub Actions，5 分钟完成部署，零成本，无需服务器。核心步骤：Fork 仓库 → 配置 Secrets（至少一个 AI 模型 Key、至少一个通知渠道、必填 STOCK_LIST）→ 启用 Actions → 手动触发测试。"
+        },
+        {
+          "type": "code",
+          "code": "git clone https://github.com/ZhuLinsen/daily_stock_analysis.git && cd daily_stock_analysis\npip install -r requirements.txt\ncp .env.example .env && vim .env\npython main.py",
+          "caption": "来源：README「快速开始」方式二"
+        },
+        {
+          "type": "list",
+          "items": [
+            "AI 模型配置至少需要一个 API Key，推荐 Modelflare 或 AIHubMix；Ollama 更适合本地 / Docker 部署，GitHub Actions 推荐使用云端 API。",
+            "通知渠道至少配置一个，否则报告不会推送；自选股列表 STOCK_LIST 必填，支持 A股、港股、美股、日股、韩股、台股和 ETF。",
+            "默认使用 AkShare、Baostock、YFinance 等免费行情源，可零配置运行，但稳定性不保证；长期定时或批量分析建议配置 Tushare、Longbridge 等 token 型数据源。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "截至 2026-11-15，仓库有 **34 个未关闭的 Issue 与 PR**，最近一次推送为 2026-11-14，最新 Release v3.34.0 发布于 2026-11-09。项目创建于 2026-01-10，不到一年内迭代了 34 个版本，更新节奏快。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**未关闭问题 34 个**：说明活跃开发中仍有积压缺陷或需求未处理。你要注意：在部署前先浏览 [Issues 页面](https://github.com/ZhuLinsen/daily_stock_analysis/issues)，确认没有影响你使用场景的已知 bug。",
+            "**版本迭代频繁（约每 9 天一个 Release）**：可能引入破坏性变更。你要注意：升级前先读 [Releases 页面](https://github.com/ZhuLinsen/daily_stock_analysis/releases) 的变更日志，并在测试环境验证配置兼容性。",
+            "**免费数据源稳定性不保证**：README 明确写\"免费源受上游限流、接口变动和网络波动影响，稳定性不保证\"。你要注意：生产环境应配置 Tushare、Longbridge 等 token 型数据源，并设置 fallback 规则。",
+            "**依赖外部 AI 与新闻 API**：需要至少配置一个 AI 模型 Key 和一个通知渠道，否则核心功能不可用。你要注意：API Key 泄露风险——GitHub Actions 的 Secrets 需妥善管理，避免在 fork 仓库中意外暴露。",
+            "**README 含赞助商推广**：顶部有 Modelflare、SerpApi 等赞助商链接，且推荐使用其服务。你要注意：这不影响 MIT 许可证下的自由使用，但若追求完全中立的数据源，可自行替换为免费或自建方案。",
+            "**免责声明明确**：项目\"仅供学习和研究使用，不构成任何投资建议\"。你要注意：任何基于此工具的实盘决策，风险自负。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "在候选项目中，**microsoft/qlib** 和 **shy3130/tick-stock-panel** 与本项目解决同类问题（AI/量化驱动的股票分析与策略构建），其余两个不构成同类替代。"
+        },
+        {
+          "type": "sub",
+          "text": "microsoft/qlib"
+        },
+        {
+          "type": "kv",
+          "k": "仓库",
+          "v": "[仓库首页](https://github.com/microsoft/qlib)"
+        },
+        {
+          "type": "kv",
+          "k": "星数",
+          "v": "50286"
+        },
+        {
+          "type": "kv",
+          "k": "许可证",
+          "v": "MIT"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新",
+          "v": "2026-11-04"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景",
+          "v": "面向量化研究全流程，支持监督学习、市场动力学建模和强化学习，适合需要深度回测与模型训练的用户。"
+        },
+        {
+          "type": "sub",
+          "text": "shy3130/tick-stock-panel"
+        },
+        {
+          "type": "kv",
+          "k": "仓库",
+          "v": "[仓库首页](https://github.com/shy3130/tick-stock-panel)"
+        },
+        {
+          "type": "kv",
+          "k": "星数",
+          "v": "7782"
+        },
+        {
+          "type": "kv",
+          "k": "许可证",
+          "v": "MIT"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新",
+          "v": "2026-11-12"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景",
+          "v": "自托管、零运维的 A 股量化工作台，支持自建策略、监控与回测，并利用 LLM 进行策略定制和个股分析。"
+        },
+        {
+          "type": "p",
+          "text": "选择判据：如果你需要**多市场覆盖（A 股/港股/美股/日股/韩股/台股）与每日自动推送**，选本项目；如果你专注**A 股深度量化建模与大规模回测**，选 microsoft/qlib；如果你只需要**轻量自托管 A 股监控**，选 shy3130/tick-stock-panel。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "推荐使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "需要每日自动获取多市场自选股分析报告、并推送到企业微信/飞书/Telegram 等渠道的个人或小团队，且能接受免费数据源波动风险。",
+            "熟悉 GitHub Actions 或 Docker，愿意配置 API Key 和 Secrets，希望零服务器成本定时运行的用户。",
+            "对 AI 策略问股（15 种内置策略）和 Web 工作台感兴趣，想快速验证选股思路的量化爱好者。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "需要机构级数据稳定性和 SLA 保证的量化团队——免费源限制与 34 个未关闭问题意味着生产可靠性未经验证。",
+            "无法接受频繁升级或配置变更的用户——项目约每 9 天一个 Release，且 README 未承诺 API 稳定性。",
+            "对投资决策有严格合规要求的机构——README 明确声明不构成投资建议，且项目处于快速迭代期，不适合作为核心交易系统。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/ZhuLinsen/daily_stock_analysis)",
+            "[README](https://github.com/ZhuLinsen/daily_stock_analysis#readme)",
+            "[Releases 页面](https://github.com/ZhuLinsen/daily_stock_analysis/releases)",
+            "[Issues 页面](https://github.com/ZhuLinsen/daily_stock_analysis/issues)",
+            "[项目主页](https://dsa.zhulinsen.tech)",
+            "[microsoft/qlib 仓库](https://github.com/microsoft/qlib)",
+            "[shy3130/tick-stock-panel 仓库](https://github.com/shy3130/tick-stock-panel)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-15。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "side": {
+    "repo": "yding-git/personal-edge-proxy",
+    "url": "https://github.com/yding-git/personal-edge-proxy",
+    "stars": 1216,
+    "language": "",
+    "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+    "why": "这个仓库把Xray、Hysteria2、REALITY Vision、WARP和静态SOCKS5路由整合成一套可配置的多入口多出口代理方案。适合需要稳定访问境外服务、又不想依赖单一机场或公共节点的个人用户。部署前需自备VPS和域名，并熟悉基础网络配置，否则配置排错成本较高。",
+    "kind": "代理工具配置方案",
+    "pushedAt": "2026-09-11"
+  },
+  "meta": {
+    "repo": "ZhuLinsen/daily_stock_analysis",
+    "stars": 72228,
+    "language": "Python",
+    "license": "MIT",
+    "lastCommit": "2026-11-14",
+    "openIssues": 34,
+    "version": "v3.34.0",
+    "trending": {
+      "window": "周榜",
+      "rank": 7,
+      "gained": 3778,
+      "unit": "本周"
+    },
+    "lenses": [
+      "高考/考研",
+      "AI",
+      "投资"
+    ]
+  },
+  "stats": {
+    "chars": 1904,
+    "codeBlocks": 3,
+    "minutes": 7,
+    "asOf": "2026-11-15"
+  }
+}
