@@ -64,10 +64,13 @@ async function gh(path, raw = false, attempt = 1) {
   return raw ? res.text() : res.json();
 }
 
-// 热度真源：GitHub Trending 是「此刻」的热门榜，每次运行现场抓取，日榜/周榜都抓
+// 热度真源：GitHub Trending 是「此刻」的热门榜，每次运行现场抓取。
+// 顺序即优先级：月榜 > 周榜 > 日榜。同一项目出现在多个榜里时保留最靠前的那个——
+// 月榜前几名意味着「连续一个月都有人在乎」，比今天刷屏一次硬得多。
 const TRENDING_WINDOWS = [
-  { since: 'daily', label: '日榜', unit: '今日', perDay: 1 },
+  { since: 'monthly', label: '月榜', unit: '本月', perDay: 30 },
   { since: 'weekly', label: '周榜', unit: '本周', perDay: 7 },
+  { since: 'daily', label: '日榜', unit: '今日', perDay: 1 },
 ];
 const MIN_STARS = 10000; // 万星日报的主稿门槛
 // 小众精选通道：万星是常态，但小而精的工具常常一辈子到不了万星。
@@ -622,7 +625,9 @@ async function collectCandidates(history) {
       const repo = await gh(`/repos/${name}`);
       if (repo.archived || repo.fork || repo.disabled || isListRepo(repo)) continue;
       if (repo.stargazers_count < MIN_STARS) continue;
-      add({ repo, heat: { ...e, perDay }, themes: topicLenses(repo), from: '池' });
+      // 池子里的名次是几天前甚至一个月前的，早就不算数了——
+      // 榜单加成只给「今天真的还在榜上」的项目，所以这里 heat 置空。
+      add({ repo, heat: null, themes: topicLenses(repo), from: '池' });
       revived++;
     } catch { /* 仓库没了 */ }
   }
@@ -644,6 +649,20 @@ async function collectCandidates(history) {
   for (const c of pool) byFrom[c.from] = (byFrom[c.from] || 0) + 1;
   log(`候选汇总 ${pool.length} 个（${Object.entries(byFrom).map(([k, v]) => `${k} ${v}`).join('，')}；已写过 ${written}，不足万星 ${small}）`);
   return pool;
+}
+
+// ── 榜单名次：优先级加成 ──────────────────────────────────────────
+// 用户要求「周榜、月榜前几的优先推送」。
+// 月榜权重最高（持续一个月在榜 = 真共识），周榜次之，日榜只说明今天刷屏。
+// 前 3 名拿全额，前 10 名 65%，前 25 名 35%，榜外没有——加成区间 1.00~1.34，
+// 够把「本周第三」顶到「无名次」前面，但压不过一条 10 倍的星数差距。
+const CHART_WEIGHT = { 月榜: 0.34, 周榜: 0.26, 日榜: 0.14 };
+
+export function chartFactor(heat) {
+  if (!heat || !heat.rank) return 1;
+  const w = CHART_WEIGHT[heat.label] ?? 0.10;
+  const share = heat.rank <= 3 ? 1 : heat.rank <= 10 ? 0.65 : heat.rank <= 25 ? 0.35 : 0;
+  return Math.round((1 + w * share) * 100) / 100;
 }
 
 // ── 粗筛：只看「描述有没有说清自己解决什么问题」─────────────────
@@ -745,8 +764,10 @@ function describeReviewed(c) {
   const r = c.review;
   const u = r ? `「${r.problem}」真${r.realness}/10` : '未评审';
   const ai = c.aiQuota && c.aiQuota !== 1 ? `，配额${c.aiQuota.toFixed(2)}` : '';
+  const chart = c.heat ? `，${c.heat.label}第${c.heat.rank}` : '，未在榜';
   return `${c.from}:${c.repo.full_name} ★${c.repo.stargazers_count} → ${Math.round(c.score * 100)}`
-    + `｜星${c.stars.toFixed(2)} 前沿${c.frontier.toFixed(2)} 生产${c.productivity.toFixed(2)} 实用${c.utility.toFixed(2)}${ai}`
+    + `｜星${c.stars.toFixed(2)} 前沿${c.frontier.toFixed(2)} 生产${c.productivity.toFixed(2)}`
+    + ` 榜${(c.chart || 1).toFixed(2)} 实用${c.utility.toFixed(2)}${ai}${chart}`
     + `｜${u}`;
 }
 
@@ -781,9 +802,10 @@ export async function findCandidate() {
     c.frontier = frontierFactor(c.repo, text);
     c.productivity = productivityFactor(c.repo, c.info || {});
     c.aiQuota = aiQuotaFactor(c.themes, AI_SHARE, `${c.repo.name} ${c.repo.description || ''}`);
+    c.chart = chartFactor(c.heat);
     const q = 1 + ((c.quality || 1) - 1) * 0.3;
     c.qualityAdj = q;
-    c.score = utility * c.stars * c.frontier * c.productivity * q * c.aiQuota;
+    c.score = utility * c.stars * c.frontier * c.productivity * q * c.aiQuota * c.chart;
   }
   shortlist.sort((a, b) => b.score - a.score);
 
