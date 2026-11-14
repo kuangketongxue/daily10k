@@ -297,11 +297,47 @@ function loadWatchlist() {
 // ── 信息增量：大家都知道的东西，再讲一遍是浪费版面 ────────────────
 // anthropics/skills 192K 星，对本站读者近乎零新增信息；
 // 3K 星的专用工具反而可能是他真没见过、真能用的。
-export function noveltyFactor(stars) {
-  if (stars >= 80000) return 0.65;
-  if (stars >= 40000) return 0.82;
-  if (stars >= 10000) return 1.0;
-  return 1.18;   // 小项目的稀缺性加分
+// ── 星数：第一权重 ────────────────────────────────────────────────
+// 用户定序：星数 > AI 前沿 > 生产力。
+// 星数代表真实共识——几万人愿意点星，说明它确实解决了什么，这比任何主观判断都硬。
+// 用对数压缩：既让 10 倍星数真体现在分数上（跨度 0.60~1.92），
+// 又不至于把 3 千星的好项目按死（它不是 0 分，只是比 10 万星的少 40%）。
+//   50 星 → 0.60｜1K → 1.12｜1万 → 1.52｜10万 → 1.92
+export function starsFactor(stars) {
+  const s = Math.max(50, Number(stars) || 0);
+  return Math.round((0.60 + 0.40 * Math.log10(s / 50)) * 100) / 100;
+}
+
+// ── AI 前沿性：第二权重 ──────────────────────────────────────────
+// 「最新最前沿」看两件事：项目本身年轻、踩在当前范式上。
+// 三年以上的老项目即使今天还在更新，它解决的问题多半已经被人解过一遍了
+// ——这才是「过时」的真正含义，跟星多星少无关。
+const FRONTIER_RE = /\b(agentic|agent|mcp|reasoning|multimodal|world model|diffusion|vlm|llm|rag|fine-?tun|inference|context engineering|computer use|tool use)\b/i;
+
+export function frontierFactor(repo, text = '') {
+  const created = repo.created_at ? new Date(repo.created_at).getTime() : Date.now();
+  const ageDays = (Date.now() - created) / 864e5;
+  let f = 1;
+  if (ageDays <= 90) f += 0.28;          // 三个月内新建：正在浪尖上
+  else if (ageDays <= 365) f += 0.14;
+  else if (ageDays >= 1095) f -= 0.18;   // 三年以上：老将
+  if (FRONTIER_RE.test(text)) f += 0.14;
+  return Math.max(0.70, Math.round(f * 100) / 100);
+}
+
+// ── 生产力属性：第三权重 ────────────────────────────────────────
+// 能不能直接拿来干活。示例库、教程、清单读完就走，不算生产力工具。
+const PRODUCTIVITY_TOPICS = /cli|command-line|tool|desktop|extension|plugin|editor|terminal|automation|workflow|productivity/i;
+const NOT_PRODUCTIVITY = /示例|example|quickstart|教程|tutorial|guide|awesome|cheat ?sheet|roadmap|handbook|\bbook\b|demo|playground|sample/i;
+
+export function productivityFactor(repo, info = {}) {
+  const text = `${repo.name || ''} ${repo.description || ''} ${(repo.topics || []).join(' ')}`;
+  const topText = (repo.topics || []).join(' ');
+  let f = 1;
+  if (info.manifest) f += 0.10;                 // 有构建清单，装得起来
+  if (PRODUCTIVITY_TOPICS.test(topText)) f += 0.12;
+  if (NOT_PRODUCTIVITY.test(text)) f -= 0.35;   // 示例/教程/清单
+  return Math.max(0.65, Math.min(1.25, Math.round(f * 100) / 100));
 }
 
 // ── AI 配额：要多，但不要那么多 ──────────────────────────────────
@@ -316,8 +352,10 @@ const AI_CODING_RE = /\b(coding agent|coding assistant|code agent|code review|mc
 export function aiQuotaFactor(themes, share = AI_SHARE, text = '') {
   if (!themes.includes('AI')) return 1;
   if (text && !AI_CODING_RE.test(text)) return 1;   // 不是编码工具，不受配额约束
-  if (share > 0.6) return 0.65;
-  if (share < 0.35) return 1.15;
+  // 只是轻轻刹一下，不是打压：用户要的就是 AI 最前沿的东西，
+  // 这条闸门唯一的职责是防止「连着七天全是编码代理」。
+  if (share > 0.6) return 0.85;
+  if (share < 0.35) return 1.10;
   return 1;
 }
 
@@ -444,10 +482,10 @@ export async function rankCandidates(pool, heatScore) {
     const webBoost = c.webMentions ? Math.min(1 + 0.12 * c.webMentions, 1.36) : 1;
     c.buzzBoost = boost;
     c.webBoost = webBoost;
-    // 三道新闸：信息增量（超高的星数反而降权）、AI 配额（防独占）、选题命中
-    c.novelty = noveltyFactor(c.repo.stargazers_count);
+    // 兜底路径同样按「星数 > 前沿 > 生产力」加权，与主路径保持一致
+    c.starsF = starsFactor(c.repo.stargazers_count);
     c.aiQuota = aiQuotaFactor(c.themes);
-    c.score = c.base * c.quality * boost * webBoost * c.novelty * c.aiQuota;
+    c.score = c.base * c.quality * boost * webBoost * c.starsF * c.aiQuota;
   }
   // 没体检到的深度降级：只有在体检过的候选全被判定为配置包时才轮到它们
   for (const c of ranked.slice(10)) c.score = c.base * 0.15;
@@ -461,7 +499,7 @@ function describe(c) {
   const b = c.buzz && c.buzz.stories ? `，HN ${c.buzz.stories} 帖 ${c.buzz.points} 分` : '，HN 无讨论';
   const w = c.webMentions ? `，推荐文点名 ${c.webMentions} 次` : '';
   const n = c.notes ? `（${c.notes.join('，')}）` : '';
-  const nv = c.novelty ? `，新颖 ${c.novelty.toFixed(2)}` : '';
+  const nv = c.starsF ? `，星数因子 ${c.starsF.toFixed(2)}` : '';
   const ai = c.aiQuota && c.aiQuota !== 1 ? `，AI 配额 ${c.aiQuota.toFixed(2)}` : '';
   const src = c.from ? `[${c.from}] ` : '';
   return `${src}${c.repo.full_name} ★${c.repo.stargazers_count} 日均${c.heat ? Math.round(c.heat.perDay * 10) / 10 : '-'} → 综合 ${Math.round(c.score)}｜${q}${n}${nv}${ai}${b}${w}`;
@@ -624,7 +662,9 @@ export function crudeUtility(repo, themes) {
   s += themes.length;
   const issues = repo.open_issues_count || 0;
   if (issues > 0 && issues < 600) s += 1;   // 有人在提 issue，说明真有人在用
-  if ((repo.stargazers_count || 0) < 50000) s += 1;
+  // 星数在粗筛里只给一个小权重（最多 3 分）。主权重留给后面的对数因子，
+  // 否则「谁星多谁上台」，评审环节就形同虚设了。
+  s += Math.min(3, Math.max(0, Math.log10(Math.max(100, repo.stargazers_count || 0)) - 2));
   return s;
 }
 
@@ -648,16 +688,16 @@ async function reviewUtility(cands) {
   const prompt = `下面是今天进入候选的 ${cands.length} 个开源项目。请逐个判断：它到底解决了什么实际问题。
 
 评判要求：
-- 只看它能不能解决一个具体、真实、常见的问题，不看它热不热、星多不多、谁做的
-- 描述里出现「平台」「生态」「框架」「赋能」「一站式」「重新定义」这类词，说明作者没想清受众，要扣分
-- 必须先装别的工具、要注册账号、要自己改代码才能用的，上手成本高，要扣分
+- 只判断「解决什么问题、这问题真不真」。星数、热度、谁做的都不归你管，那是另一个维度
+- 描述里出现「平台」「生态」「框架」「赋能」「一站式」「重新定义」这类词，说明作者没想清受众，扣分
+- 必须先装别的工具、要注册账号、要自己改代码才能用的，上手成本高，扣分
+- 示例库、快速上手、教程、清单这类「读完就走」的东西，问题真实性给低分
 - 只服务极少数人的边角需求，realness 给低分
-- 已经众所周知、装了也不会改变任何人工作方式的（比如大厂官方示例库），score 给低分
 
 对每个项目输出一条：
 {"i":序号,"problem":"它解决的具体问题，15~30字，必须落到场景","realness":0到10的整数,"barrier":"上手要做什么，一句话","score":0到100的整数,"verdict":"为什么是这个分数，一句话"}
 
-score 构成：问题真实性 40% + 解决方案具体度 30% + 上手可行性 20% + 适用范围 10%。
+score 构成：问题真实性 45% + 解决方案具体度 35% + 上手可行性 20%。
 不要客套话，不要重复仓库描述。严格输出 JSON：{"reviews":[...]}
 
 ${brief}`;
@@ -690,6 +730,7 @@ async function inspectShortlist(list) {
   for (const c of list) {
     const info = await inspectRepo(c.repo.full_name);
     const { factor, notes } = productionFactor(info);
+    c.info = info;
     c.quality = factor;
     c.notes = notes;
     const buzz = await hnBuzz(c.repo.full_name);
@@ -702,9 +743,11 @@ async function inspectShortlist(list) {
 
 function describeReviewed(c) {
   const r = c.review;
-  const u = r ? `「${r.problem}」真${r.realness}/10，AI 给 ${r.score}` : '未评审';
-  const ai = c.aiQuota && c.aiQuota !== 1 ? `，AI配额 ${c.aiQuota.toFixed(2)}` : '';
-  return `${c.from}:${c.repo.full_name} ★${c.repo.stargazers_count} → ${Math.round(c.score * 100)}｜${u}｜质量 ${(c.qualityAdj || 1).toFixed(2)}，新颖 ${(c.novelty || 1).toFixed(2)}${ai}`;
+  const u = r ? `「${r.problem}」真${r.realness}/10` : '未评审';
+  const ai = c.aiQuota && c.aiQuota !== 1 ? `，配额${c.aiQuota.toFixed(2)}` : '';
+  return `${c.from}:${c.repo.full_name} ★${c.repo.stargazers_count} → ${Math.round(c.score * 100)}`
+    + `｜星${c.stars.toFixed(2)} 前沿${c.frontier.toFixed(2)} 生产${c.productivity.toFixed(2)} 实用${c.utility.toFixed(2)}${ai}`
+    + `｜${u}`;
 }
 
 // 选品总入口：四路候选先汇成一池，再由「解决了什么实际问题」定胜负。
@@ -728,17 +771,19 @@ export async function findCandidate() {
   for (const c of shortlist) {
     const r = reviews.get(c.repo.full_name) || null;
     c.review = r;
-    // 评审失败时给中性分，不让整期因为一次 LLM 抖动而报废。
-    // 权重刻意做成「实用性主导」：AI 分 0~100 映射到 0.25~1.68，
-    // 质量系数压缩到 0.8~1.25 只作微调——否则「仓库大、构建全」会盖过
-    // 「这个问题真不真」，等于又回到按体量选品。
-    const utility = r ? 0.25 + (r.score / 100) * 1.43 : 0.85;
+    // 用户定的权重顺序：星数 > AI 前沿性 > 生产力。
+    // 实用性只需要「过线」，所以压到 0.80~1.25——它是门槛，不是主角。
+    // 真正拉开差距的是三个因子：星数 0.60~1.92、前沿 0.70~1.42、生产力 0.65~1.25。
+    const utility = r ? 0.80 + (r.score / 100) * 0.45 : 1.0;
     c.utility = utility;
-    c.novelty = noveltyFactor(c.repo.stargazers_count);
+    const text = `${c.repo.name} ${c.repo.description || ''} ${(c.repo.topics || []).join(' ')}`;
+    c.stars = starsFactor(c.repo.stargazers_count);
+    c.frontier = frontierFactor(c.repo, text);
+    c.productivity = productivityFactor(c.repo, c.info || {});
     c.aiQuota = aiQuotaFactor(c.themes, AI_SHARE, `${c.repo.name} ${c.repo.description || ''}`);
-    const q = 1 + ((c.quality || 1) - 1) * 0.4;
+    const q = 1 + ((c.quality || 1) - 1) * 0.3;
     c.qualityAdj = q;
-    c.score = utility * q * c.novelty * c.aiQuota;
+    c.score = utility * c.stars * c.frontier * c.productivity * q * c.aiQuota;
   }
   shortlist.sort((a, b) => b.score - a.score);
 
