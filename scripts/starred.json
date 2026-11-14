@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-14T23:40:26.206+08:00",
+  "updated": "2026-11-14T23:41:52.750+08:00",
   "note": "由 star-archive 生成，供 daily10k 选品读取。不要手改。",
   "items": [
     {
@@ -133,7 +133,7 @@
     },
     {
       "full_name": "openai/codex-security",
-      "stars": 13474,
+      "stars": 13475,
       "description": "OpenAI's Codex Security CLI and TypeScript SDK for finding, validating, and fixing security vulnerabilities. npm: https://www.npmjs.com/package/@openai/codex-security",
       "language": "TypeScript",
       "topics": [
@@ -445,7 +445,7 @@
     },
     {
       "full_name": "stablyai/orca",
-      "stars": 124791,
+      "stars": 124792,
       "description": "Orca lets you run a fleet of coding agents (e.g. Claude Code, Codex) with your own subscription. Available on desktop, mobile and remote runtime.",
       "language": "TypeScript",
       "topics": [
@@ -470,7 +470,7 @@
         "worktrees",
         "yc-backed"
       ],
-      "pushed_at": "2026-11-14T15:38:18Z",
+      "pushed_at": "2026-11-14T15:40:37Z",
       "archived": false,
       "star": "2026-07-05T22:14:41Z",
       "url": "https://github.com/stablyai/orca"
@@ -749,7 +749,7 @@
     },
     {
       "full_name": "D4Vinci/Scrapling",
-      "stars": 102744,
+      "stars": 102745,
       "description": "🕷️ The BEST Web Scraping framework that handles everything from a single request to a full-scale crawl! Don't be shy, join here: https://discord.gg/EMgGbDceNQ and follow here for daily tips and tricks: https://x.com/Scrapling_dev",
       "language": "Python",
       "topics": [
@@ -881,7 +881,7 @@
     },
     {
       "full_name": "DietrichGebert/ponytail",
-      "stars": 190694,
+      "stars": 190695,
       "description": "Makes your AI agent think like the laziest senior dev in the room. The best code is the code you never wrote.",
       "language": "JavaScript",
       "topics": [
@@ -1040,7 +1040,7 @@
     },
     {
       "full_name": "colbymchenry/codegraph",
-      "stars": 77590,
+      "stars": 77592,
       "description": "Pre-indexed code knowledge graph, auto syncs on code changes, for Claude Code, Codex, Gemini, Cursor, OpenCode, AntiGravity, Kiro, CoPilot, and Hermes Agent — fewer tokens, fewer tool calls, 100% local",
       "language": "TypeScript",
       "topics": [],
@@ -1288,7 +1288,7 @@
     },
     {
       "full_name": "firecrawl/firecrawl",
-      "stars": 201727,
+      "stars": 201729,
       "description": "Supercharge your AI agents with data from the web and beyond. Building the library for superintelligence. 🔥",
       "language": "TypeScript",
       "topics": [
@@ -1365,7 +1365,7 @@
     },
     {
       "full_name": "multica-ai/andrej-karpathy-skills",
-      "stars": 233073,
+      "stars": 233074,
       "description": "A single CLAUDE.md file to improve Claude Code behavior, derived from Andrej Karpathy's observations on LLM coding pitfalls.",
       "language": "",
       "topics": [],
@@ -1531,7 +1531,7 @@
     },
     {
       "full_name": "nexu-io/open-design",
-      "stars": 107616,
+      "stars": 107617,
       "description": "The 1st Collaborative AI Design Agent Workspace. Local-first and open source. Create motion, prototypes, websites, apps, dashboards, presentations, images, and videos with your team and AI agents. Share work, exchange feedback, and iterate together in one workspace.",
       "language": "TypeScript",
       "topics": [
@@ -2047,7 +2047,7 @@
     },
     {
       "full_name": "Alishahryar1/free-claude-code",
-      "stars": 70113,
+      "stars": 70114,
       "description": "Use Claude Code, Codex, Antigravity, VSCode, Pi, and OpenCode (and 6 other harnesses) for free (1.3B+ free tokens) from your terminal, app, IDE, or phone, and now from the browser with native browser sessions (multi-harness + multi-model) like OpenClaw (voice supported + ToS friendly)",
       "language": "Python",
       "topics": [],
@@ -2123,7 +2123,7 @@
         "nous-research",
         "openai"
       ],
-      "pushed_at": "2026-11-14T15:28:57Z",
+      "pushed_at": "2026-11-14T15:40:54Z",
       "archived": false,
       "star": "2026-04-18T12:23:27Z",
       "url": "https://github.com/NousResearch/hermes-agent"
@@ -2213,7 +2213,7 @@
     },
     {
       "full_name": "openai/codex",
-      "stars": 135266,
+      "stars": 135267,
       "description": "Lightweight coding agent that runs in your terminal",
       "language": "Rust",
       "topics": [],
@@ -2273,7 +2273,7 @@
     },
     {
       "full_name": "QwenLM/Qwen3-TTS",
-      "stars": 14411,
+      "stars": 14412,
       "description": "Qwen3-TTS is an open-source series of TTS models developed by the Qwen team at Alibaba Cloud, supporting stable, expressive, and streaming speech generation, free-form voice design, and vivid voice cloning.",
       "language": "Python",
       "topics": [],
@@ -2652,7 +2652,7 @@
         "own-your-data",
         "personal"
       ],
-      "pushed_at": "2026-11-14T15:40:06Z",
+      "pushed_at": "2026-11-14T15:41:07Z",
       "archived": false,
       "star": "2026-03-02T09:53:43Z",
       "url": "https://github.com/openclaw/openclaw"
@@ -2896,7 +2896,7 @@
         "nextjs",
         "personal-website"
       ],
-      "pushed_at": "2026-11-14T15:39:45Z",
+      "pushed_at": "2026-11-14T15:41:17Z",
       "archived": false,
       "star": "2025-05-25T06:12:35Z",
       "url": "https://github.com/kuangketongxue/kuangketongxue.github.io"
