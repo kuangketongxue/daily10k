@@ -278,6 +278,22 @@ const fresh = (iso, days) => {
   return Number.isFinite(t) && Date.now() - t < days * 864e5;
 };
 
+// ── 提名池 ──────────────────────────────────────────────────────
+// 用户口头说过「我觉得这个不错」但没去 star 的项目。
+// 口头提名比 star 更直接（star 是私下动作，提名是明确表态），
+// 所以排在收藏夹之前——否则这类项目永远轮不到：副位只在收藏夹没料时才向外找。
+function loadWatchlist() {
+  const p = join(ROOT, 'scripts', 'watchlist.json');
+  if (!existsSync(p)) return [];
+  try {
+    const j = JSON.parse(readFileSync(p, 'utf8'));
+    const items = Array.isArray(j) ? j : (j.items || []);
+    return items
+      .map(x => (typeof x === 'string' ? { full_name: x } : x))
+      .filter(x => x && x.full_name);
+  } catch { return []; }
+}
+
 // ── 信息增量：大家都知道的东西，再讲一遍是浪费版面 ────────────────
 // anthropics/skills 192K 星，对本站读者近乎零新增信息；
 // 3K 星的专用工具反而可能是他真没见过、真能用的。
@@ -503,10 +519,28 @@ const starRecency = (s) => (s ? new Date(s).getTime() : 0);
 // 否则又会推出 anthropics/skills 这种 192K 星、人人皆知的库。
 async function fromStarred(history) {
   const all = loadStarred();
-  if (!all.length) {
+  const watch = loadWatchlist().filter(x => !history.has(x.full_name));
+  if (!all.length && !watch.length) {
     log('无收藏夹信号（scripts/starred.json 缺失），跳过第一优先');
     return null;
   }
+
+  const pool = [];
+
+  // 口头提名优先：他明确说过不错的，直接进候选，不等星数门槛
+  let nominated = 0;
+  for (const w of watch.slice(0, 4)) {
+    try {
+      const repo = await gh(`/repos/${w.full_name}`);
+      if (repo.archived || repo.disabled || repo.fork) continue;
+      pool.push({ repo, heat: null, themes: topicLenses(repo), from: '提名', wPriority: true });
+      nominated++;
+    } catch (e) {
+      log(`提名项目 ${w.full_name} 拉取失败：${e.message}`);
+    }
+  }
+  if (nominated) log(`口头提名 ${nominated} 个项目进入候选`);
+
   const cands = all
     .filter(x => !history.has(x.full_name))
     .filter(x => !x.archived && !x.fork)
@@ -516,14 +550,15 @@ async function fromStarred(history) {
       ...x,
       themes: topicLenses({ name: String(x.full_name).split('/').pop(), description: x.description, topics: x.topics || [] }),
     }));
-  if (!cands.length) {
+  if (!cands.length && !pool.length) {
     log(`收藏夹 ${all.length} 个里没有可写的（已推过 / 归档 / 不足 ${SIDE_MIN_STARS} 星 / 半年没动）`);
     return null;
   }
   cands.sort((a, b) => starRecency(b.star) - starRecency(a.star));
   const shortlist = cands.slice(0, 6);
-  const pool = [];
   for (const c of shortlist) {
+    // 同一项目可能既被口头提名又在收藏夹里，别让它占两个名额、被加权两次
+    if (pool.some(p => p.repo.full_name === c.full_name)) continue;
     try {
       const repo = await gh(`/repos/${c.full_name}`);
       if (repo.archived || repo.fork || repo.disabled || isListRepo(repo)) continue;
@@ -534,16 +569,18 @@ async function fromStarred(history) {
   }
   if (!pool.length) return null;
 
-  // 收藏时间越近越代表当下兴趣，但两年前的收藏不该被彻底埋没
+  // 收藏时间越近越代表当下兴趣，但两年前的收藏不该被彻底埋没；
+  // 口头提名的权重压过一切，因为那是他能给出的最强信号。
   const starredAt = new Map(cands.map(c => [c.full_name, c.star]));
   const heatScore = (c) => {
     const s = starredAt.get(c.repo.full_name);
     const days = s ? (Date.now() - new Date(s).getTime()) / 864e5 : 400;
-    return Math.max(0.55, 1 - days / 730) * 1000;
+    const base = Math.max(0.55, 1 - days / 730) * 1000;
+    return c.wPriority ? base * 1.6 : base;
   };
   const ranked = await rankCandidates(pool, heatScore);
   const pick = ranked[0];
-  log(`收藏夹可写 ${cands.length} 个，进入体检 ${pool.length} 个`);
+  log(`提名 ${watch.length} 个、收藏夹可写 ${cands.length} 个，进入体检 ${pool.length} 个`);
   log('候选体检：\n  ' + ranked.slice(0, 5).map(describe).join('\n  '));
   log(`当日核心：${describe(pick)}`);
   return pick;
