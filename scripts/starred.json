@@ -1,10 +1,10 @@
 {
-  "updated": "2026-11-15T00:43:16.792+08:00",
+  "updated": "2026-11-15T00:43:40.148+08:00",
   "note": "由 star-archive 生成，供 daily10k 选品读取。不要手改。",
   "items": [
     {
       "full_name": "storytold/craft-anything",
-      "stars": 32508,
+      "stars": 32510,
       "description": "Craft Anything: understand how any software works, and craft your own.",
       "language": "Rust",
       "topics": [],
@@ -496,7 +496,7 @@
         "worktrees",
         "yc-backed"
       ],
-      "pushed_at": "2026-11-14T16:37:00Z",
+      "pushed_at": "2026-11-14T16:43:16Z",
       "archived": false,
       "star": "2026-07-05T22:14:41Z",
       "url": "https://github.com/stablyai/orca",
@@ -557,7 +557,7 @@
         "typescript",
         "video-editor"
       ],
-      "pushed_at": "2026-11-14T16:42:50Z",
+      "pushed_at": "2026-11-14T16:43:15Z",
       "archived": false,
       "star": "2026-07-05T22:00:04Z",
       "url": "https://github.com/heygen-com/hyperframes",
@@ -788,7 +788,7 @@
     },
     {
       "full_name": "D4Vinci/Scrapling",
-      "stars": 102796,
+      "stars": 102797,
       "description": "🕷️ The BEST Web Scraping framework that handles everything from a single request to a full-scale crawl! Don't be shy, join here: https://discord.gg/EMgGbDceNQ and follow here for daily tips and tricks: https://x.com/Scrapling_dev",
       "language": "Python",
       "topics": [
@@ -1354,7 +1354,7 @@
     },
     {
       "full_name": "firecrawl/firecrawl",
-      "stars": 201737,
+      "stars": 201738,
       "description": "Supercharge your AI agents with data from the web and beyond. Building the library for superintelligence. 🔥",
       "language": "TypeScript",
       "topics": [
@@ -2784,7 +2784,7 @@
         "own-your-data",
         "personal"
       ],
-      "pushed_at": "2026-11-14T16:42:53Z",
+      "pushed_at": "2026-11-14T16:43:29Z",
       "archived": false,
       "star": "2026-03-02T09:53:43Z",
       "url": "https://github.com/openclaw/openclaw",
@@ -3007,7 +3007,7 @@
     },
     {
       "full_name": "521xueweihan/HelloGitHub",
-      "stars": 188836,
+      "stars": 188837,
       "description": ":octocat: 分享 GitHub 上有趣、入门级的开源项目。Share interesting, entry-level open source projects on GitHub.",
       "language": "Python",
       "topics": [
