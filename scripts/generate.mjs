@@ -306,12 +306,16 @@ export function noveltyFactor(stars) {
 
 // ── AI 配额：要多，但不要那么多 ──────────────────────────────────
 // 用户原话：「AI 是最值得学的板块」——所以不降 AI 权重，只防它独占版面。
-// 近 7 天 AI 占比超 60% 时给 AI 候选打折，低于 35% 时反而补一点，
-// 把比例拉回 40~60% 的合理带。
+// 但配额只该压「AI 编码/开发工具」这一亚类（今天满街都是的那种）。
+// 「用 AI 解决具体领域问题」的不该被压：OfficeCLI 是「不装 Office 也能改表格」，
+// 股票分析是「把行情和新闻合成一张看板」——它们的价值在领域，不在 AI。
 let AI_SHARE = 0.5;
 
-export function aiQuotaFactor(themes, share = AI_SHARE) {
+const AI_CODING_RE = /\b(coding agent|coding assistant|code agent|code review|mcp\b|claude code|codex|cursor|copilot|prompt engineering|agent skills|skills? for|skill pack|ai coding|agentic coding)\b/i;
+
+export function aiQuotaFactor(themes, share = AI_SHARE, text = '') {
   if (!themes.includes('AI')) return 1;
+  if (text && !AI_CODING_RE.test(text)) return 1;   // 不是编码工具，不受配额约束
   if (share > 0.6) return 0.65;
   if (share < 0.35) return 1.15;
   return 1;
@@ -698,9 +702,9 @@ async function inspectShortlist(list) {
 
 function describeReviewed(c) {
   const r = c.review;
-  const u = r ? `问题「${r.problem}」真 ${r.realness}/10 分` : '未评审';
-  const ai = c.aiQuota && c.aiQuota !== 1 ? `，AI ${c.aiQuota.toFixed(2)}` : '';
-  return `${c.from}:${c.repo.full_name} ★${c.repo.stargazers_count} → 综合 ${Math.round(c.score * 100)}｜${u}｜质量 ${(c.quality || 1).toFixed(2)}，新颖 ${(c.novelty || 1).toFixed(2)}${ai}`;
+  const u = r ? `「${r.problem}」真${r.realness}/10，AI 给 ${r.score}` : '未评审';
+  const ai = c.aiQuota && c.aiQuota !== 1 ? `，AI配额 ${c.aiQuota.toFixed(2)}` : '';
+  return `${c.from}:${c.repo.full_name} ★${c.repo.stargazers_count} → ${Math.round(c.score * 100)}｜${u}｜质量 ${(c.qualityAdj || 1).toFixed(2)}，新颖 ${(c.novelty || 1).toFixed(2)}${ai}`;
 }
 
 // 选品总入口：四路候选先汇成一池，再由「解决了什么实际问题」定胜负。
@@ -724,12 +728,17 @@ export async function findCandidate() {
   for (const c of shortlist) {
     const r = reviews.get(c.repo.full_name) || null;
     c.review = r;
-    // 评审失败时给中性分 0.6，不让整期因为一次 LLM 抖动而报废
-    const utility = r ? 0.25 + r.score / 100 : 0.6;
+    // 评审失败时给中性分，不让整期因为一次 LLM 抖动而报废。
+    // 权重刻意做成「实用性主导」：AI 分 0~100 映射到 0.25~1.68，
+    // 质量系数压缩到 0.8~1.25 只作微调——否则「仓库大、构建全」会盖过
+    // 「这个问题真不真」，等于又回到按体量选品。
+    const utility = r ? 0.25 + (r.score / 100) * 1.43 : 0.85;
     c.utility = utility;
     c.novelty = noveltyFactor(c.repo.stargazers_count);
-    c.aiQuota = aiQuotaFactor(c.themes);
-    c.score = utility * (c.quality || 1) * c.novelty * c.aiQuota;
+    c.aiQuota = aiQuotaFactor(c.themes, AI_SHARE, `${c.repo.name} ${c.repo.description || ''}`);
+    const q = 1 + ((c.quality || 1) - 1) * 0.4;
+    c.qualityAdj = q;
+    c.score = utility * q * c.novelty * c.aiQuota;
   }
   shortlist.sort((a, b) => b.score - a.score);
 
