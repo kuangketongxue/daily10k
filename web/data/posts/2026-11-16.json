@@ -1,0 +1,291 @@
+{
+  "date": "2026-11-16",
+  "title": "claude-seo：让 Claude Code 在终端里跑完整 SEO 审计",
+  "oneLiner": "一个给 Claude Code 用的开源 SEO 插件，输入网址，10 到 15 分钟输出按优先级排序的优化清单，覆盖技术 SEO、内容质量、结构化数据与 AI 搜索可见性。",
+  "category": "AI 工具 · SEO · Claude Code 插件",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "做 SEO 的人都知道，一次像样的审计通常要 4 到 8 小时手工完成，外包给代理则要 1 到 3 周，费用从 2000 美元到 15000 美元以上不等。而 claude-seo 把这一流程压缩到 10 到 15 分钟，成本仅是你已有的 Claude Code 订阅。这是 README 中「Pricing」一节给出的对比数据，不是估算。"
+        },
+        {
+          "type": "p",
+          "text": "更关键的是，它把「审计」从一次性事件变成了常规动作。README 明确写道：**「SEO agencies that want weekly audits for every client instead of quarterly ones」**——代理机构可以给每个客户做周度审计，而不是季度审计；内部团队可以在每次发布前跑一遍，而不是等出了问题再补救。"
+        },
+        {
+          "type": "p",
+          "text": "它解决的第二类痛点是「AI 搜索时代的可见性」。传统 SEO 工具大多只盯着 Google 的自然排名，而 claude-seo 内置了 GEO（Generative Engine Optimization）分析，专门评估你的页面被 Google AI Overviews、AI Mode、ChatGPT、Perplexity 和 Gemini 引用的可能性。README 的 hero 图里写着：**「Rank higher in Google and get cited by AI search」**。"
+        },
+        {
+          "type": "p",
+          "text": "第三，它把「建议」和「验证」绑定在一起。README 强调：**「Every recommendation explains why it matters and how you will know it worked」**——每条建议都告诉你为什么重要，以及怎么确认它生效了。这解决了传统审计报告里「建议列了一堆，但没人知道改完有没有用」的顽疾。"
+        },
+        {
+          "type": "p",
+          "text": "它自己的站点就是活证据：claude-seo.md 从第一天起用自己审计，上线 12 周内获得 10.8K 次 Search Console 点击，移动端 PageSpeed 得分 99。这是 README「Real results」一节的原始数据。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "用途一：给 AI 搜索做「体检」——GEO 与 Agent Readiness"
+        },
+        {
+          "type": "p",
+          "text": "如果你的内容想被 ChatGPT、Perplexity 或 Google AI Overviews 引用，光有自然排名是不够的。这个方向是 claude-seo 最贴近你关注「AI」需求的部分。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个 URL"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "AI Overviews 引用可能性评估、Agent Readiness 评分（Lighthouse Agentic Browsing X/N）、AI agent 可访问性检查、llms.txt 与 Markdown 就绪状态、WebMCP 配置诊断"
+        },
+        {
+          "type": "code",
+          "code": "/seo geo <url>\n/seo agentic <url>",
+          "caption": "来源：README「Schema and AI Search」命令组"
+        },
+        {
+          "type": "sub",
+          "text": "用途二：全站审计与优先级排序"
+        },
+        {
+          "type": "p",
+          "text": "输入一个域名，最多 17 个 agent 并行工作，覆盖技术 SEO、内容质量、Schema、本地 SEO、电商、国际化等 9 大类检查项，输出一份按「影响程度」排序的行动计划。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个域名"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "Markdown、PDF 和 JSON 格式的审计报告，每条建议附「为什么重要」和「如何验证生效」"
+        },
+        {
+          "type": "code",
+          "code": "/seo audit <url>",
+          "caption": "来源：README「Audits and Planning」命令组"
+        },
+        {
+          "type": "sub",
+          "text": "用途三：持续监控——变化检测与漂移追踪"
+        },
+        {
+          "type": "p",
+          "text": "审计不是一次性的事。claude-seo 提供 SQLite 快照机制，可以对比不同时间点的 SEO 状态，捕捉排名下滑或技术性回退。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个 URL 和两个时间点的快照"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "SEO 漂移对比报告，标注哪些指标变了、变好还是变坏"
+        },
+        {
+          "type": "code",
+          "code": "/seo drift baseline | compare | history <url>",
+          "caption": "来源：README「Technical SEO」命令组"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "claude-seo 不是一个单体程序，而是一组可组合的 Claude Code 技能。README 明确写到它由 **29 个 sub-skills 和 20 个 specialist agents** 构成，每个 agent 负责一个专业领域，比如 `seo-technical` 负责技术 SEO、`seo-geo` 负责 AI 搜索分析、`seo-schema` 负责结构化数据。"
+        },
+        {
+          "type": "p",
+          "text": "架构上，它把「审计」拆成「并行扫描 + 汇总排序」两个阶段。README 的「How an audit works」一节描述了流程：先探测站点类型（SaaS、本地商家、电商等），然后多个 agent 同时扫描不同维度，最后汇总成一份按优先级排序的行动计划。最多 17 个 agent 同时工作，这是 README 明确给出的数字。"
+        },
+        {
+          "type": "p",
+          "text": "每个 agent 的职责边界很清晰。以 `seo-technical` 为例，它负责 9 个类目的技术检查；`seo-content` 用 Opus 模型做 E-E-A-T 和内容质量分析；`seo-schema` 负责检测、验证和生成 Schema.org 标记。这种「一个 agent 一个领域」的设计，让审计结果可以追溯到具体的检查模块，而不是黑箱输出。"
+        },
+        {
+          "type": "p",
+          "text": "运行时，它创建独立的 Python 环境并下载 Chromium，用于页面渲染和 Lighthouse 检查。README 的 `/seo setup` 命令说明里写着：**「Create or refresh the isolated Python runtime and Chromium」**，`/seo doctor` 则在不改动系统的情况下检查运行时就绪状态。"
+        },
+        {
+          "type": "p",
+          "text": "数据流方面，它把审计结果写成 Markdown、PDF 和 JSON 文件，保留在本地，而不是上传到某个 SaaS 后台。README 的定价对比表里明确写着：**「Your data stays with you: Yes, it runs on your machine」**。这一点对代理机构尤其重要——客户数据不出本机。"
+        },
+        {
+          "type": "p",
+          "text": "扩展性上，它提供 9 个可选扩展，用于接入实时 SEO 数据源。例如 `seo-seranking` 追踪 AI Share-of-Voice（ChatGPT、Gemini、Perplexity、AI Overviews 中的提及份额），`seo-bing` 对接 Bing Webmaster Tools 和 IndexNow 提交，`seo-unlighthouse` 做多页面 Lighthouse 本地运行。这些扩展不是核心，但让工具能跟上搜索生态的实时变化。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "安装和使用都在 Claude Code 内完成，不需要单独启动服务。以下命令直接来自 README 的命令组说明。"
+        },
+        {
+          "type": "code",
+          "code": "# 1. 在 Claude Code 中安装插件\n/plugin install claude-seo\n\n# 2. 初始化运行时（创建隔离的 Python 环境和 Chromium）\n/seo setup\n\n# 3. 检查运行时就绪状态\n/seo doctor\n\n# 4. 对目标网站执行全站审计\n/seo audit https://example.com",
+          "caption": "来源：README「Install」与「Commands」命令组"
+        },
+        {
+          "type": "list",
+          "items": [
+            "首次运行前必须执行 `/seo setup`，它会创建隔离的 Python 运行时并下载 Chromium，这一步需要网络且耗时较长，README 明确说明这是「isolated Python runtime and Chromium」。",
+            "`/seo doctor` 只做检查、不修改系统，建议在每次审计前跑一遍，确认运行时没有因环境变化而失效。",
+            "审计输出为 Markdown、PDF 和 JSON 文件，保存在本地工作目录，不会上传到第三方服务；README 的定价对比表里明确写了「Your data stays with you: Yes」。",
+            "如果只需要单页深度分析，用 `/seo page <url>` 代替全站审计，速度更快；README 将其列为「Deep single-page analysis」。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "未关闭 Issue 与 PR 共 31 个，最新 Release v2.6.2 发布于 2026-11-15，最近推送为 2026-11-15，说明项目仍在快速迭代，但 Issue 积压量相对活跃度不算高。所以你要注意：提交 Issue 前先查已有讨论，避免重复；升级前查看 Releases 页面变更说明，防止破坏性变更影响你的自动化流程。",
+            "README 明确标注为免费开源插件，但项目主页指向 skool.com/ai-marketing-hub-pro 社区，且 README 中「Pricing」一节将 Claude SEO 与付费审计软件对比，并称「Free, with your Claude Code plan」。所以你要注意：项目借开源推广商业社区与 Claude Code 订阅，但核心功能本身 MIT 许可，不强制付费；若你所在机构对商业关联敏感，需评估社区参与带来的品牌影响。",
+            "README 中「How an audit works」一节提到需要安装 Chromium 和隔离 Python 运行时，`/seo setup` 会创建隔离环境。所以你要注意：在受限 CI 或容器环境中，首次运行需要网络下载依赖，可能被防火墙拦截；建议先执行 `/seo doctor` 检查运行时就绪状态，再跑完整审计。",
+            "项目依赖 Google API（GSC、PageSpeed、CrUX、Indexing、GA4）与第三方数据源（Moz、Bing、Common Crawl），README 未明确说明 API 密钥管理与配额限制。所以你要注意：生产环境使用前需自行配置凭据并监控配额，避免审计任务因限流中断。",
+            "README 声称 3888 个测试通过，但未公开测试覆盖范围与失败容忍度；同时项目为 2026-02-07 创建，不足一年，版本号仍为 v2.x，处于快速迭代期。所以你要注意：将审计结果用于客户交付前，建议在非生产站点先验证输出稳定性，并固定版本号。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "同类项目筛选"
+        },
+        {
+          "type": "kv",
+          "k": "coreyhaines31/marketingskills（★60560，MIT，JavaScript，最近推送 2026-11-11）",
+          "v": "同类。覆盖 CRO、文案、SEO、分析与增长工程，与 claude-seo 的 SEO 审计功能有重叠，但范围更广（含增长实验）。星数更高且近期有推送，适合需要营销全流程而非仅 SEO 审计的团队。"
+        },
+        {
+          "type": "kv",
+          "k": "Illyism/seo-skills（★1260，未声明许可证，JavaScript，最近推送 2026-11-12）",
+          "v": "同类。提供 30 个 SEO SKILL.md，含技术 SEO 审计、Ahrefs/DataForSEO SERP 工作流与 GEO，但星数低一个数量级，且许可证未声明，商业使用需谨慎。"
+        },
+        {
+          "type": "kv",
+          "k": "AgriciDaniel/claude-ads（★11059，MIT，Python，最近推送 2026-11-01）",
+          "v": "不同类。专注付费媒体投放（12 个广告平台），不解决 SEO 审计问题，不纳入替代方案。"
+        },
+        {
+          "type": "kv",
+          "k": "AgriciDaniel/claude-blog（★2762，MIT，Python，最近推送 2026-11-03）",
+          "v": "不同类。专注博客写作与质量评分，不覆盖技术 SEO 审计，不纳入替代方案。"
+        },
+        {
+          "type": "p",
+          "text": "选择判据：若你需要覆盖营销增长全链路（含 CRO 与实验设计），选 marketingskills；若你只需要纯 SEO 审计且希望 MIT 许可、有明确维护节奏，选本项目 claude-seo；若需在非 Claude Code 环境（Cursor、Codex）使用，可评估 seo-skills，但需先确认许可证合规。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "SEO 代理机构：README 明确面向「每周审计而非季度审计」的场景，且支持 SQLite 快照做变更监控，适合需要高频交付的团队。",
+            "SaaS、出版与电商公司的内部 SEO 团队：需要在上线前快速检查技术 SEO、Schema 与 AI 搜索可见性（GEO），项目提供 30 个命令覆盖这些维度。",
+            "独立 SEO 顾问：可在首次客户沟通时运行审计并产出可交付的 Markdown/PDF/JSON 报告，降低提案成本。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "需要完全离线或严格网络隔离环境的团队：`/seo setup` 需下载 Chromium 与 Python 依赖，且部分扩展依赖外部 API（Google、Moz、Bing），无法在纯内网运行。",
+            "对版本稳定性要求极高、不能接受快速迭代的项目：项目创建不足一年，v2.x 阶段且存在 31 个未关闭 Issue，破坏性变更风险需自行评估。",
+            "仅需付费媒体投放或博客写作的团队：claude-ads 与 claude-blog 是不同领域工具，本项目不解决这些需求。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/AgriciDaniel/claude-seo)",
+            "[README](https://github.com/AgriciDaniel/claude-seo)",
+            "[Releases 页面](https://github.com/AgriciDaniel/claude-seo/releases)",
+            "[Issues 页面](https://github.com/AgriciDaniel/claude-seo/issues)",
+            "[项目主页](https://www.skool.com/ai-marketing-hub-pro)",
+            "[替代候选 marketingskills 仓库](https://github.com/coreyhaines31/marketingskills)",
+            "[替代候选 seo-skills 仓库](https://github.com/Illyism/seo-skills)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-16。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "side": {
+    "repo": "yding-git/personal-edge-proxy",
+    "url": "https://github.com/yding-git/personal-edge-proxy",
+    "stars": 1217,
+    "language": "",
+    "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+    "why": "这套配置把Xray、Hysteria2、REALITY Vision、WARP和静态SOCKS5路由整合成多入多出代理，适合需要稳定科学上网且有多条线路冗余的个人用户。现在就用，因为配置清晰，能避免自行拼装导致的兼容问题。注意需要熟悉VPS和代理协议，且要按自己的网络环境调整入站出站规则。",
+    "kind": "代理配置整合工具",
+    "pushedAt": "2026-09-11"
+  },
+  "meta": {
+    "repo": "AgriciDaniel/claude-seo",
+    "stars": 29663,
+    "language": "Python",
+    "license": "MIT",
+    "lastCommit": "2026-11-15",
+    "openIssues": 31,
+    "version": "v2.6.2",
+    "trending": {
+      "window": "月榜",
+      "rank": 10,
+      "gained": 10402,
+      "unit": "本月"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 2119,
+    "codeBlocks": 4,
+    "minutes": 8.3,
+    "asOf": "2026-11-16"
+  }
+}

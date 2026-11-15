@@ -1,6 +1,27 @@
 {
-  "updated": "2026-11-15",
+  "updated": "2026-11-16",
   "issues": [
+    {
+      "date": "2026-11-16",
+      "title": "claude-seo：让 Claude Code 在终端里跑完整 SEO 审计",
+      "oneLiner": "一个给 Claude Code 用的开源 SEO 插件，输入网址，10 到 15 分钟输出按优先级排序的优化清单，覆盖技术 SEO、内容质量、结构化数据与 AI 搜索可见性。",
+      "category": "AI 工具 · SEO · Claude Code 插件",
+      "stars": 29663,
+      "repo": "AgriciDaniel/claude-seo",
+      "lenses": [
+        "AI"
+      ],
+      "side": {
+        "repo": "yding-git/personal-edge-proxy",
+        "url": "https://github.com/yding-git/personal-edge-proxy",
+        "stars": 1217,
+        "language": "",
+        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+        "why": "这套配置把Xray、Hysteria2、REALITY Vision、WARP和静态SOCKS5路由整合成多入多出代理，适合需要稳定科学上网且有多条线路冗余的个人用户。现在就用，因为配置清晰，能避免自行拼装导致的兼容问题。注意需要熟悉VPS和代理协议，且要按自己的网络环境调整入站出站规则。",
+        "kind": "代理配置整合工具",
+        "pushedAt": "2026-09-11"
+      }
+    },
     {
       "date": "2026-11-15",
       "title": "daily_stock_analysis：让 AI 每天替你盯盘，零成本推送决策仪表盘",
