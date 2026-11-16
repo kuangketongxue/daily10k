@@ -32,6 +32,8 @@ const SHELL = [
   'style.css',
   'favorites.js',
   'archive.js',
+  'ratings.js',
+  'rating-ui.js',
   'register-sw.js',
   'favicon.svg',
   'manifest.webmanifest',
