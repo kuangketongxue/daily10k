@@ -25,6 +25,8 @@ const CONFIG_FILE = join(ROOT, 'scripts', 'config.json');
 const POOL_FILE = join(ROOT, 'scripts', 'pool.json');
 // 收藏夹信号：由本机归档任务写入，是选品的第一优先来源
 const STARRED_FILE = join(ROOT, 'scripts', 'starred.json');
+// 打分纠偏信号：由本机归档任务从私有仓打分聚合而来，按主题加权/降权
+const RATINGS_FILE = join(ROOT, 'scripts', 'ratings.json');
 
 const cfg = existsSync(CONFIG_FILE) ? JSON.parse(readFileSync(CONFIG_FILE, 'utf8')) : {};
 const AI_KEY = process.env.AI_API_KEY || cfg.apiKey;
@@ -275,6 +277,40 @@ function loadStarred() {
   }
 }
 
+// ── 打分纠偏信号 ────────────────────────────────────────────────
+// 用户给每期打的 1~10 分，按主题聚合出的权重。打分是比 star 更直接的偏好：
+// star 只说「收了」，打分说「多喜欢」。权重有上下限，且样本少时折扣，
+// 防止几期打分就把选品带偏。文件由本机归档任务每周写入，Actions 只读。
+function loadRatingWeights() {
+  if (!existsSync(RATINGS_FILE)) return {};
+  try {
+    const j = JSON.parse(readFileSync(RATINGS_FILE, 'utf8'));
+    const lw = j && j.lensWeights && typeof j.lensWeights === 'object' ? j.lensWeights : {};
+    const out = {};
+    for (const [lens, v] of Object.entries(lw)) {
+      const w = Number(v && v.weight);
+      if (isFinite(w) && w > 0) out[lens] = w;
+    }
+    return out;
+  } catch {
+    log('scripts/ratings.json 解析失败，本日不启用打分纠偏');
+    return {};
+  }
+}
+
+// 候选主题命中打分权重的乘积（多个主题命中取最强的那个，避免叠加放大）。
+// 无打分信号时恒为 1，完全不改变原有选品。
+const RATINGS_WEIGHTS = loadRatingWeights();
+export function tasteFactor(themes) {
+  if (!RATINGS_WEIGHTS || !Object.keys(RATINGS_WEIGHTS).length) return 1;
+  let best = 1;
+  for (const t of (themes || [])) {
+    const w = RATINGS_WEIGHTS[t];
+    if (w && w > best) best = w;
+  }
+  return best;
+}
+
 const fresh = (iso, days) => {
   if (!iso) return false;
   const t = new Date(iso).getTime();
@@ -488,7 +524,8 @@ export async function rankCandidates(pool, heatScore) {
     // 兜底路径同样按「星数 > 前沿 > 生产力」加权，与主路径保持一致
     c.starsF = starsFactor(c.repo.stargazers_count);
     c.aiQuota = aiQuotaFactor(c.themes);
-    c.score = c.base * c.quality * boost * webBoost * c.starsF * c.aiQuota;
+    c.taste = tasteFactor(c.themes);
+    c.score = c.base * c.quality * boost * webBoost * c.starsF * c.aiQuota * c.taste;
   }
   // 没体检到的深度降级：只有在体检过的候选全被判定为配置包时才轮到它们
   for (const c of ranked.slice(10)) c.score = c.base * 0.15;
@@ -805,7 +842,8 @@ export async function findCandidate() {
     c.chart = chartFactor(c.heat);
     const q = 1 + ((c.quality || 1) - 1) * 0.3;
     c.qualityAdj = q;
-    c.score = utility * c.stars * c.frontier * c.productivity * q * c.aiQuota * c.chart;
+    c.taste = tasteFactor(c.themes);
+    c.score = utility * c.stars * c.frontier * c.productivity * q * c.aiQuota * c.chart * c.taste;
   }
   shortlist.sort((a, b) => b.score - a.score);
 
