@@ -64,6 +64,7 @@
       <a class="read-btn" id="t-link" href="article.html">阅读全文<span class="go" aria-hidden="true">→</span></a>
       <span class="today-fav-slot" id="t-fav"></span>
     </div>
+    <div class="today-rating-slot" id="t-rating"></div>
   </article>
   <a class="side" id="side" hidden aria-label="今日小众精选">
     <div class="side-top">
@@ -114,6 +115,8 @@
 }
 </script>
 <script src="favorites.js"></script>
+<script src="ratings.js"></script>
+<script src="rating-ui.js"></script>
 <script src="register-sw.js"></script>
 <script>
 fetch('data/index.json', { cache: 'no-cache' })
@@ -146,6 +149,11 @@ fetch('data/index.json', { cache: 'no-cache' })
       });
     document.getElementById('t-link').href = 'article.html?d=' + encodeURIComponent(it.date);
     mountFavButton(document.getElementById('t-fav'), it.date);
+    if (typeof mountRating === 'function') {
+      mountRating(document.getElementById('t-rating'), {
+        date: it.date, repo: it.repo, title: it.title, lenses: it.lenses, category: it.category
+      });
+    }
     renderSide(it.side);
     // 生成失败或还没跑完时，首页不能把旧文章冒充成今天的
     const bjToday = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
