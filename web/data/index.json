@@ -1,6 +1,27 @@
 {
-  "updated": "2026-11-17",
+  "updated": "2026-11-18",
   "issues": [
+    {
+      "date": "2026-11-18",
+      "title": "T3 Code：给编码智能体装一个统一控制台，手机也能批命令",
+      "oneLiner": "T3 Code 是一个开源控制平面，在本地统一驱动 Claude Code、Codex 等编码智能体，支持桌面、网页与手机远程审批命令。",
+      "category": "AI 开发工具 · 智能体编排 · 远程控制",
+      "stars": 64086,
+      "repo": "pingdotgg/t3code",
+      "lenses": [
+        "AI"
+      ],
+      "side": {
+        "repo": "yding-git/personal-edge-proxy",
+        "url": "https://github.com/yding-git/personal-edge-proxy",
+        "stars": 1218,
+        "language": "",
+        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+        "why": "它把Xray、Hysteria2、REALITY Vision、WARP等组件整合成一套多入站多出站的个人代理配置，省去逐个搭建的麻烦。适合需要稳定科学上网、同时想保留国内直连或分流需求的个人用户。注意配置涉及多协议和静态路由，需先了解基础概念，且依赖较新版本，建议在干净环境测试后再替换现有方案。",
+        "kind": "代理工具配置集",
+        "pushedAt": "2026-09-11"
+      }
+    },
     {
       "date": "2026-11-17",
       "title": "HyperFrames：让 AI 写 HTML，直接渲染成 MP4",

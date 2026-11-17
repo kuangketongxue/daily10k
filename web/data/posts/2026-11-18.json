@@ -1,0 +1,306 @@
+{
+  "date": "2026-11-18",
+  "title": "T3 Code：给编码智能体装一个统一控制台，手机也能批命令",
+  "oneLiner": "T3 Code 是一个开源控制平面，在本地统一驱动 Claude Code、Codex 等编码智能体，支持桌面、网页与手机远程审批命令。",
+  "category": "AI 开发工具 · 智能体编排 · 远程控制",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "编码智能体已经进入多工具并行时代。开发者可能在桌面跑 Claude Code，在另一个终端跑 Codex，在 Cursor 里开第三条线程。每个工具各有一套会话、一套权限确认、一套 Git 工作流。你盯着终端等它问\"这条命令能跑吗\"，然后切窗口、敲回车，再切回来。"
+        },
+        {
+          "type": "p",
+          "text": "T3 Code 把这一层收拢起来。它不替代任何智能体，而是**在它们之上加一个控制平面**：所有智能体仍跑在你自己的机器上，但线程、审批、文件改动、提交与推送，都汇入同一个界面。README 的原话是：\"T3 Code runs the coding agents on your machine and gives them one fast interface.\""
+        },
+        {
+          "type": "p",
+          "text": "这个界面的关键差异是**位置无关**。README 明确写道：\"Start a thread at your desk, then approve the next step from your phone.\"——你在工位发起任务，出门后掏出手机就能批准下一步。这不是远程桌面，而是把\"确认\"这个动作从终端里拆出来，放到一个专门为审批设计的移动界面上。"
+        },
+        {
+          "type": "p",
+          "text": "它解决的第二个痛点是**订阅割裂**。T3 Code 不转售 token，它驱动你已登录的智能体。README 的\"What you get\"第一条就是：\"Your subscriptions. T3 Code does not resell tokens. It drives the agents you are already signed in to.\"这意味着你不需要为这个控制台再付一份模型费用，也不存在中间商抽成。"
+        },
+        {
+          "type": "p",
+          "text": "第三个痛点是**切换成本**。在一条线程中间换模型，或者让 Claude 把任务交给 Codex，在原生 CLI 里需要手动搬运上下文。T3 Code 把\"换模型\"和\"换智能体\"做成了界面操作。README 说：\"Change models in the middle of a thread. Let Claude hand a task to Codex.\""
+        },
+        {
+          "type": "p",
+          "text": "它还有一个容易被忽视的定位：**不锁死你**。MIT 许可证，README 里专门有一段\"Wait, what are you selling me?\"，说明作者因为现有方案（Codex 桌面应用、Conductor、Claude Desktop、Cursor Glass）没达到他们的标准才自建，并承诺\"If we ever go the wrong direction, we want you to have everything you need to fork and build the tool that you want.\""
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "远程审批与移动指挥"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一台跑着智能体的电脑，加上手机上的 iOS/Android 应用，两者连同一局域网或通过 Tailscale/T3 Connect 组网。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "在手机上看到同一批线程，批准或拒绝命令执行，不需要坐在电脑前。README 的 hero 图就是手机应用里弹出\"approve a command from Codex\"的审批卡片。"
+        },
+        {
+          "type": "code",
+          "code": "# 在电脑上启动服务器（默认同时打开 Web 界面）\nt3\n# 然后手机 App 扫码或输地址连接，按 docs/user/remote-access.md 配置",
+          "caption": "来源：README 的 Command line 一节"
+        },
+        {
+          "type": "sub",
+          "text": "跨智能体交接任务"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一条正在进行的线程，以及至少两个已登录的智能体（如 Claude Code 和 Codex）。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "在界面里把任务从 Claude 交给 Codex，上下文随线程走。README 明确写了\"Let Claude hand a task to Codex\"，这是它区别于单智能体工具的核心能力。"
+        },
+        {
+          "type": "sub",
+          "text": "按线程隔离的 Git 工作流"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个 Git 仓库，以及一条需要改代码的线程。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "每个线程在自己的 worktree 里工作，你可以在界面里看 diff、提交、推送、开 PR，全部一键完成。README 说\"Each thread can work in its own worktree. Review the diff, then commit, push, and open a pull request with one button.\""
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "T3 Code 的架构核心是**一个本地服务器 + 多个客户端**。服务器跑在你运行智能体的机器上，负责与各个智能体的 CLI 或 ACP 协议通信；客户端（桌面、Web、iOS、Android）都连同一个服务器，因此看到完全相同的线程状态。README 明确说：\"One server, and every client shows the same threads.\""
+        },
+        {
+          "type": "p",
+          "text": "它通过**适配层**接入不同智能体。README 列出支持列表：Claude Code、Codex、Cursor、OpenCode、Grok Build、Antigravity、Kiro、Pi、Muse Code、fx，以及任何实现了 ACP（Agent Client Protocol）的智能体。判断依据是 README 的原话：\"It works with Claude Code, Codex, Cursor, OpenCode, Grok Build, Antigravity, Kiro, Pi, Muse Code, fx, and any ACP agent.\""
+        },
+        {
+          "type": "p",
+          "text": "权限审批是控制平面的核心机制。当智能体请求执行命令时，T3 Code 拦截请求并推送到已连接的客户端；你从任意端批准或拒绝，服务器把决定回传给智能体。README 的文档列表里有专门的 [Permission modes](./docs/user/permission-modes.md)，说明这不是一个硬编码的开关，而是可配置的模式体系。"
+        },
+        {
+          "type": "p",
+          "text": "远程访问走**网络层加密隧道**。README 提到两种方式：本地网络或 Tailscale，以及官方提供的 T3 Connect 服务。文档 [Remote access from a phone or another machine](./docs/user/remote-access.md) 专门讲这个。这意味着即使智能体跑在远程服务器上，你也能从手机安全地控制它。"
+        },
+        {
+          "type": "p",
+          "text": "性能被当作一等公民。README 说\"Performance is a feature here. We measure it, and we treat a dropped frame as a bug.\"——它不只是功能声明，而是有测量指标的工程约束。这与它作为控制平面的定位一致：如果界面卡顿，审批延迟，智能体就会停在等待状态。"
+        },
+        {
+          "type": "p",
+          "text": "代码库是 TypeScript，MIT 许可。架构文档在 [docs/internals/overview.md](./docs/internals/overview.md)，贡献指南要求先读 [CONTRIBUTING.md](./CONTRIBUTING.md)，功能请求需先经过 Ideas 讨论。这解释了为什么它能在 2026-02-08 创建后快速积累 64086 星：控制平面是刚需，而开放许可让社区能验证和扩展它。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "官方推荐路径是下载桌面应用，但命令行方式同样完整。以下命令均来自 README。"
+        },
+        {
+          "type": "code",
+          "code": "# macOS\nbrew install --cask t3-code\n\n# Windows\nwinget install T3Tools.T3Code\n\n# 或命令行安装（安装 t3 命令）\ncurl -fsSL https://t3.codes/install.sh | sh\n\n# 启动服务器并打开 Web 应用\nt3\n\n# 不安装，临时试一次\nnpx t3@latest",
+          "caption": "来源：README 的 Install 一节"
+        },
+        {
+          "type": "p",
+          "text": "安装后，你需要**至少一个已登录的智能体**。README 的示例是：安装 Claude Code 并运行 `claude auth login`，或安装 Codex CLI 并运行 `codex login`。各智能体的具体步骤在 [Provider setup](./docs/user/install.md#providers) 文档里。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "手机端需要单独安装 App（iOS 或 Android），然后按 [remote access](./docs/user/remote-access.md) 文档连接电脑；如果不在同一局域网，用 Tailscale 或 T3 Connect。",
+            "权限模式是可配置的，不是默认全放行。首次运行前建议读 [Permission modes](./docs/user/permission-modes.md)，按你的风险偏好设置审批策略。",
+            "如果智能体没出现在列表里，检查它是否实现了 ACP 协议；README 说任何 ACP 智能体都支持，但需要按 [outside-agents](./docs/user/outside-agents.md) 文档通过 MCP 接入。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭 Issue 与 PR 达 3499 个**，而项目创建于 2026-02-08，至今不足一年。以月均新增约 350 个的速度积累，说明维护者处理速度远跟不上反馈速度。你要注意：提交 issue 后可能长时间得不到回应，关键问题建议同时到 [Discord](https://discord.gg/jn4EGJjrvv) 或社区渠道反馈。",
+            "**最新 Release 为 v0.1.10（2026-11-17），版本号仍为 0.1.x**，且 README 明确提到 nightly builds。这属于开发者预览阶段，接口和行为可能频繁变化，破坏性变更难以避免。你要注意：升级前先读 [Releases 页面](https://github.com/pingdotgg/t3code/releases) 的变更说明，生产环境务必锁定版本。",
+            "**最近推送为 2026-11-17，即文章材料截止前一天**，项目仍在活跃开发。但活跃不等于稳定：3499 个未关闭项意味着维护者主要精力在修 bug 和加功能，而非沉淀文档或做兼容性承诺。你要注意：把 T3 Code 当作快速演进的工具，而不是长期稳定的平台。",
+            "**README 的贡献指南明确写着“We have limited review capacity”**，并建议功能请求先经讨论批准。这是官方承认的维护瓶颈。你要注意：不要指望大型 PR 会被快速合并，小而有针对性的修复更可能被接受。",
+            "**README 声明“We were inspired by existing solutions like the Codex desktop app, Conductor, Claude Desktop and Cursor Glass, but none met our bar”**，并强调“If we ever go the wrong direction, we want you to have everything you need to fork”。这是开源项目借社区验证商业方向的典型信号——项目由 T3 Tools 运营，有 iOS、Android、Web 客户端和商业服务（T3 Connect）。你要注意：核心控制面开源，但移动端、远程连接和托管服务可能依赖其商业基础设施，自托管时需评估这些依赖是否可替代。",
+            "**README 提到“Remote ready. Run agents on any machine. Connect over your local network, Tailscale, or T3 Connect”**。远程访问涉及凭据和权限，官方文档 [remote-access.md](./docs/user/remote-access.md) 有专门说明。你要注意：暴露到公网前必须理解其权限模型，建议先用 Tailscale 这类加密隧道，不要直接端口转发。",
+            "**README 的性能承诺是“We measure it, and we treat a dropped frame as a bug”**，但未给出具体基准数据。你要注意：在低配机器或高负载 agent 场景下，性能仍需自行验证，不要仅凭宣传语做选型。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "从候选项目中筛选，真正与 T3 Code 解决同一类问题（多 agent 统一控制与远程操作）的只有两个：**sno-ai/sno-station** 和 **dagoSte/squadra**。其余候选不属同类：`asgeirtj/system_prompts_leaks` 是系统提示词泄露库，与 agent 编排无关；`samber/cc-skills-golang` 是 Go 语言的 agentic skills 集合，不是控制面。"
+        },
+        {
+          "type": "sub",
+          "text": "sno-ai/sno-station"
+        },
+        {
+          "type": "kv",
+          "k": "仓库",
+          "v": "[仓库首页](https://github.com/sno-ai/sno-station)"
+        },
+        {
+          "type": "kv",
+          "k": "星数 / 许可证",
+          "v": "★1024 / Apache-2.0"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新",
+          "v": "2026-11-17（与 T3 Code 同日）"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景",
+          "v": "当 Claude Code 达到用量上限时，由 Codex 从同一记忆接续任务；支持 Codex、Claude Code、Cursor、Hermes Agent、OpenClaw 组成小队，互相交接并审查代码。本地运行，开源。"
+        },
+        {
+          "type": "sub",
+          "text": "dagoSte/squadra"
+        },
+        {
+          "type": "kv",
+          "k": "仓库",
+          "v": "[仓库首页](https://github.com/dagoSte/squadra)"
+        },
+        {
+          "type": "kv",
+          "k": "星数 / 许可证",
+          "v": "★1282 / MIT"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新",
+          "v": "2026-11-12"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景",
+          "v": "协调 Claude、Codex 和 Cursor 窗口，共享任务、确认、预检查、并行测试、源码绑定证明与独立审查；内置技能可回放经验、简化代码、预测工作量；提供双语本地仪表盘和 MCP 插件。"
+        },
+        {
+          "type": "p",
+          "text": "选择判据：如果你需要**手机远程审批、跨设备同步、桌面/Web/移动三端一致**的体验，选 T3 Code；如果你更看重**多 agent 自动交接与记忆共享**，选 sno-station；如果你需要**团队协作流程（任务分配、并行测试、独立审查）**，选 squadra。T3 Code 的星数（64086）远超两者，社区规模和活跃度是其主要优势。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**经常在桌面和手机之间切换的开发者**——T3 Code 提供 iOS、Android、Web 客户端，且 README 明确支持“Start a thread at your desk, then approve the next step from your phone”。",
+            "**同时使用多个 agent（Claude Code、Codex、Cursor 等）并希望统一管理的人**——README 列出 10+ 种 agent 支持，并支持 ACP 协议扩展。",
+            "**需要远程控制开发机（如 NAS、云服务器、办公室工作站）的人**——README 支持本地网络、Tailscale 和 T3 Connect 三种远程方式。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**需要长期稳定、可审计的 CI/CD 集成**——项目处于 0.1.x 阶段，3499 个未关闭项，接口可能频繁变化，不适合作为生产流水线的固定组件。",
+            "**对数据安全要求极高、不能接受任何第三方服务依赖的组织**——README 提到 T3 Connect 远程方案，且移动端和 Web 客户端由官方托管；若需完全自托管且无外部依赖，需仔细评估。",
+            "**希望贡献大型功能或深度定制的人**——README 明确“Features need an approved discussion first”，维护者审查能力有限，大型改动很难被合并。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/pingdotgg/t3code)",
+            "[README](https://github.com/pingdotgg/t3code)",
+            "[Releases 页面](https://github.com/pingdotgg/t3code/releases)",
+            "[Issues 页面](https://github.com/pingdotgg/t3code/issues)",
+            "[项目主页](https://t3.codes)",
+            "[sno-station 仓库](https://github.com/sno-ai/sno-station)",
+            "[squadra 仓库](https://github.com/dagoSte/squadra)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-18。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "side": {
+    "repo": "yding-git/personal-edge-proxy",
+    "url": "https://github.com/yding-git/personal-edge-proxy",
+    "stars": 1218,
+    "language": "",
+    "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+    "why": "它把Xray、Hysteria2、REALITY Vision、WARP等组件整合成一套多入站多出站的个人代理配置，省去逐个搭建的麻烦。适合需要稳定科学上网、同时想保留国内直连或分流需求的个人用户。注意配置涉及多协议和静态路由，需先了解基础概念，且依赖较新版本，建议在干净环境测试后再替换现有方案。",
+    "kind": "代理工具配置集",
+    "pushedAt": "2026-09-11"
+  },
+  "meta": {
+    "repo": "pingdotgg/t3code",
+    "stars": 64086,
+    "language": "TypeScript",
+    "license": "MIT",
+    "lastCommit": "2026-11-17",
+    "openIssues": 3499,
+    "version": "v0.1.10",
+    "trending": {
+      "window": "月榜",
+      "rank": 3,
+      "gained": 34691,
+      "unit": "本月"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 2286,
+    "codeBlocks": 2,
+    "minutes": 7.2,
+    "asOf": "2026-11-18"
+  }
+}
