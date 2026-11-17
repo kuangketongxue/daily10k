@@ -1,0 +1,315 @@
+{
+  "date": "2026-11-17",
+  "title": "HyperFrames：让 AI 写 HTML，直接渲染成 MP4",
+  "oneLiner": "一个开源框架，让 AI 编码代理把 HTML、CSS 和动画确定性渲染为 MP4 视频，适合生成产品演示、解释动画和社交媒体短片。",
+  "category": "AI 代理 · 视频渲染 · HTML",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "传统视频制作依赖时间轴编辑器，素材、动效、字幕层层堆叠，改一帧往往要重排整条时间线。对于需要批量产出短视频的团队，这成了瓶颈：设计师忙不过来，开发者又不懂动效软件。"
+        },
+        {
+          "type": "p",
+          "text": "HyperFrames 换了一条路：把视频当作网页来写。它接受 HTML、CSS、媒体文件和可定位动画，输出确定性的 MP4。这意味着你可以在代码里定义每一帧的内容与位置，用版本控制管理视频，让 CI 自动渲染。"
+        },
+        {
+          "type": "quote",
+          "text": "Write HTML. Render video. Built for agents."
+        },
+        {
+          "type": "p",
+          "text": "这句 README 开篇语点明了设计取向：**面向代理**。项目为 Claude Code、Codex、Cursor 等编码代理提供了 9 个技能（skills），代理按技能描述的生产循环工作——规划、写 HTML、接动画、加媒体、lint、预览、渲染。人类只下指令，代理完成中间全部环节。"
+        },
+        {
+          "type": "p",
+          "text": "对个人开发者，这意味着不用学 After Effects 也能产出专业动态图形；对团队，视频可以进 Git 仓库、走 code review、用脚本批量生成。截至 2026 年 11 月，项目已获 85232 星、7893 次 fork，本月新增 20459 星，登上 GitHub Trending 月榜第 8 名，热度说明这套思路正被广泛验证。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "用 AI 代理批量生成产品介绍视频"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一句自然语言指令，如“创建一个 10 秒产品介绍，带淡入标题、背景视频和轻柔背景音乐”"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "一个可编辑的 HyperFrames 项目，含 HTML 源文件、动画定义和媒体引用；运行渲染命令即可得到 MP4"
+        },
+        {
+          "type": "code",
+          "code": "claude plugin marketplace add heygen-com/hyperframes\nclaude plugin install hyperframes@hyperframes",
+          "caption": "来源：README「With an AI coding agent」"
+        },
+        {
+          "type": "p",
+          "text": "安装后，在 Claude Code 里用 `/hyperframes:hyperframes` 唤起技能。技能会指导代理完成从规划到渲染的完整流程，你只需审阅最终成片。"
+        },
+        {
+          "type": "sub",
+          "text": "把现有视频逆向成可编辑项目"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "任意视频文件——动态图形、口播、实拍或 AI 生成素材"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "一个 HyperFrames 项目，逐帧对照原片校验，可修改文字、颜色、布局后重新渲染"
+        },
+        {
+          "type": "p",
+          "text": "`/reverse-any-video` 技能负责这条路径，适合把旧广告、竞品样片或客户提供的成片转成可维护的源文件。此功能属 HyperFrames Pro 计划。"
+        },
+        {
+          "type": "sub",
+          "text": "用 CLI 手动控制渲染"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个项目目录，内含 HTML 模板和动画定义"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "浏览器预览（带热重载）或最终 MP4 文件"
+        },
+        {
+          "type": "code",
+          "code": "npx hyperframes init my-video\ncd my-video\nnpx hyperframes preview      # preview in browser with live reload\nnpx hyperframes render       # render to MP4",
+          "caption": "来源：README「Manually with the CLI」"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "核心思路是**把视频帧当作网页帧来渲染**。HyperFrames 接收 HTML、CSS、媒体和可定位动画，通过无头浏览器（Puppeteer）逐帧截图，再用 FFmpeg 编码为 MP4。因为每一帧都来自确定的 DOM 状态，同一份源码在任何机器上渲染结果一致。"
+        },
+        {
+          "type": "p",
+          "text": "架构上分为三层。**技能层**：9 个 skills 封装生产流程，其中 `/hyperframes` 是核心契约，包含渲染约定与工作循环，并指向格式、动效、外观、字幕、整片与分镜等参考文档；`/hyperframes-cli` 按任务拆解 CLI 用法——脚手架、检查、看帧、编辑时间线、预览、本地或云端渲染、分享、项目历史。**注册表层**：`/hyperframes-registry` 提供约 450 个现成块与组件，安装为可编辑源码，覆盖转场、叠层、标题、动态文字、字幕、图表、地图、3D、运镜，手写任何具名视觉前应先查它。**运行时**：`hyperframes` CLI 负责初始化项目、启动预览服务器、调用渲染管线。"
+        },
+        {
+          "type": "p",
+          "text": "这种分层让代理只做两件事：按技能指引生成 HTML，再调 CLI 渲染。人类不碰渲染细节，但可以随时打开生成的 HTML 手动微调——这正是“可编辑视频”的含义。"
+        },
+        {
+          "type": "p",
+          "text": "项目用 TypeScript 编写，要求 Node.js 22+ 和 FFmpeg，许可证为 Apache-2.0。最新版本 v0.9.58 发布于 2026 年 11 月 16 日，创建于同年 3 月，8 个月内迭代近 60 个版本，开发节奏紧凑。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "两种方式：**用 AI 代理**或**手动 CLI**。代理方式适合不想记命令的人，手动方式适合脚本化与 CI。"
+        },
+        {
+          "type": "code",
+          "code": "# 方式一：安装 Claude Code 插件\nclaude plugin marketplace add heygen-com/hyperframes\nclaude plugin install hyperframes@hyperframes\n\n# 方式二：安装独立 skills（含 OpenCode 等代理）\nnpx skills add heygen-com/hyperframes\n\n# 方式三：纯 CLI 手动使用\nnpx hyperframes init my-video\ncd my-video\nnpx hyperframes preview\nnpx hyperframes render",
+          "caption": "来源：README「Quick Start」"
+        },
+        {
+          "type": "p",
+          "text": "安装后，在 Claude Code 里输入 `/hyperframes:hyperframes` 即可调用。独立安装时，`npx hyperframes init` 只装核心集（`/hyperframes`、`/hyperframes-cli`、`/hyperframes-registry`、`/media-use`、`/reverse-any-video`、`/style-sampling`），不会动你已有的技能；`/figma`、`/slideshow`、`/remotion-to-hyperframes` 按需用 `npx hyperframes skills update <name>` 安装。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "需要 Node.js 22+ 和 FFmpeg，二者缺一不可。",
+            "代理安装时，`skills add` 解析的是 skills.sh 注册表，可能滞后于 main 分支数小时；要匹配 CLI 版本，用 `npx hyperframes skills update`。",
+            "项目本地安装应从视频项目目录运行；从 HyperFrames 仓库根目录运行会覆盖未提交的 skills 编辑，建议用全局安装。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭 Issue 与 PR 共 285 个**，而项目创建于 2026-03-10，距今仅约 8 个月。这意味着平均每天有超过 1 个问题未解决，且项目仍处于快速迭代期。所以你要注意：在采用前应自行检查这些 issue 是否涉及你依赖的核心功能，并做好频繁升级的准备。",
+            "**最新 Release 为 v0.9.58（2026-11-16）**，版本号仍为 0.x，属于开发者预览阶段。README 中明确要求 Node.js 22+ 和 FFmpeg，且 CLI 与 skills 的安装方式随版本变化（如 `npx hyperframes skills update` 与 `skills add` 行为不同）。所以你要注意：生产环境需锁定版本，并验证升级后的渲染结果是否与旧版一致。",
+            "**最近推送为 2026-11-17**，与最新 Release 仅相隔一天，说明主分支更新频繁，可能存在未发布的新特性或破坏性变更。所以你要注意：不要直接依赖 `main` 分支，应使用 release tag 或锁定 npm 版本。",
+            "**README 提到 HyperFrames Pro 功能**（如 `/reverse-any-video` 和 `/style-sampling` 技能），且 Studio 的 Pro 计划会接入 HeyGen 的付费模型。项目本身是 Apache-2.0 开源，但部分高级能力可能受商业授权限制。所以你要注意：若你的工作流依赖这些 Pro 功能，需评估商业许可成本。",
+            "**README 指出 `skills add` 会解析 skills.sh 注册表，可能滞后于 main 分支数小时**，且项目内安装器可能覆盖未提交的编辑。所以你要注意：在 CI 或团队协作环境中，应使用 `npx hyperframes skills update` 而非 `skills add`，并避免在项目目录内运行全局安装。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "在 GitHub 同类搜索中，真正与 HyperFrames 解决同一问题（HTML 转视频、面向 AI 代理、可编辑运动图形）的候选有两个，按星数和近期推送筛选如下。"
+        },
+        {
+          "type": "sub",
+          "text": "nexu-io/html-video"
+        },
+        {
+          "type": "kv",
+          "k": "仓库：",
+          "v": "[仓库首页](https://github.com/nexu-io/html-video)"
+        },
+        {
+          "type": "kv",
+          "k": "星数：",
+          "v": "4847"
+        },
+        {
+          "type": "kv",
+          "k": "许可证：",
+          "v": "Apache-2.0"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新：",
+          "v": "2026-11-16"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景：",
+          "v": "需要将 HTML、CSS 与数据转换为 MP4，且希望使用可插拔渲染引擎、21 个模板和 AI 配乐，但不需要 HyperFrames 的 450 个组件库或完整 skills 体系。"
+        },
+        {
+          "type": "sub",
+          "text": "nexu-io/openmotion"
+        },
+        {
+          "type": "kv",
+          "k": "仓库：",
+          "v": "[仓库首页](https://github.com/nexu-io/openmotion)"
+        },
+        {
+          "type": "kv",
+          "k": "星数：",
+          "v": "10064"
+        },
+        {
+          "type": "kv",
+          "k": "许可证：",
+          "v": "Apache-2.0"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新：",
+          "v": "2026-11-16"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景：",
+          "v": "需要将参考视频重建为可编辑运动图形，并导出适用于 YouTube、Shorts、Reels、TikTok 的 MP4；提供 300+ Motion.md 指南和 22 个代理支持，但它是全栈视频工作室，比 HyperFrames 更重。"
+        },
+        {
+          "type": "p",
+          "text": "选择判据：如果你的核心需求是**从零写 HTML 并渲染为确定性 MP4**，且希望用 AI 代理驱动完整生产循环（计划、编写、动画、渲染），选 HyperFrames；如果你只需要**轻量 HTML 转视频**且不需要 450 个组件库，选 html-video；如果你需要**从参考视频逆向重建**并导出社媒格式，选 openmotion。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "推荐使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "使用 Claude Code、Codex、Cursor、Gemini CLI 等支持 skills 的 AI 编码代理的团队——README 明确提供插件与 skills 安装方式，且 9 个技能覆盖从规划到渲染的完整流程。",
+            "需要为视频生成建立**可复现、确定性**生产管线的团队——HyperFrames 将 HTML、CSS 与可寻址动画渲染为 MP4，适合需要版本控制与 CI 集成的场景。",
+            "需要大量现成视觉组件（约 450 个块）且希望用 HTML 而非专有格式制作运动图形的开发者——组件库可编辑为源码，便于定制。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "需要**生产级稳定性**且无法承受频繁破坏性变更的团队——项目仍为 0.x 版本，285 个未关闭 issue，且最近一次推送与 Release 仅隔一天，API 可能变动。",
+            "仅需一次性将少量 HTML 转为视频、不想引入完整 skills 体系或 450 组件库的轻量场景——html-video 更简洁，且同样为 Apache-2.0。",
+            "依赖商业 HeyGen 模型（如高级语音、图像、音乐）且预算有限的团队——Pro 计划与部分技能（如 `/reverse-any-video`）可能涉及付费，需提前评估成本。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/heygen-com/hyperframes)（星数 85232，Fork 7893，创建 2026-03-10，最近推送 2026-11-17，许可证 Apache-2.0）",
+            "[README](https://github.com/heygen-com/hyperframes)（引用安装命令、skills 列表、Node.js 22+ 与 FFmpeg 要求、Pro 功能说明）",
+            "[Releases 页面](https://github.com/heygen-com/hyperframes/releases)（最新版本 v0.9.58，2026-11-16）",
+            "[Issues 页面](https://github.com/heygen-com/hyperframes/issues)（未关闭 Issue 与 PR 共 285 个）",
+            "[项目主页](https://hyperframes.heygen.com)（文档、示例、目录）",
+            "[替代候选：nexu-io/html-video](https://github.com/nexu-io/html-video)（星数 4847，Apache-2.0，最近推送 2026-11-16）",
+            "[替代候选：nexu-io/openmotion](https://github.com/nexu-io/openmotion)（星数 10064，Apache-2.0，最近推送 2026-11-16）"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-17。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "side": {
+    "repo": "yding-git/personal-edge-proxy",
+    "url": "https://github.com/yding-git/personal-edge-proxy",
+    "stars": 1218,
+    "language": "",
+    "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+    "why": "它把Xray、Hysteria2、WARP等组合成可复用的个人代理配置，解决多入站多出站路由的编排难题。适合需要稳定科学上网、但不想折腾复杂配置的独立开发者或小团队。注意它依赖较新的协议特性，需确认客户端兼容，且配置模板需按自身网络环境调整。",
+    "kind": "网络代理配置模板",
+    "pushedAt": "2026-09-11"
+  },
+  "meta": {
+    "repo": "heygen-com/hyperframes",
+    "stars": 85232,
+    "language": "TypeScript",
+    "license": "Apache-2.0",
+    "lastCommit": "2026-11-17",
+    "openIssues": 285,
+    "version": "v0.9.58",
+    "trending": {
+      "window": "月榜",
+      "rank": 8,
+      "gained": 20459,
+      "unit": "本月"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 1997,
+    "codeBlocks": 3,
+    "minutes": 7.2,
+    "asOf": "2026-11-17"
+  }
+}

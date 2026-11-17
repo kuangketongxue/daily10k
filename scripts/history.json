@@ -24,5 +24,6 @@
   "openai/codex-security",
   "google/elephant-goldfish-model",
   "ZhuLinsen/daily_stock_analysis",
-  "AgriciDaniel/claude-seo"
+  "AgriciDaniel/claude-seo",
+  "heygen-com/hyperframes"
 ]
