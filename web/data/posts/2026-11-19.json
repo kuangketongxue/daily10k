@@ -1,0 +1,309 @@
+{
+  "date": "2026-11-19",
+  "title": "plannotator：给 AI 代理装一个可批注的审查界面",
+  "oneLiner": "本地浏览器应用，让你对 AI 代理生成的计划、文档和代码差异进行批注，并将反馈直接送回代理。",
+  "category": "AI 开发工具 · 代码审查 · 代理工作流",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "AI 编码代理正在从单轮问答走向多步执行，但开发者与代理之间的交互仍停留在文本终端：代理输出计划、修改文件、生成 HTML 原型，你只能读终端日志，然后手动把修改意见敲回提示词。这个过程既慢又容易丢失上下文，尤其是当代理同时推进多个任务时。"
+        },
+        {
+          "type": "p",
+          "text": "Plannotator 把审查面从终端搬到浏览器。它通过插件、钩子和命令直接接入代理，当代理提出决策、计划、HTML 或完成工作时，应用会在浏览器中打开，你可以在上面标记、评论，并将反馈直接发送给代理，让代理据此行动。"
+        },
+        {
+          "type": "quote",
+          "text": "It plugs directly into your agent through plugins, hooks and commands. When the agent proposes a decision, plan, html, or finishes working, the app opens in your browser and you mark it up, comment, and send feedback directly to the agent for it to act on it."
+        },
+        {
+          "type": "p",
+          "text": "项目定位为本地、基于浏览器的审查界面，支持 Claude Code、Codex、Copilot CLI、Gemini CLI、OpenCode、Kiro、Droid、Amp、DeepSeek Harness 和 Pi 等编码代理，也支持 Grok Bot、Muse、Hermes、OpenClaw 等个人助手。截至 2026 年 11 月 18 日，仓库已获得 13437 颗星和 1351 次 fork，位列 GitHub Trending 月榜第 9 名，本月新增 3475 星，说明开发者群体对这类工作流有真实需求。"
+        },
+        {
+          "type": "p",
+          "text": "与同类项目相比，obsidian-skills（★53171）侧重教代理使用 Obsidian 的 CLI 和开放格式，agentsys（★1019）和 opencode-power-pack（★557）提供技能包，herdr-reviewr（★1009）在终端窗格中审查 diff。Plannotator 的差异在于把审查面做成完整的图形界面，并覆盖从计划、文档到代码差异的多种产物。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "审查代理生成的计划与文档"
+        },
+        {
+          "type": "p",
+          "text": "代理生成计划或规格后，你可以直接在浏览器中打开 Markdown 文件进行批注。批注内容会作为反馈发送回代理，代理在下一轮执行时读取这些反馈。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个 Markdown 文件、一个目录，或一个 URL"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "浏览器中的可批注文档，反馈直接回到代理会话"
+        },
+        {
+          "type": "code",
+          "code": "/plannotator-annotate README.md                  # Local markdown file\n/plannotator-annotate src/                       # Browse and annotate files in a folder\n/plannotator-annotate https://docs.rs/…          # Fetch and annotate any URL\n/plannotator-annotate report.html --render-html  # Render HTML as-is instead of converting\n/plannotator-last                                # Annotate the agent's last message",
+          "caption": "来源：README 的 Commands 章节"
+        },
+        {
+          "type": "sub",
+          "text": "审查代码差异与 PR"
+        },
+        {
+          "type": "p",
+          "text": "你可以审查本地未提交的更改或远程 PR。在 diff 上直接评论、建议代码，评论会回到代理。支持 Git、GitButler、Jujutsu（jj）、Perforce（p4）、GitHub 和 GitLab。对于大型变更，可以启动引导式审查：代理将 diff 按重要性排序，分成章节，最重要的部分排在最前。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "未提交的更改，或一个 GitHub PR / GitLab MR 的 URL"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "带文件树和并排 diff 的审查界面，评论直接发送给代理"
+        },
+        {
+          "type": "code",
+          "code": "/plannotator-review                    # Review uncommitted changes\n/plannotator-review <github-pr-url>    # Review a GitHub pull request\n/plannotator-review <gitlab-mr-url>    # Review a GitLab merge request\nplannotator review --gitbutler         # Review an active GitButler workspace\nplannotator review --patch-file reading.diff # Review a static caller-supplied unified diff",
+          "caption": "来源：README 的 Commands 章节"
+        },
+        {
+          "type": "sub",
+          "text": "审查 HTML 产物与本地站点"
+        },
+        {
+          "type": "p",
+          "text": "代理生成的 HTML 文件或本地运行的站点可以通过本地代理打开，你在真实页面上评论，热重载保持可用。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个本地地址，如 http://localhost:5173"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "在真实渲染页面上批注，反馈直接回到代理"
+        },
+        {
+          "type": "code",
+          "code": "plannotator annotate http://localhost:5173",
+          "caption": "来源：README 的 HTML artifacts 章节"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Plannotator 的架构可以概括为三层：接入层、审查面、反馈回路。接入层通过插件、钩子和命令与各代理连接，审查面是本地浏览器应用，反馈回路将批注内容送回代理会话。"
+        },
+        {
+          "type": "p",
+          "text": "接入层针对不同代理有不同的适配方式。对于 Claude Code，安装器会配置插件市场；对于 Codex，计划审查通过实验性的 Stop 钩子自动启用；对于 Pi 和 OpenCode，通过插件连接。其他代理通过 MCP 协议接入，命令为 `plannotator inbox mcp`。"
+        },
+        {
+          "type": "p",
+          "text": "Plannotator Inbox 是这一架构的核心组件。它是一个本地窗口，代理在其中留下消息、问题、文件和引导式审查，同时继续工作。你回答一个问题、批注一个文件，按发送即可，不需要保持代理会话打开，回复会回到发起请求的会话。"
+        },
+        {
+          "type": "code",
+          "code": "plannotator inbox\nplannotator inbox mcp\nplannotator inbox --help",
+          "caption": "来源：README 的 Plannotator Inbox 章节"
+        },
+        {
+          "type": "p",
+          "text": "终端侧还有 Herdr Annotate，将 Plannotator 风格的审查带入终端：批注终端文本、审查 Markdown 文档和代理回复，反馈作为代理的下一条消息发送回去。批注保存在 Plannotator 数据目录中，终端审查和应用审查可以叠加。"
+        },
+        {
+          "type": "code",
+          "code": "herdr plugin install plannotator/herdr-annotate",
+          "caption": "来源：README 的 Herdr Annotate 章节"
+        },
+        {
+          "type": "p",
+          "text": "分享机制支持将计划以链接形式发送给队友。小分享直接嵌入链接，大分享先加密再上传，7 天后过期。可用 `PLANNOTATOR_SHARE=disabled` 关闭分享功能。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "安装器覆盖几乎所有代理。它安装 plannotator 二进制，自动检测已安装的代理，并为每个代理配置钩子、技能和斜杠命令。"
+        },
+        {
+          "type": "code",
+          "code": "# macOS / Linux / WSL\ncurl -fsSL https://plannotator.ai/install.sh | bash\n\n# Windows PowerShell\nirm https://plannotator.ai/install.ps1 | iex",
+          "caption": "来源：README 的 Install 章节"
+        },
+        {
+          "type": "p",
+          "text": "如果只需要二进制，可以传入 --minimal 跳过所有技能、钩子、斜杠命令和每个代理的配置。"
+        },
+        {
+          "type": "code",
+          "code": "curl -fsSL https://plannotator.ai/install.sh | bash -s -- --minimal",
+          "caption": "来源：README 的 Install 章节"
+        },
+        {
+          "type": "list",
+          "items": [
+            "安装器从 GitHub Releases 下载二进制。完整安装可能联系 GitHub 获取版本解析和代理文件，以及 npm 获取 Pi、额外技能或托管代理终端运行时。指定 --version 只跳过 GitHub API 版本解析，不跳过下载。",
+            "对于 Claude Code，安装后需执行 /plugin marketplace add backnotprop/plannotator，然后 /plugin install plannotator@plannotator，并重启 Claude Code。",
+            "对于 Codex，计划审查通过实验性 Stop 钩子自动启用（macOS/Linux/WSL；原生 Windows 上钩子为实验性，安装器会打印手动设置步骤）。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭 Issue 与 PR 达 203 个**，且最新版本 v0.29.0 于 2026-11-18 发布，同日有推送。项目处于高频迭代期，你需注意：提交与发布节奏快，升级后行为可能变化，生产环境应锁定版本并保留回滚路径。",
+            "**版本号为 v0.29.0，仍为 0.x**，按语义化版本约定，0.x 阶段允许不兼容变更。README 中 Codex 的 `Stop` hook 被明确标注为「experimental」，Windows 原生环境下 Codex hooks 需手动配置。你需注意：在核心工作流上依赖此项目前，应先在非关键分支验证升级，并关注 Release Notes 中的破坏性变更说明。",
+            "**安装脚本会联网下载二进制并可能联系 GitHub API 与 npm**（用于 Pi、额外 skills 或托管 agent-terminal 运行时）。README 明确要求查看隐私政策了解网络边界。你需注意：在受限网络或安全要求高的环境中，应使用 `--minimal` 安装并审计网络请求，或自行分发二进制。",
+            "**分享功能默认开启**：小型分享直接嵌入链接，大型分享加密上传后 7 天过期，且「Anyone with the full link can read it」。你需注意：分享敏感计划或代码前，应确认链接接收方，或设置 `PLANNOTATOR_SHARE=disabled` 关闭分享。",
+            "**README 中多处指向商业产品**：官方站点 plannotator.ai、Workspaces 团队功能（含 waitlist）、托管服务及隐私政策页面。开源仓库本身为 Apache-2.0，但生态明显服务于商业产品。你需注意：若团队政策禁止依赖商业服务，应仅使用本地功能，避免启用分享与 Workspaces。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "真正同类候选：obsidianmd/obsidian-skills"
+        },
+        {
+          "type": "kv",
+          "k": "仓库",
+          "v": "[obsidianmd/obsidian-skills](https://github.com/obsidianmd/obsidian-skills)"
+        },
+        {
+          "type": "kv",
+          "k": "星数",
+          "v": "53171（远超本项目的 13437）"
+        },
+        {
+          "type": "kv",
+          "k": "许可证",
+          "v": "MIT"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新",
+          "v": "2026-11-17（推送活跃）"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景",
+          "v": "在 Obsidian 生态内为 agent 提供 skills，教 agent 使用 Obsidian CLI 与开放格式（Markdown、Bases、JSON Canvas）。适合已深度使用 Obsidian 做笔记与知识管理的团队，将 agent 的产物直接落入 Obsidian 工作流。"
+        },
+        {
+          "type": "p",
+          "text": "选择判据：若你的核心诉求是「把 agent 的反馈与标注沉淀进 Obsidian 知识库」，选 obsidian-skills；若你需要在浏览器中对任意 HTML、diff、PR 做标注并回传 agent，且不依赖 Obsidian，选本项目。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "使用 Claude Code、Codex、OpenCode、Pi 等多 agent 并行工作、需要统一审阅入口的团队——本项目通过插件、hooks、MCP 接入这些 agent，Inbox 可聚合多路消息。",
+            "需要把代码评审与 agent 反馈闭环的开发者：支持 Git、GitButler、Jujutsu、Perforce、GitHub、GitLab，且评论可直接回传 agent 作为下一轮输入。",
+            "愿意接受 0.x 快速迭代、能跟随版本升级并处理破坏性变更的个人或小团队。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "建议谨慎或避免使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "对网络出口有严格限制、无法接受安装脚本联网下载或分享功能上传数据的环境——需用 `--minimal` 并审计网络，或放弃。",
+            "需要长期稳定、少维护的评审工具的生产团队：203 个未关闭 Issue/PR 与 0.x 版本意味着维护与升级成本不低。",
+            "已深度绑定 Obsidian 且不需要浏览器标注 HTML/PR 的团队：obsidian-skills 星数更高、更新活跃，更贴合其工作流。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/backnotprop/plannotator)",
+            "[README](https://github.com/backnotprop/plannotator/blob/main/README.md)",
+            "[Releases 页面](https://github.com/backnotprop/plannotator/releases)",
+            "[Issues 页面](https://github.com/backnotprop/plannotator/issues)",
+            "[项目主页](https://plannotator.ai)",
+            "[obsidian-skills 仓库](https://github.com/obsidianmd/obsidian-skills)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-19。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "side": {
+    "repo": "yding-git/personal-edge-proxy",
+    "url": "https://github.com/yding-git/personal-edge-proxy",
+    "stars": 1218,
+    "language": "",
+    "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+    "why": "这套配置把 Xray、Hysteria2、REALITY Vision、WARP 和可选 SOCKS5 路由整合成多入多出代理，适合需要稳定访问海外服务、同时兼顾国内直连的个人用户。如果你已有 VPS 但不想手动拼装复杂规则，现在就能用它省下数小时配置时间。注意项目文档可能不够详尽，需自行验证 TLS 证书和端口冲突，且部分协议对客户端版本有要求。",
+    "kind": "代理配置方案",
+    "pushedAt": "2026-09-11"
+  },
+  "meta": {
+    "repo": "backnotprop/plannotator",
+    "stars": 13437,
+    "language": "TypeScript",
+    "license": "Apache-2.0",
+    "lastCommit": "2026-11-18",
+    "openIssues": 203,
+    "version": "v0.29.0",
+    "trending": {
+      "window": "月榜",
+      "rank": 9,
+      "gained": 3475,
+      "unit": "本月"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 1923,
+    "codeBlocks": 7,
+    "minutes": 10.1,
+    "asOf": "2026-11-19"
+  }
+}

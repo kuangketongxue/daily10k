@@ -1,6 +1,27 @@
 {
-  "updated": "2026-11-18",
+  "updated": "2026-11-19",
   "issues": [
+    {
+      "date": "2026-11-19",
+      "title": "plannotator：给 AI 代理装一个可批注的审查界面",
+      "oneLiner": "本地浏览器应用，让你对 AI 代理生成的计划、文档和代码差异进行批注，并将反馈直接送回代理。",
+      "category": "AI 开发工具 · 代码审查 · 代理工作流",
+      "stars": 13437,
+      "repo": "backnotprop/plannotator",
+      "lenses": [
+        "AI"
+      ],
+      "side": {
+        "repo": "yding-git/personal-edge-proxy",
+        "url": "https://github.com/yding-git/personal-edge-proxy",
+        "stars": 1218,
+        "language": "",
+        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+        "why": "这套配置把 Xray、Hysteria2、REALITY Vision、WARP 和可选 SOCKS5 路由整合成多入多出代理，适合需要稳定访问海外服务、同时兼顾国内直连的个人用户。如果你已有 VPS 但不想手动拼装复杂规则，现在就能用它省下数小时配置时间。注意项目文档可能不够详尽，需自行验证 TLS 证书和端口冲突，且部分协议对客户端版本有要求。",
+        "kind": "代理配置方案",
+        "pushedAt": "2026-09-11"
+      }
+    },
     {
       "date": "2026-11-18",
       "title": "T3 Code：给编码智能体装一个统一控制台，手机也能批命令",
