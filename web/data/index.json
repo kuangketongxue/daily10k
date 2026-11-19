@@ -1,6 +1,27 @@
 {
-  "updated": "2026-11-19",
+  "updated": "2026-11-20",
   "issues": [
+    {
+      "date": "2026-11-20",
+      "title": "agent-browser：让 AI 智能体像操作终端一样驱动浏览器",
+      "oneLiner": "一个 Rust 编写的命令行工具，让 AI 智能体通过短命令序列驱动真实浏览器，完成网页操作与验证。",
+      "category": "浏览器自动化 · AI 智能体 · 命令行工具",
+      "stars": 52874,
+      "repo": "vercel-labs/agent-browser",
+      "lenses": [
+        "AI"
+      ],
+      "side": {
+        "repo": "yding-git/personal-edge-proxy",
+        "url": "https://github.com/yding-git/personal-edge-proxy",
+        "stars": 1220,
+        "language": "",
+        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+        "why": "这个仓库把Xray、Hysteria2、REALITY Vision、WARP和SOCKS5路由整合成一份可运行的配置模板，解决个人代理场景中多入口多出口的编排问题。适合需要自建代理、但不想从零研究协议组合的开发者。部署前需确认服务器内核版本和防火墙规则，并注意配置中的证书路径。",
+        "kind": "代理配置模板",
+        "pushedAt": "2026-09-11"
+      }
+    },
     {
       "date": "2026-11-19",
       "title": "plannotator：给 AI 代理装一个可批注的审查界面",

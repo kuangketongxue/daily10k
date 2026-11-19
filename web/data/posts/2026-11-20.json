@@ -1,0 +1,328 @@
+{
+  "date": "2026-11-20",
+  "title": "agent-browser：让 AI 智能体像操作终端一样驱动浏览器",
+  "oneLiner": "一个 Rust 编写的命令行工具，让 AI 智能体通过短命令序列驱动真实浏览器，完成网页操作与验证。",
+  "category": "浏览器自动化 · AI 智能体 · 命令行工具",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "AI 智能体要操作网页，通常需要一套完整的浏览器自动化框架，如 Playwright 或 Puppeteer。这些框架功能强大，但设计目标是给人类开发者编写测试脚本，而非给 AI 智能体在循环中逐条发指令。智能体需要的是：打开页面、读取当前状态、执行一个动作、再读取状态，如此往复。每次调用都启动一个浏览器进程，成本高且状态不连续。"
+        },
+        {
+          "type": "p",
+          "text": "agent-browser 把浏览器变成智能体可以逐条驱动的外设。**它的核心设计是：浏览器在命令之间保持打开，每一步只是一次短 shell 调用。** README 明确写道：“The browser stays open between commands, so each step is one short shell call.” 这解决了智能体循环中反复启动浏览器的开销问题，也让每一步的输入输出都是纯文本，便于大模型直接理解。"
+        },
+        {
+          "type": "p",
+          "text": "另一个痛点是**元素定位**。传统框架依赖 CSS 选择器或 XPath，智能体需要自己生成这些表达式，容易出错。agent-browser 的 `snapshot` 命令把页面转成紧凑文本，每个可交互元素带一个 `ref`（如 `@e1`）。智能体只需引用这个 ref 即可操作元素，无需理解页面结构。README 强调：“`snapshot` returns the page as compact text with a ref such as `@e1` for each element. The agent acts on a ref, reads the page again to check the result, and repeats.”"
+        },
+        {
+          "type": "p",
+          "text": "项目自 2026 年 1 月创建以来，已积累 52874 星、3697 fork，本月新增 8540 星，登上 GitHub Trending 月榜第 17 名。高热度背后，是 AI 智能体对可靠浏览器控制工具的迫切需求。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "给 AI 智能体提供稳定的浏览器操作原语"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个 URL 或一组操作指令，如 `open`、`snapshot`、`click`、`fill`。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "紧凑的页面快照（带 ref）、元素状态、URL、网络请求日志等纯文本结果，智能体可直接解析并决策下一步。"
+        },
+        {
+          "type": "code",
+          "code": "agent-browser open example.com\nagent-browser snapshot -i       # interactive elements, each with a ref\nagent-browser click @e1         # act on a ref from that snapshot\nagent-browser get url           # check the result\nagent-browser close",
+          "caption": "来源：README Quick start"
+        },
+        {
+          "type": "p",
+          "text": "这个循环——打开、快照、操作、验证——是智能体驱动浏览器的基本模式。`snapshot -i` 只列出可交互元素，减少 token 消耗。操作后通过 `get url` 或再次 `snapshot` 验证结果，形成闭环。"
+        },
+        {
+          "type": "sub",
+          "text": "作为 MCP 服务器，接入现有智能体框架"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "`agent-browser mcp` 启动一个 MCP 服务器，通过 stdio 与 MCP 客户端通信。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "标准的 MCP 工具接口，任何支持 MCP 的智能体（如 Claude Desktop、Cursor 等）都能直接调用浏览器能力。"
+        },
+        {
+          "type": "code",
+          "code": "agent-browser mcp",
+          "caption": "来源：README For AI agents 部分"
+        },
+        {
+          "type": "p",
+          "text": "MCP 是当前 AI 工具生态的标准协议。agent-browser 通过 `mcp` 子命令暴露全部浏览器操作，让智能体无需额外适配即可获得真实浏览器能力。"
+        },
+        {
+          "type": "sub",
+          "text": "给智能体提供与版本匹配的技能包"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "`agent-browser skills get core` 拉取核心技能说明。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "与当前 CLI 版本严格匹配的操作指南，智能体按指南执行即可，避免文档与实现脱节。"
+        },
+        {
+          "type": "code",
+          "code": "agent-browser skills get core                 # the core loop, refs, waiting, and common workflows\nagent-browser skills get core --ref commands  # one reference, such as the full command list\nagent-browser skills get core --full          # adds the full command reference and templates\nagent-browser skills list                     # specialized skills: electron, slack, dogfood, and more",
+          "caption": "来源：README For AI agents 部分"
+        },
+        {
+          "type": "p",
+          "text": "技能包机制解决了智能体提示词与工具版本不匹配的常见问题。README 指出：“The installed skill is a thin stub that tells the agent to load `agent-browser skills get core`, so its instructions always match the installed CLI.”"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "agent-browser 用 Rust 编写，采用**客户端-守护进程架构**。CLI 本身很薄，每条命令通过 Unix socket 或命名管道发送给后台 daemon。daemon 在第一条命令时启动，通过 Chrome DevTools Protocol（CDP）控制浏览器。每个 `--session` 对应一个独立的 daemon 和浏览器实例，会话之间互不干扰。"
+        },
+        {
+          "type": "p",
+          "text": "README 的 How it works 一节明确描述：“The CLI sends each command to a background daemon that starts on the first command and controls the browser over the Chrome DevTools Protocol. Each `--session` gets its own daemon and browser.” 这种设计让 CLI 进程可以随时退出，而浏览器保持运行，等待下一条命令。"
+        },
+        {
+          "type": "p",
+          "text": "默认使用 Chrome for Testing 作为浏览器引擎，但支持多种替代：通过 `--cdp` 或 `--auto-connect` 连接到已运行的 Chrome；用 `--engine` 选择 Lightpanda 或 Obscura 引擎；在 iOS 模拟器中驱动 Mobile Safari；或通过 Browserbase、Browserless、Browser Use、Kernel、AgentCore 等云服务商使用云端浏览器。这种可插拔的引擎设计，让智能体可以在本地快速迭代，在云端大规模并发。"
+        },
+        {
+          "type": "p",
+          "text": "**快照机制是核心抽象**。`snapshot` 将 DOM 转为无障碍树（accessibility tree），再压缩成紧凑文本，每个可交互元素分配一个 `ref`。ref 只在快照时刻有效——README 提醒：“Refs describe the page at the time of the snapshot. After navigation or a DOM change, take a new snapshot before using refs again.” 这避免了智能体使用过期引用操作已变化页面的问题。"
+        },
+        {
+          "type": "p",
+          "text": "命令覆盖范围广，从导航（`open`、`back`、`reload`）、交互（`click`、`fill`、`drag`、`upload`）、等待（`wait`）、捕获（`screenshot`、`pdf`、`record`）、网络状态（`cookies`、`network`）、调试（`console`、`trace`、`profiler`）到会话管理（`session`、`auth`）。README 的命令表列出 11 个命令组，覆盖智能体操作网页所需的全部能力。"
+        },
+        {
+          "type": "p",
+          "text": "daemon 默认在无命令一小时后关闭无头浏览器并退出，若配置了会话持久化则先保存状态。这避免了智能体崩溃后残留僵尸进程。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "code",
+          "code": "npm install -g agent-browser\nagent-browser install           # download Chrome for Testing (first time only)\nagent-browser open example.com\nagent-browser snapshot -i\nagent-browser click @e1\nagent-browser close",
+          "caption": "来源：README Install 与 Quick start"
+        },
+        {
+          "type": "list",
+          "items": [
+            "首次使用需运行 `agent-browser install` 下载 Chrome for Testing；Linux 下用 `--with-deps` 同时安装系统库。若不想全局安装，可用 `npx agent-browser open example.com`。",
+            "`snapshot` 返回的 ref 只在当时有效。导航或 DOM 变化后，必须重新执行 `snapshot` 再使用旧 ref，否则操作可能指向错误元素。",
+            "点击操作在目标被隐藏、禁用、超出视口或被遮挡（如 cookie 横幅）时会报错而非静默成功。需先处理遮挡元素，重新快照后重试。"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "安装完成后，可将技能包接入智能体。README 推荐在 `AGENTS.md` 中写入：“Use `agent-browser` for browser automation. Before the first use, run `agent-browser skills get core` and follow it.” 或通过 `npx skills add vercel-labs/agent-browser` 安装发现技能。"
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭的 Issue 与 PR 达 591 个**，而项目创建仅 10 个月（2026-01-11 创建），说明维护者响应速度可能跟不上社区反馈。所以你要注意：提交 Bug 前先搜索现有 Issue，避免重复；对关键路径的修复要有心理预期，可能等待较长时间。",
+            "**最近推送为 2026-11-19**，最新 Release 为 v0.43.0（2026-11-12），版本迭代频繁（10 个月 43 个版本），属于活跃开发期。所以你要注意：升级前务必阅读 [Releases 页面](https://github.com/vercel-labs/agent-browser/releases) 的变更日志，确认是否有破坏性变更（如命令改名、默认行为变化）。",
+            "**项目处于 Vercel Labs 旗下**，README 明确标注为「LABS PRODUCT」。Vercel Labs 是实验性产品线，项目可能因公司战略调整而停止维护或转向商业产品。所以你要注意：不要将核心业务流程完全绑定在该工具上，应保留迁移路径。",
+            "**README 未提及安全审计或企业级支持**，但提供了 [Security 文档](https://agent-browser.dev/security) 说明认证保险库、域名白名单、操作策略等内容。所以你要注意：在生产环境中使用前，必须阅读并配置这些安全机制，特别是涉及登录态和敏感操作时。",
+            "**依赖 Chrome for Testing 或外部浏览器**，需要额外安装（`agent-browser install`），且 Linux 下还需 `--with-deps` 安装系统库。所以你要注意：在 CI/CD 或容器环境中，需预先安装浏览器及其依赖，否则命令会失败。",
+            "**项目为开源（Apache-2.0）但由商业公司主导**，可能借开源推广 Vercel 生态（如 [Next.js 和 Vercel](https://agent-browser.dev/next) 文档）。所以你要注意：若你使用非 Vercel 平台，需确认无隐性依赖或推荐路径。",
+            "**README 明确说明 refs 在页面导航或 DOM 变化后失效**，需要重新获取 snapshot。所以你要注意：在自动化脚本中，每次操作后应重新获取 snapshot，避免引用过期元素导致点击失败。",
+            "**点击操作在目标被遮挡（如 cookie 弹窗）时会失败而非误报成功**，这是设计上的安全行为。所以你要注意：脚本中应处理此类失败，先关闭遮挡元素再重试。",
+            "**项目为开发者预览（v0.x 版本）**，API 可能不稳定。所以你要注意：锁定版本号，不要使用 `latest` 标签，并在升级前运行完整测试套件。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "按 GitHub 同类搜索，真正与 agent-browser 解决同一类问题（为 AI 智能体提供浏览器自动化 CLI）的候选有两个，均满足星数高且最近仍有推送的条件。"
+        },
+        {
+          "type": "sub",
+          "text": "citrolabs/ego-lite（★23744，MIT，JavaScript，最近推送 2026-11-19）"
+        },
+        {
+          "type": "kv",
+          "k": "仓库",
+          "v": "[仓库首页](https://github.com/citrolabs/ego-lite)"
+        },
+        {
+          "type": "kv",
+          "k": "星数",
+          "v": "23744"
+        },
+        {
+          "type": "kv",
+          "k": "许可证",
+          "v": "MIT"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新",
+          "v": "2026-11-19"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景",
+          "v": "需要与 AI 智能体（如 Codex、Claude Code）共享已登录浏览器状态，零配置、零成本，适合快速集成到现有智能体工作流。"
+        },
+        {
+          "type": "sub",
+          "text": "Tencent/BrowserSkill（★10590，MIT，TypeScript，最近推送 2026-11-19）"
+        },
+        {
+          "type": "kv",
+          "k": "仓库",
+          "v": "[仓库首页](https://github.com/Tencent/BrowserSkill)"
+        },
+        {
+          "type": "kv",
+          "k": "星数",
+          "v": "10590"
+        },
+        {
+          "type": "kv",
+          "k": "许可证",
+          "v": "MIT"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新",
+          "v": "2026-11-19"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景",
+          "v": "同样提供 CLI + 扩展，让 AI 智能体使用真实登录浏览器，适合需要跨 shell 能力的智能体。"
+        },
+        {
+          "type": "p",
+          "text": "选择判据：若你已有 AI 智能体（如 Codex、Claude Code）且需要共享登录态，优先考虑 ego-lite（星数更高、零配置）；若你使用腾讯云或需要企业级支持，可考虑 BrowserSkill；若你需要原生 Rust 性能、多引擎支持（Lightpanda、Obscura）或云浏览器提供商集成，则选择本项目 agent-browser。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**推荐使用**"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**需要为 AI 智能体提供稳定、可脚本化的浏览器控制**：agent-browser 提供 refs 机制和丰富的命令集（如 `snapshot`、`click`、`fill`），适合构建复杂的自动化流程。",
+            "**需要多引擎或云浏览器支持**：支持 Chrome for Testing、Lightpanda、Obscura、iOS Simulator 以及 Browserbase 等云提供商，适合需要灵活部署的场景。",
+            "**需要与 MCP 或 skills.sh 集成**：提供 `mcp` 命令和 skills 机制，适合已使用 MCP 协议的智能体（如 Claude Desktop）。"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "**不推荐使用**"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**需要长期稳定 API 的企业项目**：项目处于 v0.x 阶段，API 可能频繁变动，且由 Vercel Labs 运营，存在停止维护风险。",
+            "**对安全要求极高且无法自行审计**：虽然提供安全文档，但未提及第三方安全审计，且依赖外部浏览器，攻击面较大。",
+            "**需要与现有浏览器扩展深度集成的场景**：agent-browser 主要通过 CDP 控制浏览器，不提供浏览器扩展 API，若你的智能体依赖扩展功能，可能需要考虑其他方案。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/vercel-labs/agent-browser)",
+            "[README](https://github.com/vercel-labs/agent-browser#readme)",
+            "[Releases 页面](https://github.com/vercel-labs/agent-browser/releases)",
+            "[Issues 页面](https://github.com/vercel-labs/agent-browser/issues)",
+            "[项目主页](https://agent-browser.dev)",
+            "[替代候选：ego-lite](https://github.com/citrolabs/ego-lite)",
+            "[替代候选：BrowserSkill](https://github.com/Tencent/BrowserSkill)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-20。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "side": {
+    "repo": "yding-git/personal-edge-proxy",
+    "url": "https://github.com/yding-git/personal-edge-proxy",
+    "stars": 1220,
+    "language": "",
+    "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+    "why": "这个仓库把Xray、Hysteria2、REALITY Vision、WARP和SOCKS5路由整合成一份可运行的配置模板，解决个人代理场景中多入口多出口的编排问题。适合需要自建代理、但不想从零研究协议组合的开发者。部署前需确认服务器内核版本和防火墙规则，并注意配置中的证书路径。",
+    "kind": "代理配置模板",
+    "pushedAt": "2026-09-11"
+  },
+  "meta": {
+    "repo": "vercel-labs/agent-browser",
+    "stars": 52874,
+    "language": "Rust",
+    "license": "Apache-2.0",
+    "lastCommit": "2026-11-19",
+    "openIssues": 591,
+    "version": "v0.43.0",
+    "trending": {
+      "window": "月榜",
+      "rank": 17,
+      "gained": 8540,
+      "unit": "本月"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 2251,
+    "codeBlocks": 4,
+    "minutes": 8.6,
+    "asOf": "2026-11-20"
+  }
+}

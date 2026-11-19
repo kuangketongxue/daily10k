@@ -27,5 +27,6 @@
   "AgriciDaniel/claude-seo",
   "heygen-com/hyperframes",
   "pingdotgg/t3code",
-  "backnotprop/plannotator"
+  "backnotprop/plannotator",
+  "vercel-labs/agent-browser"
 ]
