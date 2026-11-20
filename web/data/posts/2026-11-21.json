@@ -1,0 +1,269 @@
+{
+  "date": "2026-11-21",
+  "title": "chrome-devtools-mcp：让 AI 编程代理直接操控 Chrome DevTools",
+  "oneLiner": "chrome-devtools-mcp 是一个 MCP 服务器，让 AI 编程代理控制并检查真实 Chrome 浏览器，用于自动化、调试和性能分析。",
+  "category": "AI 编程代理 · 浏览器调试 · MCP",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "AI 编程代理（如 Claude、Cursor、Copilot）在生成代码时，往往对运行时的实际表现一无所知。它们看不到页面报错、网络请求失败、布局错位或性能瓶颈，只能靠猜测和静态分析。这种盲区让代理在修复 UI bug、排查性能问题时效率低下。"
+        },
+        {
+          "type": "p",
+          "text": "chrome-devtools-mcp 填补了这一空白。它作为 Model-Context-Protocol（MCP）服务器，让代理能直接控制并检查一个真实运行的 Chrome 浏览器。代理可以导航、点击、截图、读取控制台消息、分析网络请求，甚至记录性能轨迹——这些原本需要开发者手动操作 DevTools 的能力，现在都能通过自然语言指令触发。"
+        },
+        {
+          "type": "quote",
+          "text": "Chrome DevTools for agents (`chrome-devtools-mcp`) lets your coding agent (such as Antigravity, Claude, Cursor or Copilot) control and inspect a live Chrome browser."
+        },
+        {
+          "type": "p",
+          "text": "这意味着代理不再只依赖静态代码分析。它可以在真实浏览器环境中验证代码行为，观察 DOM 变化，测量加载时间，并基于实际数据调整实现。这种闭环反馈机制显著提升了代理处理前端任务的可靠性。"
+        },
+        {
+          "type": "p",
+          "text": "项目自 2025 年 9 月创建以来，已获得超过 58,500 颗星标，本周新增 3,229 星，位列 GitHub Trending 周榜第 6。这种热度表明，开发者社区对 AI 代理与浏览器调试工具的结合有强烈需求。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "性能分析与优化"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个 URL 或页面交互指令，要求检查性能。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "性能轨迹、LCP 等关键指标，以及可执行的优化建议。"
+        },
+        {
+          "type": "code",
+          "code": "Check the performance of https://developers.chrome.com",
+          "caption": "来源：README「Your first prompt」"
+        },
+        {
+          "type": "sub",
+          "text": "调试与网络分析"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个页面交互或错误复现步骤。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "浏览器控制台消息（含 source-mapped 堆栈）、网络请求详情、截图。"
+        },
+        {
+          "type": "sub",
+          "text": "自动化测试与无障碍审计"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "测试脚本或无障碍检查指令。"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "自动化的页面操作结果、无障碍问题清单。"
+        },
+        {
+          "type": "p",
+          "text": "项目内置多个技能（skills）来引导代理完成特定任务，包括 `a11y-debugging`（无障碍审计）、`debug-optimize-lcp`（LCP 优化）、`memory-leak-debugging`（内存泄漏排查）等。这些技能让代理能按预设路径执行复杂调试流程。"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "chrome-devtools-mcp 采用客户端-服务器架构。服务器端通过 MCP 协议与编程代理通信，将代理的自然语言指令转换为 Chrome DevTools Protocol（CDP）调用，作用于真实浏览器实例。"
+        },
+        {
+          "type": "p",
+          "text": "核心依赖是 Puppeteer，用于驱动 Chrome 并自动化页面操作。Puppeteer 提供了稳定的浏览器控制 API，包括导航、点击、输入、截图等。MCP 服务器在此基础上封装了更高级的工具，如性能轨迹记录、网络请求拦截、控制台消息捕获等。"
+        },
+        {
+          "type": "p",
+          "text": "项目还包含一个 CLI（`chrome-devtools`），允许开发者从终端直接控制浏览器，无需经过 MCP 客户端。CLI 与 MCP 服务器共享核心逻辑，但面向不同使用场景：CLI 适合脚本化操作，MCP 服务器适合集成到 AI 代理工作流中。"
+        },
+        {
+          "type": "p",
+          "text": "在架构上，项目区分了完整工具集和 `--slim` 模式。完整模式暴露所有 MCP 工具，适合深度调试；`--slim` 模式只暴露基本浏览器操作工具，降低资源占用和工具选择复杂度。"
+        },
+        {
+          "type": "p",
+          "text": "项目还提供了技能（skills）目录，其中包含针对特定任务的提示词模板，如 `chrome-devtools`、`a11y-debugging`、`cookie-debugging` 等。这些技能教会代理如何正确使用 MCP 工具，提高调试效率。"
+        },
+        {
+          "type": "p",
+          "text": "在数据隐私方面，项目默认启用使用统计（工具调用成功率、延迟等），可通过 `--no-usage-statistics` 标志或 `CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS` 环境变量禁用。性能工具可能将轨迹 URL 发送到 Google CrUX API 以获取真实用户体验数据，可用 `--no-performance-crux` 标志禁用。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "安装要求：Node.js LTS 版本、Chrome 当前稳定版或更新、npm。"
+        },
+        {
+          "type": "code",
+          "code": "{\n  \"mcpServers\": {\n    \"chrome-devtools\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"chrome-devtools-mcp@latest\"]\n    }\n  }\n}",
+          "caption": "来源：README「Getting started」"
+        },
+        {
+          "type": "p",
+          "text": "将上述配置添加到你的 MCP 客户端（如 Claude Code、Cursor、VS Code 等）的配置文件中。使用 `chrome-devtools-mcp@latest` 确保始终使用最新版本。"
+        },
+        {
+          "type": "p",
+          "text": "配置完成后，在 MCP 客户端中发送提示词 `Check the performance of https://developers.chrome.com`。客户端应自动打开浏览器并记录性能轨迹。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "MCP 服务器不会自动启动浏览器，只有在客户端调用需要浏览器实例的工具时才会启动。",
+            "项目官方仅支持 Google Chrome 和 Chrome for Testing，其他 Chromium 浏览器可能工作但不保证。",
+            "默认启用使用统计，可用 `--no-usage-statistics` 标志禁用；性能工具会发送数据到 CrUX API，可用 `--no-performance-crux` 禁用。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭 Issue 与 PR 达 136 个**，项目创建于 2025-09-11，最近推送为 2026-11-20，说明维护活跃但积压不少。所以你要注意：提交 bug 前先搜现有 issue，避免重复；对关键问题可考虑在社区中寻找 workaround，而非等待官方修复。",
+            "**最新 Release 为 chrome-devtools-mcp-v1.13.0（2026-11-11）**，版本迭代频繁，但 README 未标注为开发者预览。所以你要注意：升级前务必阅读 [Releases 页面](https://github.com/ChromeDevTools/chrome-devtools-mcp/releases) 的变更日志，确认是否有破坏性变更；生产环境建议锁定版本，而非使用 `@latest`。",
+            "**README 明确要求 Node.js LTS、Chrome 当前稳定版或更新、npm**，且官方仅支持 Google Chrome 与 Chrome for Testing，其他 Chromium 浏览器不保证可用。所以你要注意：部署前确认运行环境满足这些要求，避免在不受支持的浏览器上浪费调试时间。",
+            "**安全风险**：README 声明 MCP 服务器会向客户端暴露浏览器实例内容，允许检查、调试和修改任何数据；且性能工具可能将 trace URL 发送至 Google CrUX API 获取真实用户体验数据。所以你要注意：不要在共享敏感信息的浏览器会话中使用；如需关闭 CrUX 上报，启动时加 `--no-performance-crux` 标志。",
+            "**数据收集**：README 明确 Google 默认收集使用统计（如调用成功率、延迟、环境信息），可通过 `--no-usage-statistics` 或环境变量 `CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS`、`CI` 关闭。所以你要注意：若涉及企业合规或隐私要求，务必在部署配置中显式禁用。",
+            "**未发现借开源推广商业产品的迹象**：项目由 ChromeDevTools 组织维护，许可证为 Apache-2.0，README 未提及付费服务。所以你要注意：这降低了商业锁定风险，但需自行评估与 Chrome 生态的绑定程度。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "同类项目筛选"
+        },
+        {
+          "type": "p",
+          "text": "在候选项目中，`h4ckf0r0day/obscura` 与 `lexmount/moli` 均为 Rust 编写的无头浏览器，面向 AI agent 和网页抓取，与本项目解决的问题（控制真实 Chrome、调试、性能分析）不完全同类，故不纳入。`zhizhuodemao/js-reverse-mcp` 聚焦 JS 逆向，场景偏窄，也不作为直接替代。真正同类的只有 `nanobrowser/nanobrowser`，它让 AI agent 使用真实登录的浏览器进行自动化，与本项目在“控制真实浏览器”这一核心上重叠。"
+        },
+        {
+          "type": "kv",
+          "k": "nanobrowser/nanobrowser",
+          "v": "★14356，Apache-2.0，TypeScript，最近推送 2026-11-17。适用场景：需要复用用户真实登录态的 Web 自动化，但更偏向浏览器扩展形态，而非 DevTools 协议深度调试。"
+        },
+        {
+          "type": "p",
+          "text": "选择判据：若你的核心需求是深度调试（网络、性能 trace、控制台堆栈）且接受 Chrome 官方支持，选本项目；若只需在真实浏览器中执行自动化任务、不关心底层协议，可评估 nanobrowser。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "推荐使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**需要性能洞察的开发者**：项目能记录 trace 并提取可操作建议，适合优化 LCP、内存泄漏等场景。",
+            "**依赖真实 Chrome 的 AI 编码 agent 用户**：如 Antigravity、Claude、Cursor、Copilot，项目提供 MCP 服务器和 CLI，可直接集成。",
+            "**需要可靠自动化的团队**：基于 Puppeteer 自动等待操作结果，减少 flaky 测试。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**使用非 Chrome/Chromium 浏览器的用户**：README 仅官方支持 Google Chrome 和 Chrome for Testing，其他浏览器可能出意外行为。",
+            "**对隐私敏感的场景**：默认收集使用统计且可访问浏览器全部数据，若不配置关闭标志或共享敏感信息，风险较高。",
+            "**需要极简轻量方案的项目**：项目依赖 Node.js LTS 和 Chrome 稳定版，若环境受限或只需简单截图，可能过重。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/ChromeDevTools/chrome-devtools-mcp)",
+            "[README](https://github.com/ChromeDevTools/chrome-devtools-mcp)",
+            "[Releases 页面](https://github.com/ChromeDevTools/chrome-devtools-mcp/releases)",
+            "[Issues 页面](https://github.com/ChromeDevTools/chrome-devtools-mcp/issues)",
+            "[项目主页](https://developer.chrome.com/docs/devtools/agents)",
+            "[nanobrowser 仓库](https://github.com/nanobrowser/nanobrowser)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-21。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "side": {
+    "repo": "yding-git/personal-edge-proxy",
+    "url": "https://github.com/yding-git/personal-edge-proxy",
+    "stars": 1221,
+    "language": "",
+    "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+    "why": "这是一套多入口多出口的个人代理配置，用Xray、Hysteria2、REALITY和WARP组合实现分流。适合需要同时连接多个网络、且希望区分不同流量走向的进阶用户。配置较复杂，需要先理解各协议差异，建议在干净环境测试后再替换现有方案。",
+    "kind": "网络代理配置工具",
+    "pushedAt": "2026-09-11"
+  },
+  "meta": {
+    "repo": "ChromeDevTools/chrome-devtools-mcp",
+    "stars": 58524,
+    "language": "TypeScript",
+    "license": "Apache-2.0",
+    "lastCommit": "2026-11-20",
+    "openIssues": 136,
+    "version": "chrome-devtools-mcp-v1.13.0",
+    "trending": {
+      "window": "周榜",
+      "rank": 6,
+      "gained": 3229,
+      "unit": "本周"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 1913,
+    "codeBlocks": 2,
+    "minutes": 6.3,
+    "asOf": "2026-11-21"
+  }
+}

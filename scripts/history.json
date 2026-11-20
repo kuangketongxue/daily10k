@@ -28,5 +28,6 @@
   "heygen-com/hyperframes",
   "pingdotgg/t3code",
   "backnotprop/plannotator",
-  "vercel-labs/agent-browser"
+  "vercel-labs/agent-browser",
+  "ChromeDevTools/chrome-devtools-mcp"
 ]

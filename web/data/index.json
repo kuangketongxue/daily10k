@@ -1,6 +1,27 @@
 {
-  "updated": "2026-11-20",
+  "updated": "2026-11-21",
   "issues": [
+    {
+      "date": "2026-11-21",
+      "title": "chrome-devtools-mcp：让 AI 编程代理直接操控 Chrome DevTools",
+      "oneLiner": "chrome-devtools-mcp 是一个 MCP 服务器，让 AI 编程代理控制并检查真实 Chrome 浏览器，用于自动化、调试和性能分析。",
+      "category": "AI 编程代理 · 浏览器调试 · MCP",
+      "stars": 58524,
+      "repo": "ChromeDevTools/chrome-devtools-mcp",
+      "lenses": [
+        "AI"
+      ],
+      "side": {
+        "repo": "yding-git/personal-edge-proxy",
+        "url": "https://github.com/yding-git/personal-edge-proxy",
+        "stars": 1221,
+        "language": "",
+        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+        "why": "这是一套多入口多出口的个人代理配置，用Xray、Hysteria2、REALITY和WARP组合实现分流。适合需要同时连接多个网络、且希望区分不同流量走向的进阶用户。配置较复杂，需要先理解各协议差异，建议在干净环境测试后再替换现有方案。",
+        "kind": "网络代理配置工具",
+        "pushedAt": "2026-09-11"
+      }
+    },
     {
       "date": "2026-11-20",
       "title": "agent-browser：让 AI 智能体像操作终端一样驱动浏览器",
