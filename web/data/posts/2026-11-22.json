@@ -1,0 +1,274 @@
+{
+  "date": "2026-11-22",
+  "title": "OpenSRE：让 CI 变红后，有人替你查因、修好、写总结",
+  "oneLiner": "一个开源 CLI 代理，在 CI 失败或生产告警时自动拉取上下文、定位根因、推送修复分支，并把结论发到 Slack 或 Telegram。",
+  "category": "CI/CD · SRE · LLM Agent · 可观测性",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "CI 变红时，流水线只告诉你**哪里**失败了，不告诉你**为什么**，更不告诉你**怎么修**。于是团队习惯性地点一下 re-run，把问题往后推；flaky 检查越积越多，`main` 长时间保持红色，真正的调查只能等某个资深工程师有空。"
+        },
+        {
+          "type": "p",
+          "text": "OpenSRE 的定位就是接管这段等待。README 里的原话是：**\"Your CI tells you it broke, but not why or how to fix it. OpenSRE is a CLI agent that reads the failed run, traces the cause and pushes a fix for you to review.\"** 它把\"读日志、找原因、提修复\"从人工任务变成代理任务。"
+        },
+        {
+          "type": "p",
+          "text": "这个代理不是简单地把日志扔给大模型。它运行在你自己的基础设施上、使用你自己的模型，并且把 CI 故障和代码故障区分开——前者是流水线本身的问题，后者才是提交引入的回归。区分这两类，团队才知道该修谁。"
+        },
+        {
+          "type": "p",
+          "text": "对管理者来说，它还回答一个此前难以量化的成本问题：CI 的失败率是多少、开发者因为不可靠的 CI 损失了多少小时、`main` 平均保持红色多久。这些数字来自实际运行数据，不是估算。"
+        },
+        {
+          "type": "p",
+          "text": "项目当前处于 public alpha 阶段（README 标注 **\"Core workflows are usable for early exploration, though not yet fully stable\"**），API 与集成仍在演进。但核心工作流——失败运行调查、根因定位、修复分支推送——已经可以实际使用。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "用途一：CI 失败自动调查与修复"
+        },
+        {
+          "type": "p",
+          "text": "这是它的主场景。当一次 CI 运行失败，OpenSRE 自动获取失败检查与日志、最近提交与部署、以及关联的日志/指标/追踪，在工具调用循环中验证假设，最后把修复推送到 PR 分支供人审查。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个失败的 CI 运行（通过 GitHub 集成触发，或手动在交互式 shell 里描述）"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "证据关联的根因分析、修复补丁（推送到 PR 分支）、以及可选的自动执行修复动作"
+        },
+        {
+          "type": "code",
+          "code": "opensre ask \"why is checkout-api slow?\"",
+          "caption": "来源：README Quick Start — Headless CLI"
+        },
+        {
+          "type": "sub",
+          "text": "用途二：生产事件调查（不只 CI/CD）"
+        },
+        {
+          "type": "p",
+          "text": "同一个代理也处理生产环境的告警。你可以在交互式 shell 里用自然语言描述事件，也可以把告警直接路由给它。它自己挑选合适的工具——从日志、指标到 Pod 状态与部署历史——来定位根因。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一条告警（来自 Alertmanager、Datadog、CloudWatch 等）或一句\"checkout-api 变慢了\""
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "跨系统的根因分析，以及可选执行的修复动作（如重启、回滚）"
+        },
+        {
+          "type": "sub",
+          "text": "用途三：嵌入你现有的 Python 服务"
+        },
+        {
+          "type": "p",
+          "text": "如果你想让团队日常循环里自动带上事件响应，可以把 OpenSRE 作为 Python 库嵌入现有服务。这需要源码检出，但接口很直接。"
+        },
+        {
+          "type": "code",
+          "code": "from surfaces.embedded import start_embedded_session\n\nsession = start_embedded_session()\nresult = session.chat(\"why is checkout-api slow?\")\nif result.action_result.accounting_status == \"completed\" and not result.cancelled:\n    print(result.primary_response_text)",
+          "caption": "来源：README Quick Start — From Python"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "OpenSRE 的核心是一个**工具调用循环**（tool-calling loop）。当 CI 运行失败、告警到达或你提出问题时，它按固定顺序执行六步：获取上下文 → 脱敏 → 推理 → 回答 → 修复 → 发布。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**获取**：拉取失败检查与 CI 日志、最近提交与部署、以及关联的日志/指标/追踪",
+            "**脱敏**：在调用外部 LLM 之前，可选地遮蔽敏感标识符",
+            "**推理**：跨已连接系统测试假设，区分 CI 引起的故障与代码引起的故障",
+            "**回答**：在对话中给出证据关联的回复",
+            "**修复**：把修复推送到 PR 分支供审查，或建议下一步并可选执行修复动作",
+            "**发布**：把摘要直接发到 Slack、PagerDuty 或 Telegram"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "架构上，项目移除了旧的 graph 与 chain 框架层，当前代码级代理架构记录在 [`AGENTS.md`](https://github.com/Tracer-Cloud/opensre/blob/main/AGENTS.md)。入口点在 [`main.py`](https://github.com/Tracer-Cloud/opensre/blob/main/main.py)，嵌入式会话从 `surfaces.embedded` 导入。"
+        },
+        {
+          "type": "p",
+          "text": "质量保障方式值得注意：团队用真实世界的端到端测试覆盖云后端场景（[`tests/e2e`](https://github.com/Tracer-Cloud/opensre/tree/main/tests/e2e)），并保持语义化的测试目录命名，让 e2e 与单元测试、本地与云端的边界清晰可见（[`tests/README.md`](https://github.com/Tracer-Cloud/opensre/blob/main/tests/README.md)）。"
+        },
+        {
+          "type": "p",
+          "text": "部署形态有三种：OpenSRE Cloud 托管网关（组织管理员在 Web 应用里配置）、AMI + systemd 的网关（仅 Telegram，无 Docker）、以及自托管容器（Railway / ECS / Vercel）。自托管时设置 `MODE`、`LLM_PROVIDER` 及其 API key；只有网关需要共享 Postgres 状态时才设置 `DATABASE_URL`。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "安装只需一条命令，支持 macOS 与 Linux；Windows 用 PowerShell 等效命令。安装器从 `main` 分支拉取最新构建，不需要 sudo。"
+        },
+        {
+          "type": "code",
+          "code": "curl -fsSL https://install.opensre.com | bash -s -- -gh\nopensre",
+          "caption": "来源：README Step 1: Install and start opensre"
+        },
+        {
+          "type": "p",
+          "text": "首次启动会引导你登录，并激活托管模型。之后有两种使用方式：交互式 shell（TTY 必需）或无头 CLI（`opensre ask \"...\"`，适合脚本与 CI 作业）。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "需要 Git 仓库（推荐，以便体验完整工作流）",
+            "如果 `opensre` 命令找不到，按安装器打印的 PATH 指示操作，或打开新终端",
+            "交互式 shell 中可用 `/help`、`/status`、`/cost`、`/sessions`、`/resume`、`/compact`、`/new`、`/exit` 等斜杠命令控制会话；`/integrations list` 与 `/integrations verify` 管理集成"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "若想从 Python 驱动代理，需要源码检出；`start_embedded_session()` 返回的会话对象提供 `chat()` 方法，结果对象包含 `action_result.accounting_status` 与 `cancelled` 字段，可据此判断调用是否真正完成。"
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**项目状态为 public alpha**：README 顶部明确标注「Core workflows are usable for early exploration, though not yet fully stable. The project is in active development, and APIs and integrations may evolve.」这意味着 API 与集成接口可能随时变更，升级需谨慎，生产环境使用前应锁定版本并做好回归测试。",
+            "**未关闭的 Issue 与 PR 共 19 个**：对于一个 2026-01-13 创建、目前仅 13941 星的年轻项目，19 个未关闭项不算多，但结合 alpha 状态，说明维护团队仍在快速迭代，问题修复与功能开发并行，你需要关注 issue 列表以判断哪些已知问题会影响你的使用场景。",
+            "**最近提交为 2026-11-21，最新 Release 为 v0.1.2026.11.21（同日）**：项目更新频繁，几乎每天都有新提交。这种节奏对开发者友好，但也意味着你跟踪的版本可能很快过时，建议将升级纳入常规运维流程，并利用 GitHub Releases 页面查看变更日志。",
+            "**安全要求**：README 的 Security 部分链接到 [trust.tracer.cloud](https://trust.tracer.cloud/)，但未在仓库内详细说明数据脱敏机制。README 提到「Masks sensitive identifiers (optional) before external LLM calls」——注意是**可选**功能，默认不脱敏。如果你使用外部 LLM 提供商，务必显式启用脱敏，并评估将 CI 日志与代码上下文发送给第三方模型的安全风险。",
+            "**商业推广痕迹**：README 顶部有「Sponsored by Greptile」徽章，且项目主页为 opensre.com，提供 OpenSRE Cloud 托管网关。开源版本与商业服务并存，你需要确认自托管路径（Dockerfile + MODE + LLM_PROVIDER）是否满足你的全部需求，避免被引导至云服务。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "同类候选筛选"
+        },
+        {
+          "type": "p",
+          "text": "从 GitHub 同类搜索的 4 个候选中，只有 **ongridio/ongrid** 与 OpenSRE 解决同一类问题：面向 CI/CD 与运维的 AI Agent，能定位根因并自动修复。其余 3 个（hertzbeat、openstatus、maintenant）本质是监控/状态页工具，不具备「读取失败日志→定位根因→推送修复」的完整闭环，不构成直接替代。"
+        },
+        {
+          "type": "kv",
+          "k": "ongridio/ongrid",
+          "v": "★1294，AGPL-3.0，Go，最近推送 2026-11-19。定位：Ops AI Agent，能理解基础设施、定位根因并从 Slack/Telegram/Lark/DingTalk 发起修复。与 OpenSRE 相比，它更偏运维侧（基础设施），而 OpenSRE 更偏 CI/CD 流水线，两者在「修复 CI 失败」场景有重叠，但 ongrid 的星数（1294 vs 13941）与社区规模明显更小，且许可证为 AGPL-3.0，对商业闭源集成限制更严。"
+        },
+        {
+          "type": "p",
+          "text": "**选择判据**：如果你的核心痛点是「CI 变红后自动定位根因并推送修复 PR」，选 OpenSRE；如果你的痛点更偏「生产基础设施告警的根因分析，且团队已重度使用聊天工具作为操作入口」，可以评估 ongrid，但需接受更小的社区与 AGPL 许可证约束。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "建议采用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**CI 频繁变红、且团队缺乏资深 SRE 的工程团队**：OpenSRE 能自动分析失败运行、区分 CI 自身问题与代码问题，并推送修复供审查，直接降低对高级工程师的依赖。",
+            "**已使用 GitHub/GitLab CI 且希望将 AI 集成到现有工作流的团队**：项目提供 CLI（交互式与 headless）与 Python API，可嵌入现有脚本与自动化，且支持 60+ 集成（Slack、Grafana、Datadog 等），适合已有可观测性栈的团队。",
+            "**愿意接受 alpha 状态、能快速迭代的团队**：项目更新频繁（最近提交 2026-11-21），适合有工程能力应对 API 变更、且愿意主动跟踪 Release 的团队。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "建议暂缓或避免"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**对稳定性要求极高、无法承受 API 破坏性变更的生产环境**：README 明确标注「APIs and integrations may evolve」，且当前为 public alpha，不适合作为关键路径的固定依赖。",
+            "**有严格数据合规要求、且无法接受将 CI 日志发送给外部 LLM 的团队**：README 中数据脱敏是「optional」功能，默认不启用；若你的合规政策禁止代码或日志出域，需先确认自托管模型（LLM_PROVIDER 自选）与脱敏配置能满足要求。",
+            "**需要开箱即用、不愿投入配置时间的团队**：项目需要安装 CLI、配置 LLM 提供商、设置集成，且文档中明确要求 Git 仓库与终端环境，对非技术背景用户不够友好。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/Tracer-Cloud/opensre)",
+            "[README](https://github.com/Tracer-Cloud/opensre/blob/main/README.md)",
+            "[Releases 页面](https://github.com/Tracer-Cloud/opensre/releases)",
+            "[Issues 页面](https://github.com/Tracer-Cloud/opensre/issues)",
+            "[项目主页](https://opensre.com)",
+            "[ongrid 仓库](https://github.com/ongridio/ongrid)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-22。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "side": {
+    "repo": "yding-git/personal-edge-proxy",
+    "url": "https://github.com/yding-git/personal-edge-proxy",
+    "stars": 1224,
+    "language": "",
+    "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+    "why": "它把Xray、Hysteria2、REALITY、WARP等代理组件封装成一套可复用的多入多出配置，省去逐个拼装的时间。适合需要稳定科学上网、但不想维护复杂配置的个人用户。注意它依赖较新的内核和证书，部署前先确认VPS系统版本与端口占用。",
+    "kind": "代理配置工具集",
+    "pushedAt": "2026-09-11"
+  },
+  "meta": {
+    "repo": "Tracer-Cloud/opensre",
+    "stars": 13941,
+    "language": "Python",
+    "license": "Apache-2.0",
+    "lastCommit": "2026-11-21",
+    "openIssues": 19,
+    "version": "v0.1.2026.11.21",
+    "trending": {
+      "window": "日榜",
+      "rank": 13,
+      "gained": 450,
+      "unit": "今日"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 2144,
+    "codeBlocks": 3,
+    "minutes": 7.6,
+    "asOf": "2026-11-22"
+  }
+}

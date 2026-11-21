@@ -1,6 +1,27 @@
 {
-  "updated": "2026-11-21",
+  "updated": "2026-11-22",
   "issues": [
+    {
+      "date": "2026-11-22",
+      "title": "OpenSRE：让 CI 变红后，有人替你查因、修好、写总结",
+      "oneLiner": "一个开源 CLI 代理，在 CI 失败或生产告警时自动拉取上下文、定位根因、推送修复分支，并把结论发到 Slack 或 Telegram。",
+      "category": "CI/CD · SRE · LLM Agent · 可观测性",
+      "stars": 13941,
+      "repo": "Tracer-Cloud/opensre",
+      "lenses": [
+        "AI"
+      ],
+      "side": {
+        "repo": "yding-git/personal-edge-proxy",
+        "url": "https://github.com/yding-git/personal-edge-proxy",
+        "stars": 1224,
+        "language": "",
+        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+        "why": "它把Xray、Hysteria2、REALITY、WARP等代理组件封装成一套可复用的多入多出配置，省去逐个拼装的时间。适合需要稳定科学上网、但不想维护复杂配置的个人用户。注意它依赖较新的内核和证书，部署前先确认VPS系统版本与端口占用。",
+        "kind": "代理配置工具集",
+        "pushedAt": "2026-09-11"
+      }
+    },
     {
       "date": "2026-11-21",
       "title": "chrome-devtools-mcp：让 AI 编程代理直接操控 Chrome DevTools",
