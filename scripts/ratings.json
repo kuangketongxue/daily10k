@@ -1,0 +1,59 @@
+{
+  "updated": "2026-11-22T14:33:47.552+08:00",
+  "note": "由 star-archive 从私有仓 daily-ratings.json 聚合，供 daily10k 选品纠偏读取。不要手改。",
+  "ratedCount": 5,
+  "lensWeights": {
+    "AI": {
+      "weight": 1.023,
+      "avg": 5.8,
+      "n": 5
+    }
+  },
+  "recent": [
+    {
+      "date": "2026-11-20",
+      "score": 7,
+      "lenses": [
+        "AI"
+      ],
+      "repo": "vercel-labs/agent-browser",
+      "title": "agent-browser：让 AI 智能体像操作终端一样驱动浏览器"
+    },
+    {
+      "date": "2026-11-19",
+      "score": 4,
+      "lenses": [
+        "AI"
+      ],
+      "repo": "backnotprop/plannotator",
+      "title": "plannotator：给 AI 代理装一个可批注的审查界面"
+    },
+    {
+      "date": "2026-11-18",
+      "score": 8,
+      "lenses": [
+        "AI"
+      ],
+      "repo": "",
+      "title": "T3 Code：给编码智能体装一个统一控制台，手机也能批命令"
+    },
+    {
+      "date": "2026-11-17",
+      "score": 6,
+      "lenses": [
+        "AI"
+      ],
+      "repo": "heygen-com/hyperframes",
+      "title": "HyperFrames：让 AI 写 HTML，直接渲染成 MP4"
+    },
+    {
+      "date": "2026-11-16",
+      "score": 4,
+      "lenses": [
+        "AI"
+      ],
+      "repo": "AgriciDaniel/claude-seo",
+      "title": "claude-seo：让 Claude Code 在终端里跑完整 SEO 审计"
+    }
+  ]
+}
