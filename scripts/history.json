@@ -30,5 +30,6 @@
   "backnotprop/plannotator",
   "vercel-labs/agent-browser",
   "ChromeDevTools/chrome-devtools-mcp",
-  "Tracer-Cloud/opensre"
+  "Tracer-Cloud/opensre",
+  "zhouxiaoka/autoclip"
 ]

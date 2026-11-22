@@ -1,6 +1,27 @@
 {
-  "updated": "2026-11-22",
+  "updated": "2026-11-23",
   "issues": [
+    {
+      "date": "2026-11-23",
+      "title": "AutoClip：一个链接，一键出片——开源 AI 视频剪辑桌面工具",
+      "oneLiner": "AutoClip 是开源 AI 视频剪辑桌面工具，粘贴长视频链接即可自动生成适配多平台的短视频、字幕、封面与发布文案。",
+      "category": "AI 视频剪辑 · 内容再利用 · 桌面应用 · 开源",
+      "stars": 13377,
+      "repo": "zhouxiaoka/autoclip",
+      "lenses": [
+        "AI"
+      ],
+      "side": {
+        "repo": "yding-git/personal-edge-proxy",
+        "url": "https://github.com/yding-git/personal-edge-proxy",
+        "stars": 1226,
+        "language": "",
+        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+        "why": "如果你需要一台机器同时跑多个代理入口和出口，又不想手动拼配置，这个项目把 Xray、Hysteria2、REALITY、WARP 和静态 SOCKS5 路由整合成一套可复用的模板。适合有 VPS 且熟悉代理协议、但懒得从零写配置的个人用户。注意它面向自部署，需自行维护证书和更新，且依赖较新协议版本。",
+        "kind": "代理配置整合模板",
+        "pushedAt": "2026-09-11"
+      }
+    },
     {
       "date": "2026-11-22",
       "title": "OpenSRE：让 CI 变红后，有人替你查因、修好、写总结",
