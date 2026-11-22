@@ -955,7 +955,10 @@ main {
   background: var(--blue-050);
   border: 1px solid #d3e4f8;
   color: var(--blue-700);
-  white-space: nowrap;
+  /* 行内命令/URL 常常很长：不再强制单行，否则整页被撑出视口（390px 屏实测溢出 255px） */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .a-code {
@@ -1738,3 +1741,165 @@ a.issue-nav-slot:hover { border-color: #bcd7f2; transform: translateY(-2px); }
 @media (max-width: 520px) {
   .rate-btn { min-width: 27px; height: 28px; font-size: 12px; }
 }
+
+/* ==========================================================
+   2026-11-22 视觉升级 · 晨报版面
+   ----------------------------------------------------------
+   从「网页卡片」改为「一份晨报」：纸白底、衬线标题、极细分隔线、
+   墨蓝作唯一强调色，金只留给星数。删掉本段即回到旧视觉。
+   ========================================================== */
+:root{
+  --paper:#f7f6f1;
+  --paper-2:#efede5;
+  --card:transparent;
+  --line:rgba(20,22,26,.14);
+  --line-soft:rgba(20,22,26,.07);
+  --ink:#14161a;
+  --ink-2:#3f444b;
+  --ink-3:#6b7077;
+  --blue-700:#1b4b6b;
+  --blue-600:#1b4b6b;
+  --blue-500:#2a6285;
+  --blue-050:transparent;
+  --gold:#8a6a34;
+  --gold-050:transparent;
+  --r-lg:2px;
+  --r-md:2px;
+  --shadow-card:none;
+  --shadow-soft:none;
+  --serif:"Source Han Serif SC","Noto Serif SC","Songti SC","STSong",Georgia,"Times New Roman",serif;
+}
+
+body{
+  background:var(--paper);
+  color:var(--ink);
+  line-height:1.85;
+  background-image:repeating-linear-gradient(180deg,rgba(20,22,26,.016) 0 1px,transparent 1px 4px);
+}
+.wrap{max-width:780px;padding:0 26px}
+
+/* ---- 首屏：天空图压暗，标题写字 ---- */
+.hero{color:#f6f4ee}
+.hero-veil{
+  background:linear-gradient(180deg,rgba(10,14,20,.55) 0%,rgba(10,14,20,.62) 55%,rgba(247,246,241,.0) 100%),
+             linear-gradient(90deg,rgba(10,14,20,.55),rgba(10,14,20,.15));
+}
+.hero-inner{padding-top:96px;padding-bottom:88px}
+.hero-kicker{
+  font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:12px;font-weight:500;letter-spacing:.34em;text-transform:none;
+  color:rgba(246,244,238,.62);display:inline-flex;align-items:center;gap:12px;
+}
+.hero-kicker:before{content:"";width:36px;height:1px;background:rgba(246,244,238,.45)}
+.hero-title{font-family:var(--serif);font-weight:600;font-size:clamp(44px,7vw,76px);
+  line-height:1.04;letter-spacing:.01em;color:#faf8f2}
+.hero-title .en{font-family:-apple-system,"PingFang SC",sans-serif;font-size:13px;font-weight:400;
+  letter-spacing:.24em;color:rgba(246,244,238,.55);margin-top:20px;display:block}
+.hero-sub{font-size:16.5px;line-height:1.95;color:rgba(246,244,238,.82);max-width:34em;margin-top:24px}
+.hero-sub b{font-weight:600;color:#fff;border-bottom:1px solid rgba(255,255,255,.35)}
+.hero-chips{gap:0;margin-top:30px;border-top:1px solid rgba(246,244,238,.18);padding-top:18px}
+.hero-chip{border:0;border-radius:0;background:transparent;padding:0 22px 0 0;
+  font-size:13px;letter-spacing:.08em;color:rgba(246,244,238,.7)}
+.hero-fav{margin-top:32px;gap:28px}
+.hero-fav-link{font-size:14px;font-weight:500;letter-spacing:.04em;color:#f6f4ee;
+  border-bottom:1px solid rgba(246,244,238,.32);padding-bottom:4px}
+.hero-fav-link:hover{border-color:#f6f4ee;color:#fff}
+
+/* ---- 今日：头版，不是卡片 ---- */
+main.wrap{padding-top:52px;padding-bottom:80px}
+.today{
+  background:transparent;border:0;border-radius:0;box-shadow:none;
+  padding:0 0 34px;border-bottom:1px solid var(--ink);
+  animation:issueIn .55s cubic-bezier(.22,.7,.3,1) both;
+}
+@keyframes issueIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.today-meta{gap:0;font-size:12px;letter-spacing:.16em;color:var(--ink-3)}
+.issue-date{font-family:var(--serif);font-size:26px;font-weight:600;letter-spacing:.02em;
+  color:var(--ink);font-variant-numeric:lining-nums tabular-nums}
+.issue-sep{display:none}
+.today-stars{font-family:var(--serif);color:var(--gold);font-size:14px;letter-spacing:.06em;
+  margin-left:14px;padding-left:14px;border-left:1px solid var(--line)}
+.today-title{font-family:var(--serif);font-weight:600;font-size:clamp(27px,4.2vw,40px);
+  line-height:1.26;letter-spacing:.004em;color:var(--ink);margin:18px 0 14px}
+.today-oneliner{font-size:17px;line-height:1.95;color:var(--ink-2);max-width:62ch;margin-bottom:22px}
+.today-actions{border-top:1px solid var(--line-soft);padding-top:22px;gap:22px}
+
+.tag{background:transparent;border:1px solid var(--line);border-radius:2px;color:var(--ink-2);
+  font-size:11.5px;font-weight:500;letter-spacing:.08em;padding:3px 9px}
+.read-btn{background:var(--ink);color:var(--paper);border-radius:2px;box-shadow:none;
+  padding:12px 22px;font-size:14px;font-weight:500;letter-spacing:.1em}
+.read-btn:hover{background:#000;color:var(--paper);transform:none}
+.fav-btn{background:transparent;border:1px solid var(--line);border-radius:2px;color:var(--ink-2);
+  font-size:13px;font-weight:500;letter-spacing:.04em}
+.fav-btn:hover{border-color:var(--ink);color:var(--ink)}
+.fav-btn.is-on{background:transparent;border-color:var(--blue-700);color:var(--blue-700)}
+
+/* ---- 往期：目录行 ---- */
+.recent{margin-top:56px}
+.recent-head{align-items:baseline;border-bottom:1px solid var(--ink);padding-bottom:12px}
+.recent-title{font-family:var(--serif);font-size:15px;font-weight:600;letter-spacing:.26em;color:var(--ink-3)}
+.recent-all{font-size:12.5px;font-weight:500;letter-spacing:.06em;color:var(--blue-700)}
+.recent-list{display:block}
+
+/* ---- 加载 / 空 / 过期 ---- */
+.loading,.empty{background:transparent;border:0;box-shadow:none;border-radius:0;
+  color:var(--ink-3);padding:56px 0;font-size:14px;letter-spacing:.1em}
+.stale{background:transparent;border:0;border-left:2px solid var(--gold);border-radius:0;
+  color:#6d531f;padding:14px 0 14px 16px;font-size:13.5px;line-height:1.8}
+.empty .big{font-size:0;height:1px;background:var(--line);margin:0 0 28px}
+.empty-hint{color:var(--ink-3);font-size:13px}
+
+/* ---- 文章页：正文用刊物栏宽，代码块改成纸上的一条 ---- */
+.article-band{border-bottom:1px solid var(--line);background:transparent}
+.masthead{background:transparent;border:0}
+.logo{font-family:var(--serif);letter-spacing:.08em;color:var(--ink)}
+.a-title{font-family:var(--serif);font-weight:600;letter-spacing:.004em;line-height:1.26;color:var(--ink)}
+.a-section-title,.a-h3{font-family:var(--serif);color:var(--ink)}
+.a-code{
+  background:#efece3;border-radius:0;border-left:2px solid var(--ink);
+  box-shadow:none;padding:16px 18px;margin:22px 0 10px;
+}
+.a-code code{color:#22262b;background:transparent;font-size:12.5px;line-height:1.85}
+.ic{background:#efece3;border:0;border-radius:2px;color:#22262b;padding:1px 5px}
+.a-quote{border-left:2px solid var(--ink);background:transparent;border-radius:0}
+
+/* ---- 收藏夹 / 档案列表：去卡片 ---- */
+.fav-item{background:transparent;border:0;border-bottom:1px solid var(--line-soft);
+  border-radius:0;box-shadow:none;padding:16px 0}
+.fav-title{font-family:var(--serif);font-size:17px;color:var(--ink)}
+
+@media(max-width:640px){
+  .hero-inner{padding-top:64px;padding-bottom:56px}
+  .hero-title{font-size:40px}
+  main.wrap{padding-top:34px}
+  .issue-date{font-size:22px}
+  .today-title{font-size:26px}
+  .today-oneliner{font-size:15.5px}
+  .wrap{padding:0 20px}
+}
+
+/* 第二轮收敛：胶囊按钮压平为文字链；往期列表从卡片改为目录行 */
+.hero-fav-link{
+  border-radius:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;
+  padding:0 0 4px;border:0;border-bottom:1px solid rgba(246,244,238,.34);
+  font-weight:500;font-size:14px;letter-spacing:.04em;
+}
+.hero-fav-link:hover{background:transparent;transform:none;border-bottom-color:#f6f4ee}
+.recent-list{display:block;gap:0}
+.recent-item{
+  background:transparent;border:0;border-bottom:1px solid var(--line-soft);
+  border-radius:0;box-shadow:none;padding:14px 4px;gap:20px;
+}
+.recent-item:hover{background:rgba(20,22,26,.035);border-bottom-color:var(--ink);transform:none}
+.recent-date{font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-3);
+  letter-spacing:.04em;font-variant-numeric:lining-nums tabular-nums;flex:none;width:58px}
+.recent-name{font-size:15px;color:var(--ink);letter-spacing:.01em}
+.recent-stars{font-family:var(--serif);color:var(--gold);font-size:13px;letter-spacing:.04em}
+
+/* 文章页顶部入口：与其他页面一致，压平为文字链 */
+.masthead-link{
+  border-radius:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;
+  padding:0 0 4px;border:0;border-bottom:1px solid rgba(246,244,238,.34);
+  font-weight:500;letter-spacing:.04em;color:#f6f4ee;
+}
+.masthead-link:hover{background:transparent;border-bottom-color:#f6f4ee}
