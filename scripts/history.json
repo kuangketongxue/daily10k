@@ -32,5 +32,6 @@
   "ChromeDevTools/chrome-devtools-mcp",
   "Tracer-Cloud/opensre",
   "zhouxiaoka/autoclip",
-  "firecrawl/firecrawl"
+  "firecrawl/firecrawl",
+  "THU-MAIC/OpenMAIC"
 ]

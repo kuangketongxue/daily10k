@@ -1,0 +1,251 @@
+{
+  "date": "2026-11-25",
+  "title": "OpenMAIC：把任何文档变成一间有老师、有同学的 AI 课堂",
+  "oneLiner": "开源多智能体交互课堂平台，输入主题或资料，自动生成课件、测验、仿真与项目制学习，AI 老师与同学可实时互动。",
+  "category": "AI 教育 · 多智能体 · 开源",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "备课与授课是两种节奏。教师要把讲义转成课件、设计互动、准备测验，再在课堂上应对不同学生的提问——这些环节彼此割裂，且高度依赖人工。OpenMAIC 的目标，是把这条链路交给一组可编排的 AI 智能体：你给出主题或材料，它生成完整课程，并在课堂上扮演老师和同学。"
+        },
+        {
+          "type": "p",
+          "text": "README 的 Overview 开宗明义：**OpenMAIC**（Open Multi-Agent Interactive Classroom）是一个开源 AI 平台，能把任何主题或文档变成丰富的交互式课堂体验。它由多智能体编排驱动，生成课件、测验、交互仿真与项目制学习活动——全部由能说话、能画白板、能实时讨论的 AI 老师和 AI 同学交付。"
+        },
+        {
+          "type": "p",
+          "text": "对自学者而言，痛点同样具体：看视频被动、看书没反馈、遇到问题无人可问。OpenMAIC 把学习变成对话：你可以随时向 AI 老师提问，AI 同学会参与讨论，白板上的推导与语音讲解同步进行。项目方称其核心体验为「Get an immersive, multi-agent learning experience in just one click」——一次点击，进入沉浸式多智能体学习。"
+        },
+        {
+          "type": "p",
+          "text": "它并非概念原型。仓库 44,368 星、6,824 fork，MIT 许可证，最新 release v1.5.0（2026-11-24）已把首页重构为工作台，支持手机端；v1.4.0 引入 PBL v3，v1.3.0 加入知识库。版本演进说明该项目在持续交付可用功能，而非停留在演示阶段。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "考研/高考复习：把考纲或错题本变成课程"
+        },
+        {
+          "type": "p",
+          "text": "复习资料往往是一堆 PDF 和笔记。OpenMAIC 支持上传材料，AI 会解析文档并围绕它生成课程。你可以把考纲、历年真题解析或自己的错题整理成一份材料，让它生成带讲解、测验与交互仿真的复习课。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一份数学错题 PDF 或知识大纲"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "分节的课件、每节后的测验、可交互的图形演示，以及能就任意知识点追问的 AI 老师"
+        },
+        {
+          "type": "sub",
+          "text": "AI 学习：把论文或技术文档变成可对话的课程"
+        },
+        {
+          "type": "p",
+          "text": "读论文常卡在方法一节。OpenMAIC 的智能体课堂允许你「ask about any slide element」——对着课件里的某个公式、某张图或白板上的推导直接提问，AI 老师会结合上下文回答，而不是泛泛而谈。v1.1.0 起加入的 agentic classroom chat 正是为此设计。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一篇 Transformer 论文或一份系统设计文档"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "带讲解的课件、可运行的交互仿真，以及针对任意课件元素的问答"
+        },
+        {
+          "type": "sub",
+          "text": "从聊天工具或 IDE 里生成课堂"
+        },
+        {
+          "type": "p",
+          "text": "OpenMAIC 内置 Skill 支持 OpenClaw 及 Codex、DeepSeek、WorkBuddy 等工作台。你在 Feishu、Slack、Telegram 等 20+ 消息应用里发一个主题，或在 IDE 里触发，就能生成课堂并推送到当前环境。"
+        },
+        {
+          "type": "code",
+          "code": "# 在 OpenClaw 中调用 OpenMAIC Skill（示意，来自 README 的 Agent workbench integration 章节）\nopenmaic.generate(topic=\"贝叶斯定理\", materials=[\"bayes_notes.pdf\"])\n# 返回 classroomId，可在 OpenMAIC 中打开并继续编辑",
+          "caption": "来源：README「Agent workbench integration」"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "OpenMAIC 的核心是「服务端编排 + 多智能体协作」。服务端用 `openmaic.yml` 声明模型提供商（providers）与槽位（slots），每个槽位对应一种 AI 用途：大纲生成、课件内容、语音合成、网络搜索等。例如 `course.outline` 槽位指定用哪个模型来写课程大纲，`llm` 槽位是默认聊天模型。"
+        },
+        {
+          "type": "p",
+          "text": "这种设计把「用哪个模型」和「怎么用」解耦。密钥只存在于 `.env.local`，通过 `${VAR}` 引用；`openmaic.yml` 里可以 `lock` 槽位或设置 `allowUserKeys: false`，禁止用户自行更换模型。服务端启动时会校验配置文件，报错精确到字段名或 YAML 行号。"
+        },
+        {
+          "type": "p",
+          "text": "课程生成不是一次调用。v1.0.0 引入的 agent workbench 把「生成」拆成可复用的技能（skills）与持久化会话（durable sessions）：大纲、课件、测验、仿真各自独立产出，再组装成课堂。v1.4.2 加入课程级撤销，v1.4.1 让编辑与学习进度在后台同步中保留——这些版本记录表明，生成过程是可编辑、可回退、可断点续传的，而非一次性黑箱输出。"
+        },
+        {
+          "type": "p",
+          "text": "前端基于 Next.js 16 与 React 19，TypeScript 5，Tailwind CSS 4。v1.5.0 把首页重构为工作台：课程与对话并排，全屏教室同时承载学习与编辑，并适配手机。v1.2.0 起 server-first 稳定，生成在标签页关闭后仍继续，模型配置从环境变量迁移到 `openmaic.yml`。"
+        },
+        {
+          "type": "p",
+          "text": "安全方面，项目在 v1.0.x 至 v1.1.x 期间密集修复了 SSRF、DNS rebinding、访问码令牌过期、文档解析加固等问题（GHSA-6c52-8h4v-5xvg、GHSA-g87c-cm4q-cw5x、GHSA-cpjc-vgjh-c5jp 等）。这提示其架构中服务端代理了外部请求与文档解析，属于需要持续加固的攻击面。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "本地运行需要 Node.js ≥ 22.19、pnpm ≥ 10、PostgreSQL 16。仓库提供 `pnpm db:up` 在 Docker 中启动数据库。安装与配置如下。"
+        },
+        {
+          "type": "code",
+          "code": "git clone https://github.com/THU-MAIC/OpenMAIC.git\ncd OpenMAIC\npnpm install\n\ncp .env.example .env.local            # API keys and server options\ncp openmaic.example.yml openmaic.yml  # which models the server uses",
+          "caption": "来源：README「Quick Start」"
+        },
+        {
+          "type": "p",
+          "text": "`.env.local` 只需填入 `OPENAI_API_KEY` 即可跑通默认配置；若换用其他提供商，改 `openmaic.yml` 里的 `providers` 与 `slots`。示例配置中 `video: null` 表示关闭该能力。"
+        },
+        {
+          "type": "code",
+          "code": "providers:\n  openai:\n    preset: openai\n    apiKey: ${OPENAI_API_KEY}\n  anthropic:\n    preset: anthropic\n    apiKey: ${ANTHROPIC_API_KEY}\n\nslots:\n  llm: openai:gpt-5.5\n  course.outline: anthropic:claude-sonnet-4-6\n  video: null",
+          "caption": "来源：README「Quick Start」中的 openmaic.yml 示例"
+        },
+        {
+          "type": "list",
+          "items": [
+            "密钥只放在 `.env.local`，不要写进 `openmaic.yml`；服务端启动时会校验配置并报出具体字段错误。",
+            "若沿用旧版配置（`DEFAULT_MODEL`、`MODEL_FALLBACK`），`MODEL_ROUTES` 必须迁移为 slots，详见 README 的迁移指南。",
+            "用户可在应用内更改模型或连接自己的服务，除非你在 `openmaic.yml` 中设置 `lock` 或 `allowUserKeys: false`。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭的 Issue 与 PR 有 85 个**，而项目创建于 2026-03-11，距今仅 8 个多月。这意味着平均每 3 天就有一个新问题或合并请求进入待办池，维护压力不小。所以你要注意：如果你打算长期依赖 OpenMAIC，需要评估自己是否有能力跟进上游修复，或者准备自行维护一份 fork。",
+            "**最近推送是 2026-11-24**，即文章材料截止日当天，说明项目仍在活跃开发。但 Release 节奏很快——从 v1.0.0（2026-08-27）到 v1.5.0（2026-11-24）不到 3 个月就发布了 5 个 minor 版本，且 v1.4.0、v1.4.2、v1.5.0 的更新说明中明确写着 **one-way upgrade**（单向升级）。所以你要注意：升级前必须备份数据库和 `openmaic.yml`，并仔细阅读迁移文档，否则可能遇到不兼容变更。",
+            "**README 中多次提到安全修复**：v1.0.1 到 v1.1.3 之间密集发布了 6 个安全相关版本，涉及 SSRF、DNS-rebinding、访问码令牌过期、渲染服务网络策略、Next.js RCE 补丁等。这说明项目在早期对安全边界做了大量加固，但同时也提醒你：**OpenMAIC 是一个需要暴露在网络上、处理用户上传文档和调用外部 AI 服务的应用**，部署时必须严格配置网络策略、访问码和密钥管理，不能当作纯本地工具随意开放。",
+            "**README 明确要求 Node.js >= 22.19、pnpm >= 10、PostgreSQL 16**，且课程数据存储在服务端。所以你要注意：这不是一个可以随手 `npm install` 就跑的轻量工具，它依赖一套完整的服务端栈，运维成本高于纯前端项目。",
+            "**README 中出现了 OpenClaw、Codex、DeepSeek、WorkBuddy 等第三方集成**，以及 Lemonade Local AI、FunASR 等本地 AI 选项。项目本身是 MIT 许可证，但它的核心价值在于编排多个 AI 提供商的能力，而**这些上游模型服务大多不是开源的**。所以你要注意：你的实际使用成本取决于你选择的模型提供商，项目本身不承担模型 API 费用；如果上游模型服务变更或停用，OpenMAIC 的某些功能可能失效。",
+            "**README 中未明确说明是否借开源推广商业产品**，但项目主页指向飞书文档（用户指南和体验指南），且提供 Live Demo（open.maic.chat）。这暗示背后可能有商业运营团队。所以你要注意：如果你计划将 OpenMAIC 嵌入自己的商业产品，请先确认其许可证条款和商标使用规则，避免与上游商业利益冲突。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "按 GitHub 同类话题搜索暂未找到成熟的同类项目。OpenMAIC 的定位是「多智能体交互式课堂」，它同时覆盖课程生成、实时多智能体对话、白板、TTS、PBL 和导出，这种组合在开源生态中尚属空白。"
+        },
+        {
+          "type": "p",
+          "text": "因此，选择判据很简单：**如果你需要的是一个开箱即用的、能生成完整交互式课程并支持多智能体实时互动的平台，OpenMAIC 目前是唯一成熟选项**；如果你的需求只是单点功能（如生成 PPT、做在线测验），那么可以选用更轻量的专用工具，但不要期待它们能替代 OpenMAIC 的完整课堂体验。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "推荐使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**教育科技团队**：需要快速搭建 AI 互动课程原型，且已有 Node.js/PostgreSQL 运维能力；OpenMAIC 的 MIT 许可证允许自由修改和商用，v1.5.0 还支持手机端，适合面向学生的产品验证。",
+            "**个人学习者和教师**：有 OpenAI/Anthropic 等 API 密钥，希望将讲义或文档转成带 AI 助教和同学的互动课堂；Quick Start 只需配置一个 `OPENAI_API_KEY` 即可启动，门槛不高。",
+            "**AI Agent 开发者**：想研究多智能体编排、PBL 教学法或课堂场景的实时交互；项目从 v0.1.0 到 v1.5.0 的迭代记录本身就是一份完整的设计案例。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**没有 API 预算的团队**：OpenMAIC 本身免费，但所有 AI 能力（大纲生成、TTS、搜索、PBL 里程碑）都依赖外部模型服务，README 中 `slots` 配置明确要求你提供 `apiKey`；如果无法承担模型费用，项目基本不可用。",
+            "**需要长期稳定、不愿频繁升级的生产系统**：项目 8 个月内发布了 15 个版本（v0.1.0 到 v1.5.0），其中多个是单向升级，且仍有 85 个未关闭的 Issue/PR；如果你的业务不能承受每周一次的升级节奏，建议等版本稳定后再采用。",
+            "**对数据主权有严格要求的组织**：README 明确课程存储在服务端 PostgreSQL，且支持连接外部 AI 提供商；如果你不能接受课程内容经过第三方模型服务处理，或者需要完全离线的解决方案，OpenMAIC 不适合。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/THU-MAIC/OpenMAIC)",
+            "[README](https://github.com/THU-MAIC/OpenMAIC/blob/main/README.md)",
+            "[Releases 页面](https://github.com/THU-MAIC/OpenMAIC/releases)",
+            "[Issues 页面](https://github.com/THU-MAIC/OpenMAIC/issues)",
+            "[v1.5.0 Release](https://github.com/THU-MAIC/OpenMAIC/releases/tag/v1.5.0)",
+            "[v1.4.2 Release](https://github.com/THU-MAIC/OpenMAIC/releases/tag/v1.4.2)",
+            "[v1.4.0 Release](https://github.com/THU-MAIC/OpenMAIC/releases/tag/v1.4.0)",
+            "[v1.3.0 Release](https://github.com/THU-MAIC/OpenMAIC/releases/tag/v1.3.0)",
+            "[v1.1.3 安全公告](https://github.com/THU-MAIC/OpenMAIC/security/advisories/GHSA-6c52-8h4v-5xvg)",
+            "[v1.1.2 安全公告](https://github.com/THU-MAIC/OpenMAIC/security/advisories/GHSA-g87c-cm4q-cw5x)",
+            "[v1.1.1 安全公告](https://github.com/THU-MAIC/OpenMAIC/security/advisories/GHSA-cpjc-vgjh-c5jp)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-25。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "side": {
+    "repo": "yding-git/personal-edge-proxy",
+    "url": "https://github.com/yding-git/personal-edge-proxy",
+    "stars": 1229,
+    "language": "",
+    "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+    "why": "这套配置把Xray、Hysteria2、REALITY和WARP组合成多入口多出口的代理方案，适合需要稳定访问境外服务、又不想依赖单一协议的个人用户。如果你有VPS且熟悉SSH，现在就能部署；但要注意它需要手动编辑配置文件，且依赖较新内核，建议先备份原有网络设置。",
+    "kind": "代理工具配置集",
+    "pushedAt": "2026-09-11"
+  },
+  "meta": {
+    "repo": "THU-MAIC/OpenMAIC",
+    "stars": 44368,
+    "language": "TypeScript",
+    "license": "MIT",
+    "lastCommit": "2026-11-24",
+    "openIssues": 85,
+    "version": "v1.5.0",
+    "lenses": [
+      "高考/考研",
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 2384,
+    "codeBlocks": 3,
+    "minutes": 8.2,
+    "asOf": "2026-11-25"
+  }
+}
