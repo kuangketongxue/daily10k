@@ -1,6 +1,27 @@
 {
-  "updated": "2026-11-23",
+  "updated": "2026-11-24",
   "issues": [
+    {
+      "date": "2026-11-24",
+      "title": "Firecrawl：让 AI 代理直接读懂整个 Web 的知识基础设施",
+      "oneLiner": "Firecrawl 是一个把网页、搜索与 550+ 数据源统一成 LLM 就绪输出的知识基础设施，供 AI 代理与开发者调用。",
+      "category": "AI · Web 抓取 · 数据提取",
+      "stars": 207977,
+      "repo": "firecrawl/firecrawl",
+      "lenses": [
+        "AI"
+      ],
+      "side": {
+        "repo": "yding-git/personal-edge-proxy",
+        "url": "https://github.com/yding-git/personal-edge-proxy",
+        "stars": 1228,
+        "language": "",
+        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+        "why": "它把Xray、Hysteria2、REALITY Vision、WARP和SOCKS5路由整合成一套可运行的个人代理配置，解决多入口多出口的流量分流问题。适合需要稳定访问海外资源、又不想维护复杂配置的独立开发者或技术爱好者。使用前需确认服务器支持所需协议，并自行调整入站出站规则。",
+        "kind": "网络代理配置工具",
+        "pushedAt": "2026-09-11"
+      }
+    },
     {
       "date": "2026-11-23",
       "title": "AutoClip：一个链接，一键出片——开源 AI 视频剪辑桌面工具",

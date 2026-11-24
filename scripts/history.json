@@ -31,5 +31,6 @@
   "vercel-labs/agent-browser",
   "ChromeDevTools/chrome-devtools-mcp",
   "Tracer-Cloud/opensre",
-  "zhouxiaoka/autoclip"
+  "zhouxiaoka/autoclip",
+  "firecrawl/firecrawl"
 ]
