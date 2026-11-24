@@ -9,6 +9,11 @@ on:
     # 对策：在「北京 00:00~07:30」这个窗口里多排几批（UTC 16:00~23:30 都落在同一个
     # 北京日期），哪批先跑起来就先出稿，其余批次命中「当天已生成」闸门后几秒退出。
     # 延迟 5.5 小时以内，第一批（UTC 16:00）就能在北京 5:30 前把稿子发出去。
+    #
+    # 2026-11-24 追加：GitHub 的定时事件不只会迟到，还会整段丢失 —— 11-23 全天 7 批
+    # 一次都没投递（最后一条事件停在 11-23 10:14 UTC），当天直接没有稿子。
+    # 所以多排两批晚档，并把「缺期补写」做进脚本（见 generate.mjs 的 pickTarget）：
+    # 任何一批真的到达时，都会把最近 3 天里最新的空档补上，不再出现永久缺稿。
     - cron: "0 16 * * *"   # 北京 00:00（主力，抵御 3~4 小时排队延迟）
     - cron: "30 17 * * *"  # 北京 01:30
     - cron: "0 19 * * *"   # 北京 03:00
@@ -16,8 +21,18 @@ on:
     - cron: "30 22 * * *"  # 北京 06:30
     - cron: "30 23 * * *"  # 北京 07:30 兜底
     - cron: "0 2 * * *"    # 北京 10:00 补跑：早间批次全部失败时仍有一次机会
+    - cron: "0 6 * * *"    # 北京 14:00 晚间前的最后一次机会
+    - cron: "0 11 * * *"   # 北京 19:00 当天最后一次机会
   workflow_dispatch:
     inputs:
+      date:
+        description: 要写的日期 YYYY-MM-DD（留空＝今天，今天已有则补最近缺期）
+        type: string
+        default: ""
+      force:
+        description: 该日期已有稿子也重新生成
+        type: boolean
+        default: false
       dry_run:
         description: 只验证选品与写稿，不写入数据、不提交
         type: boolean
@@ -52,6 +67,8 @@ jobs:
           # 圈内风向信号：搜「最近被公开推荐的开源项目」。没有这个 secret 时选品照常跑，只是少一路加权
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          TARGET_DATE: ${{ github.event.inputs.date || '' }}
+          FORCE_REGEN: ${{ github.event.inputs.force || 'false' }}
         run: |
           for i in 1 2 3; do
             if node scripts/generate.mjs; then exit 0; fi
@@ -97,5 +114,5 @@ jobs:
 
           常见原因：正文字数不达标、GitHub API 限流（403/429）、LLM 超时或返回空。
 
-          处理方式：先看日志确认原因；若只是偶发，可直接用 gh run rerun ${{ github.run_id }} 重跑，或等下一个批次（北京 10:00 有补跑）。" \
+          处理方式：先看日志确认原因；若只是偶发，可直接用 gh run rerun ${{ github.run_id }} 重跑，或等下一个批次（北京 10:00 / 14:00 / 19:00 都还有补跑）。" \
             2>/dev/null || echo "issue 创建失败（检查 issues:write 权限），请到 Actions 页面查看"

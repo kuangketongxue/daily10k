@@ -34,6 +34,9 @@ const AI_BASE = (process.env.AI_BASE_URL || cfg.baseUrl || '').replace(/\/+$/, '
 const AI_MODEL = process.env.AI_MODEL || cfg.model;
 const GH_TOKEN = process.env.GITHUB_TOKEN || cfg.githubToken || '';
 const DRY_RUN = /^(1|true)$/i.test(String(process.env.DRY_RUN || ''));
+// 手动触发用：指定日期与强制重写（定时批次不传这两个）
+const TARGET_DATE = String(process.env.TARGET_DATE || '').trim();
+const FORCE_REGEN = /^(1|true)$/i.test(String(process.env.FORCE_REGEN || ''));
 if (!AI_KEY || !AI_BASE || !AI_MODEL) {
   console.error('缺少 AI 配置（config.json 或 AI_API_KEY/AI_BASE_URL/AI_MODEL）');
   process.exit(1);
@@ -42,6 +45,29 @@ if (!AI_KEY || !AI_BASE || !AI_MODEL) {
 const log = (...a) => console.log('[万星日报]', ...a);
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
+
+// 日期加减：按 UTC 正午算，避开时区与跨月边界
+const shiftDate = (iso, days) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d) + days * 86400000).toISOString().slice(0, 10);
+};
+
+// 定时批次的目标日期。
+// GitHub 的 schedule 事件会被延迟数小时、也会被直接丢弃（实测 2026-11-23 全天 7 批一次没到）。
+// 若目标日期写死为「今天」，那么：① 事件迟到跨零时后，昨天整天就永久缺稿；
+// ② 某天所有事件都丢了，第二天只认新日期，那天空档再也不会被补。
+// 所以：今天没有就先写今天；今天已有，就把最近 BACKFILL_DAYS 天里最新的空档补上。
+const BACKFILL_DAYS = 3;
+const postPath = d => join(POSTS_DIR, `${d}.json`);
+function pickTarget() {
+  const t = today();
+  if (!existsSync(postPath(t))) return t;
+  for (let i = 1; i <= BACKFILL_DAYS; i++) {
+    const d = shiftDate(t, -i);
+    if (!existsSync(postPath(d))) return d;
+  }
+  return null;
+}
 
 async function gh(path, raw = false, attempt = 1) {
   const res = await fetch('https://api.github.com' + path, {
@@ -1375,12 +1401,22 @@ export function rebuildIndex(dataDir = DATA_DIR) {
 }
 
 export async function main() {
-  const date = today();
+  if (TARGET_DATE && !/^\d{4}-\d{2}-\d{2}$/.test(TARGET_DATE)) {
+    console.error(`TARGET_DATE 必须是 YYYY-MM-DD，收到：${TARGET_DATE}`);
+    process.exit(1);
+  }
+  // 定时批次走 pickTarget：今天优先，今天已有则补最近缺期；手动指定日期时以指定值为准
+  const date = TARGET_DATE || (DRY_RUN ? today() : pickTarget());
+  if (!date) {
+    log(`今日 ${today()} 的日报已存在，近 ${BACKFILL_DAYS} 天也无缺期，跳过本次批次`);
+    return;
+  }
+  if (date !== today()) log(`补写 ${date} 的空档（定时批次迟到或缺失，先把缺期填上）…`);
   log('开始生成', date, '这一期…');
 
-  // 定时任务在北京时间一天内有多批（16:00~23:30 UTC，见 daily.yml）；
-  // 当天已生成时后面的批次直接跳过，手动运行不受影响
-  if (!DRY_RUN && process.env.GITHUB_EVENT_NAME === 'schedule' && existsSync(join(POSTS_DIR, `${date}.json`))) {
+  // 定时任务在北京时间一天内有多批（见 daily.yml），同一天不重复写；
+  // 手动运行可开 force 强制重写，或用 date 指定补某一天
+  if (!DRY_RUN && !TARGET_DATE && !FORCE_REGEN && existsSync(postPath(date))) {
     log(`今日 ${date} 的日报已存在，跳过本次定时批次`);
     return;
   }
