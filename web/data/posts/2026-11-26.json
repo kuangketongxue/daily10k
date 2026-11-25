@@ -1,0 +1,256 @@
+{
+  "date": "2026-11-26",
+  "title": "AIHOT：把信源和精选标准换成你的，就是你的行业热点站",
+  "oneLiner": "一个自托管的热点聚合与日报生成框架：采集、筛选、聚簇、写作全自动，用你自己的信源和标准，跑出你的行业热点站。",
+  "category": "AI · 内容聚合 · 自托管 · TypeScript",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "做内容的人每天都要面对同一个问题：信源太多，看不过来；看完了，还要自己判断哪些值得写、怎么写摘要、怎么组织成一篇日报。这个流程重复、耗时，而且很难规模化。AIHOT 把这条流水线自动化了：采集、预筛、两次评分、写作、聚簇、热点计算、成刊，每一步都由代码和提示词驱动。"
+        },
+        {
+          "type": "p",
+          "text": "它的核心主张在 README 里说得很直白：**“把信源换成你的，把精选标准换成你的 KnowHow，它就是你的行业热点站。”** 这句话点出了它的定位——不是另一个资讯 App，而是一个框架。你不需要懂它的行业，只需要懂你自己的：哪些信源有用、什么消息对你来说算热点。"
+        },
+        {
+          "type": "quote",
+          "text": "这半年，很多做法律、做 HR、做金融、做贵金属的朋友问我，能不能也给他们的行业做一个。我做不了。我不懂你们的行业，不知道哪些信源有用，也不知道什么样的消息，对你们来说才叫热点。但你们懂。既然我没办法满足所有人，那就把火种交到大家自己手上。"
+        },
+        {
+          "type": "p",
+          "text": "作者在“为什么开源”一节里交代了动机。这个仓库是 AIHOT 线上站的引擎，同步时直接从线上导出，不是精心打磨的通用框架。它带 18 个公开的海外 AI 资讯源做示范，够你跑起来看效果；真正的信源，要换成你自己行业的。"
+        },
+        {
+          "type": "p",
+          "text": "对开发者来说，这意味着两件事：第一，你拿到的是一个**真实运行中的系统**，不是玩具；第二，它的边界很清晰——模型榜、Codex 重置监控、主题页大事记这些只对 AI 行业有意义的功能，以及 AIHOT 自己的运营工具，都留在线上，开源版给 Agent 的入口是 MCP 和站点上的 `/agent` 页面。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "用途一：给你的行业做一个每日热点站"
+        },
+        {
+          "type": "p",
+          "text": "这是最直接的用法。你不需要写代码，只需要改配置和提示词。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "你的信源列表（RSS、网页列表、JSON 接口、X 账号、微信公众号，或你自己脚本推送进来的内容）、你的行业词、你的精选标准（写在 `industry/prompts/selection-score.md` 里）、你的入选门槛（`industry/selection.ts`）"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "一个带后台的网站：每天自动出日报（默认 08:00），每周一出周报、每月 1 日出月报（默认 10:00、10:30），有主题页、搜索、RSS 和公开 API。所有提示词和门槛公开可改，改标准不用改代码。"
+        },
+        {
+          "type": "code",
+          "code": "请读 AGENTS.md 和 docs/customize.md，把这个站改成「XX 行业」的热点站。\n我关心的是：……（写你想盯的信源、你觉得什么消息重要、什么不重要，越具体越好）。\n改完帮我跑 npm run typecheck、npm test 和 node scripts/smoke.ts，并告诉我还需要我自己决定哪些事。",
+          "caption": "来源：README「把它改成你的行业」——最省事的改法，把仓库交给你的 Agent"
+        },
+        {
+          "type": "sub",
+          "text": "用途二：给 Agent 提供行业资讯接口"
+        },
+        {
+          "type": "p",
+          "text": "站点跑起来后，同一份内容既给人看，也给 Agent 用。这是它和普通资讯站的区别。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个能读网页或走 MCP 的 Agent（Claude Code、Codex 都可以）"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "MCP 接入、Agent Markdown、`llms.txt`、公开 API（`/api/v1/agent` 起）、RSS（精选、全部、全文、日报、周报、月报），以及 `/agent` 页面上的接入方式说明。"
+        },
+        {
+          "type": "sub",
+          "text": "用途三：校准你的精选标准"
+        },
+        {
+          "type": "p",
+          "text": "最值得花时间的是评分标准和门槛。拿一两百条你自己标注过的资料，用 `scripts/eval-selection.ts` 跑一遍，看它选得准不准，再回去改。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "你自己标注的样本（每条资料你判断它该不该入选）"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "一份评测报告，告诉你当前提示词和门槛的准确率；据此调整 `industry/prompts/selection-score.md` 和 `industry/selection.ts`。"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "README 里有一张六步流程图：**采集、预筛、两次评分、写作、聚簇、热点与成刊**。一条资料从信源进来，先判重，再预筛；可能重要的独立打两次分，写好中文标题和摘要，和别的报道聚成事件，算进热度。"
+        },
+        {
+          "type": "p",
+          "text": "架构上，它跑三个进程（详见 `docs/architecture.md`），技术栈是 Node.js 24 · TypeScript · React Router（服务端渲染）· Fastify · PostgreSQL · pg-boss · Tailwind CSS · Docker Compose。数据存在 PostgreSQL 里，任务队列用 pg-boss。"
+        },
+        {
+          "type": "p",
+          "text": "核心机制有两个。第一个是**聚簇**：同一件事，官网发一篇、媒体转十篇、X 上吵一天，读者只需要看到一次。它先用标题摘要的向量（没配向量服务时比文字重合度）在最近两周里找候选，再让模型判断是同一件事、后续进展，还是两件事；拿不准的合并，写入前再让模型复核一遍（复核可以单独换一家模型，设 `GROUP_REVIEW_MODEL`）。"
+        },
+        {
+          "type": "p",
+          "text": "第二个是**热度**：按事件算，不按文章算。48 小时内，每个独立来源只算一次，24 小时减半。重复抓取不会多算，一家媒体发十篇也只算一次，所以排在前面的，是真正有很多人在说的事。"
+        },
+        {
+          "type": "p",
+          "text": "每一步的提示词都在 `industry/prompts/`，改标准不用改代码。信源分三级（官方一手、官方账号与准官方、媒体与个人），各级入选门槛不同；抓取频率按产出自动调整。X 帖子没有正文或只有链接时，保留原帖的链接和图片，不调用写作或翻译模型。"
+        },
+        {
+          "type": "p",
+          "text": "性能方面，README 给出了线上实测数据：页面中位数 10 毫秒，95% 在 50 毫秒内；接口中位数 6 毫秒，95% 在 12 毫秒内；文章页 95% 在 14 毫秒内。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "需要 Docker、Node.js 24（运行 `init-env` 生成配置要用），和一个 OpenAI 兼容的模型 API Key（DeepSeek、千问、智谱都可以）。`init-env` 默认按 DeepSeek 配置。"
+        },
+        {
+          "type": "code",
+          "code": "git clone https://github.com/KKKKhazix/AIHOT.git myhot\ncd myhot\nnode scripts/init-env.ts --llm-key <你的模型 API Key>\ndocker compose up -d --build",
+          "caption": "来源：README「跑起来」"
+        },
+        {
+          "type": "p",
+          "text": "打开 <http://localhost:3000>。后台在 `/admin`，管理员密码在 `.env` 的 `ADMIN_PASSWORD` 里。一两分钟后开始有内容，第一次导入的资料大约半小时处理完。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "用千问、智谱等别家，照 `.env.example` 里的例子改 `.env` 的 `LLM_BASE_URL`、`LLM_MODEL` 和 `LLM_EXTRA_JSON`；用推理模型（先想再答）时，还要设 `LLM_REASONING_TOKENS` 给推理留出输出额度。",
+            "机器上没有 Node、服务器在中国大陆、要配域名和 HTTPS，或者不用 Docker、直接在 Linux、macOS 上跑（Windows 用 WSL2），见 `docs/deploy.md`。",
+            "站点跑起来后，打开 `/agent` 可以复制 MCP、RSS 或 API 的接入方式；只能读网页的 Agent 从 `/api/v1/agent` 开始；接口说明在 `/openapi-v1.json`。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**项目状态与维护风险**：仓库创建于 2026-09-28，最近一次推送为 2026-11-25，目前仅有 1 个未关闭的 Issue 与 PR。这意味着项目处于活跃开发期，但维护者明确表示\"我不是专业的开发者\"，且\"以后 AIHOT 的更新，我会尽量同步过来，但没法保证每一次都同步\"。所以你要注意：如果你依赖上游更新，需要自行维护 fork 或定期手动同步，且无法期待快速响应。",
+            "**版本与稳定性风险**：官方未发布正式 Release，项目处于开发者预览阶段。README 中提及的 `init-env` 脚本、Docker Compose 配置和模块结构可能随开发频繁变化，存在破坏性变更的可能。所以你要注意：在生产环境部署前，应锁定 commit 版本，并建立自己的回归测试机制。",
+            "**功能范围限制**：开源版明确不包含 AIHOT 的信源名单和运营数据，仅提供 18 个公开的海外 AI 资讯源作为示范。同时，模型榜、Codex 重置监控、主题页大事记等 AI 行业专属功能，以及可安装的 Agent Skill 文件，只保留在 AIHOT 线上站。所以你要注意：如果你需要这些功能，开源版无法提供，需要自行开发。",
+            "**品牌与许可限制**：代码采用 MIT 许可证，但 AIHOT 的名字和 Logo 不在许可范围内。所以你要注意：你可以自由使用代码，但必须更换站名和品牌标识，否则可能涉及商标侵权。",
+            "**安全与运维要求**：README 明确要求使用 Docker、Node.js 24 和 PostgreSQL 17，并需要配置一个 OpenAI 兼容的模型 API Key。后台管理密码存储在 `.env` 的 `ADMIN_PASSWORD` 中。所以你要注意：部署时需妥善管理环境变量，避免将 API Key 和密码泄露到公开仓库。",
+            "**商业化倾向**：项目通过线上原站 aihot.news 进行推广，但 README 中未发现明显的商业产品推广内容。项目定位为\"火种\"，鼓励用户自建行业站点。所以你要注意：虽然当前未见商业化风险，但维护者可能将部分功能保留在线上站，需持续关注项目动态。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "按 GitHub 同类搜索（topic: news-aggregator, rss, daily-digest, self-hosted）暂未找到与 AIHOT 完全同类的成熟项目。候选项目中，BeeCount 是记账工具、document.ai 是企业知识库问答、JioNLP 是中文 NLP 工具包、ChatTTS 是语音合成模型，均不解决\"自建行业热点聚合与日报生成\"这一核心问题。因此，不列出替代方案。"
+        },
+        {
+          "type": "p",
+          "text": "选择判据：如果你需要的是\"自己找热点、自己写日报\"的行业内容站框架，AIHOT 是当前唯一开源实现；如果你需要的是通用 RSS 阅读器，可考虑其他成熟项目；如果你需要的是企业知识库问答，document.ai 可能更合适。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**推荐使用**："
+        },
+        {
+          "type": "list",
+          "items": [
+            "需要为特定行业（法律、HR、金融等）搭建热点聚合站的团队或个人，且愿意投入时间配置信源和校准评分标准。",
+            "具备基本 Docker 和 Node.js 运维能力，能够管理 API Key 和数据库的开发者。",
+            "希望将内容聚合流程（采集、评分、聚簇、日报生成）作为可配置框架来研究或二次开发的技术人员。"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "**不建议使用**："
+        },
+        {
+          "type": "list",
+          "items": [
+            "需要开箱即用、无需配置信源和模型就能运行的团队——开源版仅提供示范信源，且需要自行提供模型 API Key。",
+            "依赖正式 Release 版本和长期稳定支持的生产环境——项目目前无正式 Release，且维护者明确不保证同步频率。",
+            "需要 AIHOT 线上站专属功能（如模型榜、Agent Skill 文件）的用户——这些功能不在开源版范围内。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/KKKKhazix/AIHOT)",
+            "[README](https://github.com/KKKKhazix/AIHOT/blob/main/README.md)",
+            "[Releases 页面](https://github.com/KKKKhazix/AIHOT/releases)",
+            "[Issues 页面](https://github.com/KKKKhazix/AIHOT/issues)",
+            "[项目主页](https://aihot.news)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-26。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "side": {
+    "repo": "yding-git/personal-edge-proxy",
+    "url": "https://github.com/yding-git/personal-edge-proxy",
+    "stars": 1229,
+    "language": "",
+    "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+    "why": "它把Xray、Hysteria2、WARP等代理组件整合成一套可运行的多入口多出口配置，省去你自己拼接文档的时间。适合需要稳定科学上网、又不想依赖现成商业服务的个人用户。注意它面向自托管，需要你有基本Linux和网络知识，且项目更新较快，部署前先看README和近期issue。",
+    "kind": "自托管代理配置工具",
+    "pushedAt": "2026-09-11"
+  },
+  "meta": {
+    "repo": "KKKKhazix/AIHOT",
+    "stars": 11403,
+    "language": "TypeScript",
+    "license": "MIT",
+    "lastCommit": "2026-11-25",
+    "openIssues": 1,
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 2409,
+    "codeBlocks": 2,
+    "minutes": 7.5,
+    "asOf": "2026-11-26"
+  }
+}

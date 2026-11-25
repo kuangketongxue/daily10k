@@ -1,6 +1,27 @@
 {
-  "updated": "2026-11-25",
+  "updated": "2026-11-26",
   "issues": [
+    {
+      "date": "2026-11-26",
+      "title": "AIHOT：把信源和精选标准换成你的，就是你的行业热点站",
+      "oneLiner": "一个自托管的热点聚合与日报生成框架：采集、筛选、聚簇、写作全自动，用你自己的信源和标准，跑出你的行业热点站。",
+      "category": "AI · 内容聚合 · 自托管 · TypeScript",
+      "stars": 11403,
+      "repo": "KKKKhazix/AIHOT",
+      "lenses": [
+        "AI"
+      ],
+      "side": {
+        "repo": "yding-git/personal-edge-proxy",
+        "url": "https://github.com/yding-git/personal-edge-proxy",
+        "stars": 1229,
+        "language": "",
+        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+        "why": "它把Xray、Hysteria2、WARP等代理组件整合成一套可运行的多入口多出口配置，省去你自己拼接文档的时间。适合需要稳定科学上网、又不想依赖现成商业服务的个人用户。注意它面向自托管，需要你有基本Linux和网络知识，且项目更新较快，部署前先看README和近期issue。",
+        "kind": "自托管代理配置工具",
+        "pushedAt": "2026-09-11"
+      }
+    },
     {
       "date": "2026-11-25",
       "title": "OpenMAIC：把任何文档变成一间有老师、有同学的 AI 课堂",
