@@ -1,0 +1,277 @@
+{
+  "date": "2026-11-27",
+  "title": "magpie：把所有 AI 订阅汇成一个池子，任何 Agent 都能用",
+  "oneLiner": "magpie 是一个本地网关，把你付费的 Claude、ChatGPT、Copilot、GLM、Kimi 等订阅汇成统一池子，供 Claude Code、Codex 等任意 Agent 调用，配额耗尽自动切换。",
+  "category": "AI 开发工具 · 本地网关 · 订阅管理",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "多数开发者同时订阅了多个 AI 服务：Claude 用于 Codex，ChatGPT 用于 Claude Code，还有 GLM、Kimi 的编程套餐。但每个 Agent 只认自己厂商的模型，订阅被锁死在购买它的那个工具里。你为 Claude Max 付费，却无法在 Codex 里用；你为 ChatGPT Pro 付费，却无法在 Claude Code 里用。"
+        },
+        {
+          "type": "p",
+          "text": "magpie 的定位正是解决这个割裂。README 开篇写道：**\"Claude Code on your ChatGPT Pro. Codex on your Claude Max. Claude Desktop on your GLM Coding Plan.\"** 它把每个 Agent 的模型配置、密钥、base URL 统一收进一个本地网关，让任意 Agent 调用任意已添加的订阅。"
+        },
+        {
+          "type": "p",
+          "text": "更关键的是配额管理。当你某个订阅的额度耗尽，magpie 会自动切换到同一路由组的下一个模型或提供商，Agent 端不会看到报错。README 明确说明：**\"Keep going when a quota runs out: a provider's next account takes over, and a routing group moves on to another model or provider, so the agent never sees the error.\"** 前提是你至少有两个账户或一个路由组，否则错误仍会传回 Agent。"
+        },
+        {
+          "type": "p",
+          "text": "隐私是另一个痛点。Agent 会把读取到的 .env、配置文件、日志中的 token 塞进提示词，发送给厂商。magpie 在设置中提供隐私掩码功能（默认关闭），在请求离开电脑前将密钥、密码、邮箱替换为占位符，并在回复中还原。README 称：**\"Keep your secrets off the vendor's servers.\"**"
+        },
+        {
+          "type": "p",
+          "text": "项目热度验证了需求：GitHub 星数 41952，本月新增 20593 星，位列 Trending 月榜第 11 名。未关闭的 Issue 与 PR 达 5249 个，说明社区参与度极高。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "让 Claude Code 跑在 ChatGPT Pro 上"
+        },
+        {
+          "type": "p",
+          "text": "如果你同时订阅了 ChatGPT Pro 和 Claude Code，magpie 让你在 Claude Code 里选择 ChatGPT 的模型，无需额外付费。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "ChatGPT Pro 订阅（通过浏览器登录或 API key），以及 Claude Code 的配置"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "Claude Code 的模型选择列表中多出 ChatGPT 的模型，选择后自动改写 Agent 配置，保留注释与格式"
+        },
+        {
+          "type": "sub",
+          "text": "配额耗尽自动切换，不中断工作流"
+        },
+        {
+          "type": "p",
+          "text": "当某个订阅的额度用完，magpie 自动切换到下一个可用账户或模型。README 中的路由组示例展示了这一机制："
+        },
+        {
+          "type": "code",
+          "code": "magpie group add \"Opus anywhere\" models=claude/claude-opus-5-5,copilot/claude-opus-5.5 routing=smart\nmagpie claude group/opus-anywhere   # fails over between subscriptions",
+          "caption": "来源：README「Quick start」"
+        },
+        {
+          "type": "p",
+          "text": "这个路由组包含 Claude 和 Copilot 两个订阅的 Opus 模型，`routing=smart` 表示智能路由。当 Claude 配额耗尽，请求自动转向 Copilot，Agent 端无感知。"
+        },
+        {
+          "type": "sub",
+          "text": "隐私掩码，防止密钥泄漏给厂商"
+        },
+        {
+          "type": "p",
+          "text": "开启 Settings → Privacy 的掩码后，magpie 在本地识别 API key、私钥、token、邮箱、银行卡号等敏感值，替换为 `{{API_KEY_k3v9x2mq}}` 这样的占位符，请求发出后才在回复中还原。README 提到，掩码支持流式文本和工具调用参数，确保 Agent 执行命令时拿到真实密钥。"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个包含敏感信息的提示词（例如从 .env 读取的 token）"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "发送给厂商的请求中敏感值被替换为占位符，回复中自动还原"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "magpie 的核心是一个本地网关，监听 `127.0.0.1:3425`，同时支持四种协议：OpenAI Chat、OpenAI Responses、Anthropic Messages 和 Gemini。README 描述：**\"The gateway at 127.0.0.1:3425 speaks OpenAI Chat, OpenAI Responses, Anthropic Messages and Gemini, and translates between them, streaming, tool calls and reasoning included.\"** 这意味着不同协议的 Agent 可以无缝接入。"
+        },
+        {
+          "type": "p",
+          "text": "架构上分为三层。第一层是 Agent 适配层，magpie 自动检测本机安装的 Agent（README 列出了 80 多个，包括 Claude Code、Codex、Gemini CLI、Cursor CLI、Zed 等），并读取它们的配置文件。第二层是路由层，将请求分发到对应的提供商适配器。第三层是提供商层，处理与各厂商 API 的交互。README 中的架构图展示了这一流程：Agent 发送请求到 magpie 网关，网关通过路由组和插件分发到 API key、订阅或本地模型。"
+        },
+        {
+          "type": "p",
+          "text": "订阅发现机制值得一提。magpie 通过读取 Agent 的登录状态（如 Claude Code 和 Codex 的配置文件、macOS 钥匙串）自动发现你已登录的订阅，无需手动输入凭据。README 说明：**\"magpie finds the subscriptions your agents are signed in to by reading their sign-ins (Claude Code's and Codex's files, the Keychain).\"** 若不想让 magpie 读取，可在 Settings → Privacy 关闭，或设置环境变量 `MAGPIE_NO_ACCOUNTS=1`。"
+        },
+        {
+          "type": "p",
+          "text": "模型切换通过原子化重写 Agent 配置文件实现。README 描述：**\"The agent's config is rewritten atomically, and its comments, order and formatting stay as they were.\"** 这保证了切换模型不会破坏用户的配置结构。"
+        },
+        {
+          "type": "p",
+          "text": "项目用 Go 编写，MIT 许可证，支持 macOS、Windows、Linux，提供菜单栏应用、窗口、TUI、Web UI 和 CLI 多种界面，也可在 Docker 和 Termux 中运行。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "安装非常简单，一条命令即可："
+        },
+        {
+          "type": "code",
+          "code": "curl -fsSL https://usemagpie.ai/install.sh | sh",
+          "caption": "来源：README「Quick start」"
+        },
+        {
+          "type": "p",
+          "text": "安装后，打开 magpie，在 **Providers → Add provider** 中添加提供商。选择预设并粘贴 API key，或通过浏览器登录订阅。然后在 **Agents** 页面为每个 Agent 选择模型，新会话即生效。"
+        },
+        {
+          "type": "p",
+          "text": "全部操作也可在终端完成："
+        },
+        {
+          "type": "code",
+          "code": "magpie provider add deepseek sk-…              # a preset needs only the key\nmagpie claude deepseek/deepseek-v4-pro          # Claude Code on DeepSeek\nmagpie codex moonshot/kimi-k2.5                 # Codex on Kimi\nmagpie quota                                    # what's left on every plan\nmagpie tui                                      # the whole thing, in a terminal",
+          "caption": "来源：README「Quick start」"
+        },
+        {
+          "type": "list",
+          "items": [
+            "macOS 构建已签名并公证，每个 release 文件带有 GitHub Actions 构建证明，可用 `gh attestation verify <file> -R yetone/magpie-releases` 验证。",
+            "Linux 上若无桌面环境或无法在终端询问，安装脚本会安装终端版本并提示需要添加的包；可用 `--gui` 或 `--tui` 选择界面。",
+            "卸载命令为 `curl -fsSL https://usemagpie.ai/install.sh | sh -s -- --uninstall`，会恢复 Agent 原始配置并移除安装的文件；设置保存在 `~/.config/magpie`，除非加 `--purge` 否则保留。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭 Issue 与 PR 达 5249 个**，而仓库创建于 2026-09-23，仅两个月。这意味着维护者平均每天要处理约 87 个新反馈，积压量已远超正常维护能力。所以你要注意：提交问题后可能长时间得不到回应，关键 bug 修复速度存在不确定性。",
+            "**最新 Release 为 v0.1.4884（2026-11-26），版本号仍在 0.1.x**，且最近一次推送就在 2026-11-26。官方明确表示这是开发者预览阶段，接口和配置格式可能频繁变动。所以你要注意：升级前务必阅读 [Releases 页面](https://github.com/yetone/magpie/releases) 的变更说明，生产环境需锁定版本。",
+            "**README 指出隐私掩码功能默认关闭**（Settings → Privacy 中开启）。这意味着默认状态下，密钥、密码和邮箱等敏感信息会以明文形式发送给模型供应商。所以你要注意：若处理敏感代码或配置，必须手动开启掩码，并确认本地模型（1.6 GB 下载）已就绪。",
+            "**README 明确说明**：magpie 会读取你已安装代理的登录凭据（如 Claude Code 和 Codex 的配置文件、Keychain），以发现订阅账户。虽然可通过 Settings → Privacy 关闭，但默认开启。所以你要注意：在共享或公司电脑上使用前，需评估凭据读取范围，必要时执行 `magpie accounts discovery off`。",
+            "**README 显示项目接受商业赞助**（Kimi、WandAPI、AIGoCode、ModelGo、x6.ai、Ccode-AI 等），并存在官方推广链接。虽然核心代码为 MIT 许可，但赞助商可能影响功能优先级。所以你要注意：关注路由策略是否偏向赞助商模型，避免依赖特定供应商的免费额度。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "同类项目筛选"
+        },
+        {
+          "type": "p",
+          "text": "在候选列表中，**cheaper-inference/OmniRoute** 与 **decolua/9router** 确实解决同一类问题——将多个模型提供商的配额聚合为统一网关，并支持自动故障转移。其余候选（coucou、token-monitor）仅提供监控或通知功能，不涉及请求路由，故不纳入。"
+        },
+        {
+          "type": "kv",
+          "k": "cheaper-inference/OmniRoute（★90492，MIT，TypeScript，最近推送 2026-11-26）",
+          "v": "单一端点支持 375 个提供商（150+ 免费）、1400+ 模型，具备配额感知自动故障转移和 RTK+Caveman 压缩（节省 15-95% token）。[仓库首页](https://github.com/cheaper-inference/OmniRoute)"
+        },
+        {
+          "type": "kv",
+          "k": "decolua/9router（★32873，MIT，JavaScript，最近推送 2026-11-23）",
+          "v": "连接 Claude Code、Codex 等代理到 40+ 免费提供商，支持自动回退和 RTK 压缩（节省 40% token）。[仓库首页](https://github.com/decolua/9router)"
+        },
+        {
+          "type": "p",
+          "text": "选择判据：若你需要**最大提供商覆盖**（尤其是免费模型）且接受 TypeScript 栈，选 OmniRoute；若你只需连接主流代理且偏好轻量 JavaScript 方案，选 9router；若你要求**原生桌面应用体验**（macOS/Windows/Linux 菜单栏、TUI、Docker、Termux）且需要**隐私掩码**功能，则选本项目 magpie。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**多代理、多提供商用户**：同时使用 Claude Code、Codex、Gemini CLI 等 2 个以上代理，且订阅了多个付费计划（如 ChatGPT Pro + Claude Max），需要统一管理配额并自动切换。",
+            "**需要隐私保护的用户**：处理含 API 密钥、密码等敏感信息的代码，且愿意在本地运行 1.6 GB 掩码模型，确保请求离开前敏感值已被替换。",
+            "**跨平台团队**：在 macOS、Windows、Linux 甚至 Docker/Termux 环境中部署，需要一致的 CLI 和 Web UI 操作界面。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**单一代理、单一订阅用户**：README 明确表示，若你只用一个代理且其官方计划已足够，无需 magpie——引入额外网关只会增加配置复杂度和潜在故障点。",
+            "**无法接受频繁变更的稳定性敏感场景**：当前版本为 0.1.x 开发者预览，配置格式和路由行为可能随 Release 变动，不适合需要长期锁定环境的 CI/CD 流水线。",
+            "**对维护响应速度有严格要求的团队**：5249 个未关闭 Issue/PR 表明反馈积压严重，若你的工作流依赖快速修复，建议先评估替代方案或自行 fork 维护。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/yetone/magpie)",
+            "[README](https://github.com/yetone/magpie#readme)",
+            "[Releases 页面](https://github.com/yetone/magpie/releases)",
+            "[Issues 页面](https://github.com/yetone/magpie/issues)",
+            "[项目主页](https://usemagpie.ai)",
+            "[OmniRoute 仓库](https://github.com/cheaper-inference/OmniRoute)",
+            "[9router 仓库](https://github.com/decolua/9router)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-27。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "side": {
+    "repo": "yding-git/personal-edge-proxy",
+    "url": "https://github.com/yding-git/personal-edge-proxy",
+    "stars": 1229,
+    "language": "",
+    "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
+    "why": "这套配置把Xray、Hysteria2、WARP和静态SOCKS5路由组合成多入口多出口的个人代理方案，适合需要稳定连接海外服务但不想依赖单一协议的独立开发者或运维。它解决的是多协议切换和分流配置繁琐的问题，但要求你熟悉代理协议基础，部署前先确认节点可用性和网络环境。",
+    "kind": "代理配置方案",
+    "pushedAt": "2026-09-11"
+  },
+  "meta": {
+    "repo": "yetone/magpie",
+    "stars": 41952,
+    "language": "Go",
+    "license": "MIT",
+    "lastCommit": "2026-11-26",
+    "openIssues": 5249,
+    "version": "v0.1.4884",
+    "trending": {
+      "window": "月榜",
+      "rank": 11,
+      "gained": 20593,
+      "unit": "本月"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 2002,
+    "codeBlocks": 3,
+    "minutes": 7.3,
+    "asOf": "2026-11-27"
+  }
+}
