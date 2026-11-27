@@ -6,7 +6,6 @@
 <title>万星日报 · 每天一个 GitHub 万星项目</title>
 <meta name="description" content="万星日报：每天只讲一个 GitHub 万星热门项目（运行时抓取 Trending 热度榜）。">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0a3d6e">
 <meta property="og:site_name" content="万星日报">
@@ -53,9 +52,8 @@
   </div>
 </footer>
 
+<script src="js/cloud-favorites.js"></script>
 <script src="favorites.js"></script>
-<script src="ratings.js"></script>
-<script src="rating-ui.js"></script>
 <script src="register-sw.js"></script>
 <script>
 const article = document.getElementById('article');
@@ -140,7 +138,7 @@ function render(p) {
   // 正文排版统一由 favorites.js 的 renderPostHtml 产出，这里只补文章页独有的外壳，
   // 避免两处各写一份 esc/inline 后逐渐漂移
   const html = `<a class="back" href="index.html"><span aria-hidden="true">←</span> 回首页</a>`
-    + renderPostHtml(p, { afterTitle: '<div class="a-fav-slot" id="a-fav"></div><div class="a-rating-slot" id="a-rating"></div>' });
+    + renderPostHtml(p, { afterTitle: '<div class="a-fav-slot" id="a-fav"></div>' });
 
   document.getElementById('loading')?.remove();
   article.innerHTML = html;
@@ -148,11 +146,6 @@ function render(p) {
     label: '收藏这一期',
     onLabel: '已收藏 · 点击取消',
   });
-  if (p.date && typeof mountRating === 'function') {
-    mountRating(document.getElementById('a-rating'), {
-      date: p.date, title: p.title, category: p.category
-    });
-  }
   if (p.date) mountIssueNav(p.date);
 }
 
