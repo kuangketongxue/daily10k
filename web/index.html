@@ -63,6 +63,7 @@
       <a class="read-btn" id="t-link" href="article.html">阅读全文<span class="go" aria-hidden="true">→</span></a>
       <span class="today-fav-slot" id="t-fav"></span>
     </div>
+    <div class="today-rating-slot" id="t-rating"></div>
   </article>
   <div class="empty" id="empty" hidden>
     <p class="big" aria-hidden="true">☁</p>
@@ -100,6 +101,7 @@
 }
 </script>
 <script src="js/cloud-favorites.js"></script>
+<script src="js/ratings.js"></script>
 <script src="favorites.js"></script>
 <script src="register-sw.js"></script>
 <script>
@@ -133,6 +135,7 @@ fetch('data/index.json', { cache: 'no-cache' })
       });
     document.getElementById('t-link').href = 'article.html?d=' + encodeURIComponent(it.date);
     mountFavButton(document.getElementById('t-fav'), it.date);
+    if (window.D10Ratings) window.D10Ratings.mount(document.getElementById('t-rating'), it.date);
     // 生成失败或还没跑完时，首页不能把旧文章冒充成今天的
     const bjToday = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
     if (it.date !== bjToday) {
