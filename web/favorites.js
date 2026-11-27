@@ -17,22 +17,41 @@ const LS_FAV = 'daily10k:favorites';
 const LS_OPEN = 'daily10k:favorites:open';
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/* ---------- 云端同步桥（2026-11-27 新增）----------
+   底层换成 shared/cloud-favorites.js：收藏写 localStorage 的同时，
+   填了 GitHub 令牌就自动同步到私有仓 kuangketongxue/kuangketongxue 的
+   data/daily-favorites.json —— 电脑重置后登录令牌即可拉回最新收藏。
+   没填令牌时行为与旧版完全一致（纯本机）。旧收藏首次访问自动迁移进新结构。 */
+const CF = typeof window !== 'undefined' ? window.CloudFavorites : null;
+const CF_SITE = 'daily10k';
+if (CF) {
+  CF.configure({ site: CF_SITE });
+  // 一次性迁移：旧 localStorage 收藏 → 云端结构（CF 未就绪或已迁移则跳过）
+  try {
+    const legacy = loadLegacyFavorites();
+    if (legacy.length) {
+      const cur = CF.list('issues');
+      legacy.forEach(d => { if (cur.indexOf(d) < 0) CF.add('issues', d); });
+      if (CF.hasToken()) CF.sync().catch(() => {});
+    }
+  } catch { /* 迁移失败不影响使用 */ }
+}
+
+function loadLegacyFavorites() {
+  const raw = readCache(LS_FAV);
+  if (!raw) return [];
+  try {
+    const d = JSON.parse(raw);
+    return (Array.isArray(d.items) ? d.items : []).filter(d => DATE_RE.test(d));
+  } catch { return []; }
+}
+
 /* ---------- 小工具 ---------- */
 
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
-}
-
-// 分类串（「AI Agent · 技能编排 · 官方示例」）拆成逐项标签，
-// 首页 / 归档 / 收藏三处共用同一套拆分口径，避免一处整串、一处逐项。
-function splitCategory(cat) {
-  return String(cat ?? '').split(/[·\/,，]/).map(s => s.trim()).filter(Boolean);
-}
-
-function categoryTags(cat) {
-  return splitCategory(cat).map(c => `<span class="tag">${esc(c)}</span>`).join('');
 }
 
 function readCache(key) {
@@ -46,6 +65,12 @@ function writeCache(key, value) {
 /* ---------- 收藏数据 ---------- */
 
 function loadFavorites() {
+  // 有 CloudFavorites：以其结构为准（内部仍写 localStorage，且自动云同步）
+  if (CF) {
+    try {
+      return { items: (CF.list('issues') || []).filter(d => DATE_RE.test(d)) };
+    } catch { /* 回退到旧路径 */ }
+  }
   const raw = readCache(LS_FAV);
   if (!raw) return { items: [] };
   try {
@@ -59,6 +84,16 @@ function loadFavorites() {
 
 function saveFavorites(items) {
   const uniq = [...new Set(items)].sort().reverse();
+  if (CF) {
+    try {
+      const cur = new Set(CF.list('issues') || []);
+      uniq.forEach(d => { if (!cur.has(d)) CF.add('issues', d); });
+      // 删除云里已有但不在 uniQ 的（保持与入参一致）
+      Array.from(cur).forEach(d => { if (!uniq.includes(d)) CF.remove('issues', d); });
+      // 同步后回读，保证返回的是真实落库状态
+      return (CF.list('issues') || []).slice().sort((a, b) => b.localeCompare(a));
+    } catch { /* 回退到本地 */ }
+  }
   writeCache(LS_FAV, JSON.stringify({ items: uniq }));
   return uniq;
 }
@@ -66,17 +101,15 @@ function saveFavorites(items) {
 function has(items, date) { return Array.isArray(items) && items.includes(date); }
 
 function toggleFavorite(date, action) {
+  if (CF) {
+    try {
+      if (action === 'add') CF.add('issues', date); else CF.remove('issues', date);
+      return (CF.list('issues') || []).slice().sort((a, b) => b.localeCompare(a));
+    } catch { /* 回退 */ }
+  }
   const set = new Set(loadFavorites().items);
   if (action === 'add') set.add(date); else set.delete(date);
-  const next = saveFavorites([...set]);
-  // 镜像到云端私有仓。没配令牌时 CloudFavorites 内部直接跳过，
-  // 所以这段不会影响「完全不想联网」的用法。
-  try {
-    if (window.CloudFavorites && DATE_RE.test(date)) {
-      window.CloudFavorites.toggle('issues', date, action, CLOUD_SITE);
-    }
-  } catch (e) { /* 云端出错不影响本机收藏 */ }
-  return next;
+  return saveFavorites([...set]);
 }
 
 /* ---------- 导出 / 导入（跨设备短码） ---------- */
@@ -191,7 +224,7 @@ function renderFavoriteItem(post, date, open) {
           <h2 class="fav-title">${esc(post.title || '万星日报')}</h2>
           <p class="fav-one">${esc(post.oneLiner || '')}</p>
           <div class="fav-tags">
-            ${categoryTags(post.category)}
+            ${post.category ? `<span class="tag">${esc(post.category)}</span>` : ''}
             ${Number(m.stars) > 0 ? `<span class="fav-stars">★ ${Number(m.stars).toLocaleString('zh-CN')}</span>` : ''}
           </div>
         </div>
@@ -253,43 +286,6 @@ async function initFavoritesPage(root) {
   });
 }
 
-/* ---------- 云端同步（私有仓 kuangketongxue/kuangketongxue） ---------- */
-
-const CLOUD_SITE = 'daily10k';
-
-function cloudReady() {
-  return !!(window.CloudFavorites && window.CloudFavorites.hasToken());
-}
-
-// 从云端取回 → 与本机合并 → 落盘 → 重渲染。合并只增不减，绝不复活已取消的收藏。
-async function cloudPullIntoLocal(root) {
-  if (!window.CloudFavorites) throw new Error('云端模块未加载');
-  const doc = await window.CloudFavorites.pull();
-  const cloudDates = (doc && doc.sites && doc.sites[CLOUD_SITE] && doc.sites[CLOUD_SITE].issues) || [];
-  const local = loadFavorites().items;
-  const merged = [...new Set([...local, ...cloudDates])].sort().reverse();
-  if (merged.join('|') !== local.join('|')) {
-    saveFavorites(merged);
-    document.dispatchEvent(new CustomEvent('favorites:changed', { detail: { items: merged } }));
-    if (root) initFavoritesPage(root);
-  }
-  return merged;
-}
-
-// 只在已填令牌时自动拉一次；任何失败都静默降级（云端挂了不影响看收藏）
-async function initCloud(root) {
-  if (!window.CloudFavorites) return;
-  try { window.CloudFavorites.configure({ site: CLOUD_SITE }); } catch (e) { }
-  if (!cloudReady()) return;
-  try { await cloudPullIntoLocal(root); } catch (e) { }
-}
-
-if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', () => {
-    initCloud(document.getElementById('fav-root'));
-  });
-}
-
 /* ---------- 导出 / 导入面板 ---------- */
 
 function initSyncPanel(panel, root) {
@@ -301,47 +297,54 @@ function initSyncPanel(panel, root) {
     body.hidden = false;
 
     if (mode === 'cloud') {
-      const st = window.CloudFavorites ? window.CloudFavorites.state() : null;
-      const token = window.CloudFavorites ? window.CloudFavorites.getToken() : '';
-      const setupUrl = window.CloudFavorites ? window.CloudFavorites.tokenSetupUrl() : '#';
+      const hasTok = CF ? CF.hasToken() : false;
+      const hasSet = !!(CF && CF.state && CF.state().pending);
       body.innerHTML = `
-        <p class="fav-sync-title">填一次令牌，收藏就存进你的私有仓；电脑重装后打开这里点「取回收藏」即可恢复。令牌只保存在这台设备的浏览器里，不会进代码、也不会进仓库。</p>
-        <p><a class="fav-sync-link" href="${esc(setupUrl)}" target="_blank" rel="noopener">① 生成令牌（已预填：只授权 kuangketongxue/kuangketongxue 这一个私有仓）</a></p>
-        <textarea class="fav-sync-box" rows="2" placeholder="② 粘贴令牌（github_pat_ 开头）">${esc(token)}</textarea>
+        <p class="fav-sync-title">把收藏同步到你自己的 GitHub 私有仓（kuangketongxue/kuangketongxue）。电脑重置后填回令牌即可拉回全部收藏。</p>
+        <p class="fav-sync-title">① 去 GitHub 生成一个只对私有仓有 Contents 读写权限的令牌：
+          <a href="${CF ? esc(CF.tokenSetupUrl()) : 'https://github.com/settings/personal-access-tokens/new'}" target="_blank" rel="noopener noreferrer">点此生成令牌 ↗</a></p>
+        <p class="fav-sync-title">② 粘贴令牌（只存在本机浏览器，不会上传到任何地方）：</p>
+        <input class="fav-sync-box" type="password" placeholder="github_pat_…  或  ghp_…" value="${CF && CF.getToken() ? '••••••••（已保存，留空即不改）' : ''}" />
         <p>
-          <button type="button" class="read-btn fav-sync-save">③ 保存并同步</button>
-          <button type="button" class="fav-sync-btn-inline fav-sync-pull">取回收藏</button>
-          <button type="button" class="fav-sync-cancel">关闭</button>
+          <button type="button" class="read-btn fav-sync-save">保存并同步</button>
+          <button type="button" class="read-btn fav-sync-now">立即同步</button>
+          ${hasTok ? '<button type="button" class="fav-sync-clear">清除令牌</button>' : ''}
         </p>
-        <p class="fav-sync-hint">${esc(st ? ('状态：' + st.message + (st.pending ? '（待上传 ' + st.pending + ' 项）' : '')) : '云端模块未加载')}</p>
+        <p class="fav-sync-syncstat" role="status">${hasTok ? '已配置令牌' + (hasSet ? ' · 有待同步操作' : '') : '尚未配置令牌'}</p>
         <p class="fav-sync-err" role="alert"></p>`;
+      const inp = body.querySelector('.fav-sync-box');
       const errEl = body.querySelector('.fav-sync-err');
-      const box = body.querySelector('.fav-sync-box');
+      const stat = body.querySelector('.fav-sync-syncstat');
+      const save = body.querySelector('.fav-sync-save');
+      const now = body.querySelector('.fav-sync-now');
+      const clear = body.querySelector('.fav-sync-clear');
+      // 订阅 CF 的同步状态事件，把结果实时显示出来（CF 内部吞异常，靠事件通知）
+      const onState = (e) => {
+        const s = e.detail || {};
+        if (!stat.isConnected) { document.removeEventListener('cloud:state', onState); return; }
+        if (s.phase === 'syncing') { stat.textContent = '正在同步…'; errEl.textContent = ''; }
+        else if (s.phase === 'synced') { stat.textContent = '同步完成 ✓'; }
+        else if (s.phase === 'error') { stat.textContent = '同步失败'; errEl.textContent = s.message || '同步失败'; }
+        else if (s.phase === 'offline') { stat.textContent = '未配置令牌（仅本机）'; }
+      };
+      document.addEventListener('cloud:state', onState);
 
-      body.querySelector('.fav-sync-save').addEventListener('click', async () => {
-        errEl.textContent = '';
-        const t = box.value.trim();
-        if (!t) { errEl.textContent = '先把令牌粘进来。'; return; }
-        window.CloudFavorites.setToken(t);
-        try {
-          await window.CloudFavorites.sync();
-          await cloudPullIntoLocal(root);
-          toast('已连上云端，收藏已同步。');
-          mode = null; render();
-        } catch (e) {
-          errEl.textContent = e.message || '同步失败，检查令牌权限。';
-        }
+      save.addEventListener('click', async () => {
+        const v = (inp.value || '').trim();
+        if (!v || v.indexOf('•') === 0) { errEl.textContent = '请先粘贴新令牌再点保存。'; return; }
+        CF.setToken(v);
+        toast('已保存令牌，开始同步…');
+        await CF.sync();           // 结果由 cloud:state 事件显示
+        initFavoritesPage(root);   // 刷新收藏列表（可能从云端拉回新数据）
       });
-      body.querySelector('.fav-sync-pull').addEventListener('click', async () => {
-        errEl.textContent = '';
-        try {
-          await cloudPullIntoLocal(root);
-          toast('已从云端取回收藏。');
-        } catch (e) {
-          errEl.textContent = e.message || '取回失败。';
-        }
+      now.addEventListener('click', async () => {
+        if (!CF.hasToken()) { errEl.textContent = '还没填令牌。'; return; }
+        await CF.sync();
+        initFavoritesPage(root);
       });
-      body.querySelector('.fav-sync-cancel').addEventListener('click', () => { mode = null; render(); });
+      if (clear) clear.addEventListener('click', () => {
+        CF.clearToken(); toast('已清除本机令牌。'); mode = null; render();
+      });
       return;
     }
 
