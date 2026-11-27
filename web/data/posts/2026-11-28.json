@@ -1,0 +1,260 @@
+{
+  "date": "2026-11-28",
+  "title": "superpowers：让编码代理先想清楚，再动手写代码",
+  "oneLiner": "一套为编码代理设计的技能框架与软件开发方法论，通过强制流程让代理先澄清需求、再写计划、最后实现，适用于 Claude Code 等主流工具。",
+  "category": "AI · 软件开发 · 方法论",
+  "sections": [
+    {
+      "heading": "1 它解决什么问题",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "多数开发者与编码代理的协作方式，是直接下达任务、等待代码。代理往往在需求尚未澄清时就开始写实现，产出与真实意图不符的代码，随后进入反复修改的循环。superpowers 的出发点，是改变这一默认行为：**代理在动手前，先追问你真正想做什么。**"
+        },
+        {
+          "type": "quote",
+          "text": "It starts from the moment you fire up your coding agent. As soon as it sees that you're building something, it *doesn't* just jump into trying to write code. Instead, it steps back and asks you what you're really trying to do."
+        },
+        {
+          "type": "p",
+          "text": "这套框架把软件开发流程拆成七个强制步骤，从需求澄清、工作区隔离、计划编写、子代理执行、测试驱动开发、代码审查到分支收尾。每一步都有对应的技能文件，代理在开始任何任务前都会检查相关技能是否已加载——**这是强制流程，不是建议。**"
+        },
+        {
+          "type": "p",
+          "text": "对团队而言，收益是可复现的：无论谁在哪个代理工具里运行，同一套流程都会触发。对个人开发者而言，收益是减少返工：代理在写代码前就拿到你确认过的设计文档，实现计划细化到每个文件路径和验证步骤。"
+        }
+      ]
+    },
+    {
+      "heading": "2 能用来干嘛",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "从零开始构建新功能"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一句模糊的需求，比如“做一个 React 待办列表”"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "先通过 brainstorming 技能追问需求，输出你确认过的设计文档；再通过 writing-plans 生成每个任务 2-5 分钟、包含精确文件路径和验证步骤的实现计划；最后通过 subagent-driven-development 派发子代理逐任务执行并审查。"
+        },
+        {
+          "type": "code",
+          "code": "Let's make a react todo list",
+          "caption": "来源：README 的 Muse 安装验证示例——发送这句话后，一个正常安装的 superpowers 会在写任何代码前自动触发 brainstorming 技能"
+        },
+        {
+          "type": "sub",
+          "text": "调试已有代码"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一个 bug 或异常行为"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "systematic-debugging 技能执行四阶段根因分析（含根因追踪、防御性编程、条件等待技术），并在修复后通过 verification-before-completion 确认问题确实解决。"
+        },
+        {
+          "type": "sub",
+          "text": "诊断代理自身的问题"
+        },
+        {
+          "type": "kv",
+          "k": "你给它：",
+          "v": "一句“figure out what went wrong with superpowers in this session”"
+        },
+        {
+          "type": "kv",
+          "k": "它还你：",
+          "v": "diagnosing-superpowers 技能读取会话记录，按行级证据报告哪里出错，并可打包脱敏后的错误报告用于提交 issue。"
+        }
+      ]
+    },
+    {
+      "heading": "3 它是怎么做的",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "superpowers 的核心是一个**技能库**加**引导机制**。技能库位于仓库的 skills 目录，按测试、调试、协作、规划等类别组织，每个技能是一个 markdown 文件，包含触发条件、执行步骤和参考材料。引导机制则通过 `using-superpowers` 技能实现——代理启动时加载它，它会提示模型在会话开始时加载整个技能库。"
+        },
+        {
+          "type": "p",
+          "text": "工作流是线性的，但每个环节都有明确的输入输出。**brainstorming** 先通过提问澄清需求，输出设计文档；**using-git-worktrees** 在独立分支创建隔离工作区并验证测试基线；**writing-plans** 将设计拆解为 2-5 分钟的小任务；**subagent-driven-development** 或 **executing-plans** 负责实现——前者为每个任务派发全新子代理并在任务间审查，后者在当前会话内实现全部任务、最后统一审查；**test-driven-development** 强制红绿重构循环；**requesting-code-review** 按严重级别报告问题，关键问题阻塞进度；**finishing-a-development-branch** 验证测试后提供合并、PR、保留或丢弃选项。"
+        },
+        {
+          "type": "p",
+          "text": "这套机制的核心设计意图，是让代理具备**项目上下文**。普通代理没有项目背景，容易写出“有糟糕品味、没有判断力、没有项目上下文、厌恶测试”的代码——README 明确说实现计划要清晰到让这样的初级工程师也能遵循。通过强制流程，代理先获得需求上下文，再获得计划上下文，最后才进入实现。"
+        },
+        {
+          "type": "p",
+          "text": "安装层面，superpowers 适配了 16 种代理工具，从 Claude Code、Codex、Cursor 到 Gemini CLI、GitHub Copilot CLI、Kimi Code 等。每个工具通过各自的插件机制安装，安装后技能自动触发，无需手动加载。"
+        }
+      ]
+    },
+    {
+      "heading": "4 怎么上手",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "安装方式取决于你使用的代理工具。以下以 Claude Code 和 Cursor 为例："
+        },
+        {
+          "type": "code",
+          "code": "# Claude Code：从 Anthropic 官方插件市场安装\n/plugin install superpowers@claude-plugins-official\n\n# Cursor：在 Agent chat 中从市场安装\n/add-plugin superpowers",
+          "caption": "来源：README 的 Installation 章节"
+        },
+        {
+          "type": "p",
+          "text": "安装完成后，启动新会话并发送一句需求描述，superpowers 会自动触发 brainstorming 技能，开始追问你的真实意图。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "如果你使用多个代理工具，需要为每个工具分别安装 superpowers——README 明确说明“Installation differs by harness. If you use more than one, install Superpowers separately for each one.”",
+            "部分工具（如 Hermes Agent）没有会话压缩后的钩子，长会话压缩后技能可能停止触发，需要重启会话；Muse 安装后需重启会话使 SessionStart 钩子生效。",
+            "遇到技能触发异常时，让代理执行“figure out what went wrong with superpowers in this session”即可调用诊断技能，按行级证据定位问题。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "5 局限与风险",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "**未关闭 Issue 与 PR 数量为 374**，这是一个相当高的数字，说明项目在快速迭代中积累了大量待处理反馈。你需要留意：如果你依赖某个具体功能，建议先查看 [Issues 页面](https://github.com/obra/superpowers/issues) 确认其是否已被提及或修复，避免在等待中浪费时间。",
+            "**最近推送为 2026-11-26，最新 Release 为 v7.0.2（2026-11-03）**，说明项目仍在活跃开发中，但版本号已到 7.x，且 README 提到安装方式因 harness 而异。你需要警惕：频繁的破坏性变更可能影响现有集成，升级前务必查看 [Releases 页面](https://github.com/obra/superpowers/releases) 的变更日志。",
+            "**README 明确提到 Hermes Agent 的局限**：Hermes 没有 post-compaction hook，因此超长会话在首次压缩后会丢失 bootstrap，需要启动新会话。你需要知道：如果你使用 Hermes，必须接受这个限制或定期重启会话。",
+            "**README 提到商业服务**：如果你在企业环境中使用，项目方提供商业支持、额外工具和托管支出服务（sales@primeradiant.com）。你需要留意：这虽然不意味着项目是商业产品的附属，但说明核心维护者可能优先考虑企业客户的需求，开源社区的功能优先级可能受影响。",
+            "**项目语言为 Shell，许可证为 MIT，创建于 2025-10-09**，从创建到 2026-11-26 仅约 13 个月，但已积累 32.8 万星。你需要警惕：超高速增长可能带来文档滞后或社区支持不足，尤其是 README 中部分安装说明（如 OpenCode）需要跳转到外部文件，可能不够稳定。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "6 替代方案",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "同类项目筛选"
+        },
+        {
+          "type": "p",
+          "text": "在候选项目中，**jnMetaCode/superpowers-zh** 和 **samber/cc-skills-golang** 与本题材最接近，但前者是汉化增强版，后者是 Go 语言技能集，均非完全独立的方法论框架。**zhnt/loushang** 和 **zgsm-ai/costrict** 虽然涉及 AI 编码，但分别偏向多模型编排和企业质量管控，与本项目的核心——技能驱动的开发流程——不同。因此，真正同类的候选只有 1 个。"
+        },
+        {
+          "type": "sub",
+          "text": "候选 1：jnMetaCode/superpowers-zh"
+        },
+        {
+          "type": "kv",
+          "k": "仓库",
+          "v": "[jnMetaCode/superpowers-zh](https://github.com/jnMetaCode/superpowers-zh)"
+        },
+        {
+          "type": "kv",
+          "k": "星数",
+          "v": "8,621"
+        },
+        {
+          "type": "kv",
+          "k": "许可证",
+          "v": "MIT"
+        },
+        {
+          "type": "kv",
+          "k": "最近更新",
+          "v": "2026-11-16"
+        },
+        {
+          "type": "kv",
+          "k": "适用场景",
+          "v": "中文用户，需要完整汉化文档和 4 个中国原创 skills，且使用 Claude Code / Copilot CLI / Cursor 等 26 款 AI 编程工具。"
+        },
+        {
+          "type": "p",
+          "text": "**选择判据**：如果你的团队主要使用中文、需要更贴近本地习惯的文档，且不介意它基于本项目（250k+ ⭐ 的原始版本）的派生，那么 superpowers-zh 是更友好的起点。如果你需要官方原版、最新功能或对派生版本的维护节奏有疑虑，则选择本项目。"
+        }
+      ]
+    },
+    {
+      "heading": "7 谁该用，谁别用",
+      "blocks": [
+        {
+          "type": "sub",
+          "text": "推荐使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**使用 Claude Code、Codex、Cursor、Gemini CLI 等主流 harness 的开发者**：README 提供了针对 16 种 harness 的安装方法，且技能自动触发，无需手动配置。",
+            "**需要严格 TDD 流程的团队**：test-driven-development 技能强制 RED-GREEN-REFACTOR 循环，并删除测试前写的代码，适合对代码质量有高要求的项目。",
+            "**愿意接受子代理驱动开发的团队**：subagent-driven-development 可让代理自主工作数小时，适合任务分解清晰、需要并行处理的中大型项目。"
+          ]
+        },
+        {
+          "type": "sub",
+          "text": "不建议使用"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**使用 Hermes Agent 且会话经常超过压缩阈值的用户**：README 明确指出 Hermes 无 post-compaction hook，超长会话会丢失 bootstrap，需要频繁重启会话，体验不佳。",
+            "**需要快速原型、不注重测试的开发者**：该框架强调 YAGNI 和 DRY，且强制测试优先，与快速迭代、跳过测试的工作风格冲突。",
+            "**对 374 个未关闭 Issue 敏感、需要稳定支持的企业**：项目活跃但待处理问题多，若无法投入时间跟踪进展，可能遇到文档或功能滞后。"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "8 出处与日期",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "[仓库首页](https://github.com/obra/superpowers)",
+            "[README](https://github.com/obra/superpowers#readme)",
+            "[Releases 页面](https://github.com/obra/superpowers/releases)",
+            "[Issues 页面](https://github.com/obra/superpowers/issues)"
+          ]
+        },
+        {
+          "type": "p",
+          "text": "材料截至 2026-11-28。文中命令与输出均取自官方文档和样例，未在本机运行。"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "repo": "obra/superpowers",
+    "stars": 328194,
+    "language": "Shell",
+    "license": "MIT",
+    "lastCommit": "2026-11-26",
+    "openIssues": 374,
+    "version": "v7.0.2",
+    "trending": {
+      "window": "日榜",
+      "rank": 2,
+      "gained": 916,
+      "unit": "今日"
+    },
+    "lenses": [
+      "AI"
+    ]
+  },
+  "stats": {
+    "chars": 1983,
+    "codeBlocks": 2,
+    "minutes": 6.5,
+    "asOf": "2026-11-28"
+  }
+}

@@ -1,6 +1,17 @@
 {
-  "updated": "2026-11-27",
+  "updated": "2026-11-28",
   "issues": [
+    {
+      "date": "2026-11-28",
+      "title": "superpowers：让编码代理先想清楚，再动手写代码",
+      "oneLiner": "一套为编码代理设计的技能框架与软件开发方法论，通过强制流程让代理先澄清需求、再写计划、最后实现，适用于 Claude Code 等主流工具。",
+      "category": "AI · 软件开发 · 方法论",
+      "stars": 328194,
+      "repo": "obra/superpowers",
+      "lenses": [
+        "AI"
+      ]
+    },
     {
       "date": "2026-11-27",
       "title": "magpie：把所有 AI 订阅汇成一个池子，任何 Agent 都能用",
@@ -10,17 +21,7 @@
       "repo": "yetone/magpie",
       "lenses": [
         "AI"
-      ],
-      "side": {
-        "repo": "yding-git/personal-edge-proxy",
-        "url": "https://github.com/yding-git/personal-edge-proxy",
-        "stars": 1229,
-        "language": "",
-        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
-        "why": "这套配置把Xray、Hysteria2、WARP和静态SOCKS5路由组合成多入口多出口的个人代理方案，适合需要稳定连接海外服务但不想依赖单一协议的独立开发者或运维。它解决的是多协议切换和分流配置繁琐的问题，但要求你熟悉代理协议基础，部署前先确认节点可用性和网络环境。",
-        "kind": "代理配置方案",
-        "pushedAt": "2026-09-11"
-      }
+      ]
     },
     {
       "date": "2026-11-26",
@@ -31,17 +32,7 @@
       "repo": "KKKKhazix/AIHOT",
       "lenses": [
         "AI"
-      ],
-      "side": {
-        "repo": "yding-git/personal-edge-proxy",
-        "url": "https://github.com/yding-git/personal-edge-proxy",
-        "stars": 1229,
-        "language": "",
-        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
-        "why": "它把Xray、Hysteria2、WARP等代理组件整合成一套可运行的多入口多出口配置，省去你自己拼接文档的时间。适合需要稳定科学上网、又不想依赖现成商业服务的个人用户。注意它面向自托管，需要你有基本Linux和网络知识，且项目更新较快，部署前先看README和近期issue。",
-        "kind": "自托管代理配置工具",
-        "pushedAt": "2026-09-11"
-      }
+      ]
     },
     {
       "date": "2026-11-25",
@@ -53,17 +44,7 @@
       "lenses": [
         "高考/考研",
         "AI"
-      ],
-      "side": {
-        "repo": "yding-git/personal-edge-proxy",
-        "url": "https://github.com/yding-git/personal-edge-proxy",
-        "stars": 1229,
-        "language": "",
-        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
-        "why": "这套配置把Xray、Hysteria2、REALITY和WARP组合成多入口多出口的代理方案，适合需要稳定访问境外服务、又不想依赖单一协议的个人用户。如果你有VPS且熟悉SSH，现在就能部署；但要注意它需要手动编辑配置文件，且依赖较新内核，建议先备份原有网络设置。",
-        "kind": "代理工具配置集",
-        "pushedAt": "2026-09-11"
-      }
+      ]
     },
     {
       "date": "2026-11-24",
@@ -74,17 +55,7 @@
       "repo": "firecrawl/firecrawl",
       "lenses": [
         "AI"
-      ],
-      "side": {
-        "repo": "yding-git/personal-edge-proxy",
-        "url": "https://github.com/yding-git/personal-edge-proxy",
-        "stars": 1228,
-        "language": "",
-        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
-        "why": "它把Xray、Hysteria2、REALITY Vision、WARP和SOCKS5路由整合成一套可运行的个人代理配置，解决多入口多出口的流量分流问题。适合需要稳定访问海外资源、又不想维护复杂配置的独立开发者或技术爱好者。使用前需确认服务器支持所需协议，并自行调整入站出站规则。",
-        "kind": "网络代理配置工具",
-        "pushedAt": "2026-09-11"
-      }
+      ]
     },
     {
       "date": "2026-11-23",
@@ -95,17 +66,7 @@
       "repo": "zhouxiaoka/autoclip",
       "lenses": [
         "AI"
-      ],
-      "side": {
-        "repo": "yding-git/personal-edge-proxy",
-        "url": "https://github.com/yding-git/personal-edge-proxy",
-        "stars": 1226,
-        "language": "",
-        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
-        "why": "如果你需要一台机器同时跑多个代理入口和出口，又不想手动拼配置，这个项目把 Xray、Hysteria2、REALITY、WARP 和静态 SOCKS5 路由整合成一套可复用的模板。适合有 VPS 且熟悉代理协议、但懒得从零写配置的个人用户。注意它面向自部署，需自行维护证书和更新，且依赖较新协议版本。",
-        "kind": "代理配置整合模板",
-        "pushedAt": "2026-09-11"
-      }
+      ]
     },
     {
       "date": "2026-11-22",
@@ -116,17 +77,7 @@
       "repo": "Tracer-Cloud/opensre",
       "lenses": [
         "AI"
-      ],
-      "side": {
-        "repo": "yding-git/personal-edge-proxy",
-        "url": "https://github.com/yding-git/personal-edge-proxy",
-        "stars": 1224,
-        "language": "",
-        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
-        "why": "它把Xray、Hysteria2、REALITY、WARP等代理组件封装成一套可复用的多入多出配置，省去逐个拼装的时间。适合需要稳定科学上网、但不想维护复杂配置的个人用户。注意它依赖较新的内核和证书，部署前先确认VPS系统版本与端口占用。",
-        "kind": "代理配置工具集",
-        "pushedAt": "2026-09-11"
-      }
+      ]
     },
     {
       "date": "2026-11-21",
@@ -137,17 +88,7 @@
       "repo": "ChromeDevTools/chrome-devtools-mcp",
       "lenses": [
         "AI"
-      ],
-      "side": {
-        "repo": "yding-git/personal-edge-proxy",
-        "url": "https://github.com/yding-git/personal-edge-proxy",
-        "stars": 1221,
-        "language": "",
-        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
-        "why": "这是一套多入口多出口的个人代理配置，用Xray、Hysteria2、REALITY和WARP组合实现分流。适合需要同时连接多个网络、且希望区分不同流量走向的进阶用户。配置较复杂，需要先理解各协议差异，建议在干净环境测试后再替换现有方案。",
-        "kind": "网络代理配置工具",
-        "pushedAt": "2026-09-11"
-      }
+      ]
     },
     {
       "date": "2026-11-20",
@@ -158,17 +99,7 @@
       "repo": "vercel-labs/agent-browser",
       "lenses": [
         "AI"
-      ],
-      "side": {
-        "repo": "yding-git/personal-edge-proxy",
-        "url": "https://github.com/yding-git/personal-edge-proxy",
-        "stars": 1220,
-        "language": "",
-        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
-        "why": "这个仓库把Xray、Hysteria2、REALITY Vision、WARP和SOCKS5路由整合成一份可运行的配置模板，解决个人代理场景中多入口多出口的编排问题。适合需要自建代理、但不想从零研究协议组合的开发者。部署前需确认服务器内核版本和防火墙规则，并注意配置中的证书路径。",
-        "kind": "代理配置模板",
-        "pushedAt": "2026-09-11"
-      }
+      ]
     },
     {
       "date": "2026-11-19",
@@ -179,17 +110,7 @@
       "repo": "backnotprop/plannotator",
       "lenses": [
         "AI"
-      ],
-      "side": {
-        "repo": "yding-git/personal-edge-proxy",
-        "url": "https://github.com/yding-git/personal-edge-proxy",
-        "stars": 1218,
-        "language": "",
-        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
-        "why": "这套配置把 Xray、Hysteria2、REALITY Vision、WARP 和可选 SOCKS5 路由整合成多入多出代理，适合需要稳定访问海外服务、同时兼顾国内直连的个人用户。如果你已有 VPS 但不想手动拼装复杂规则，现在就能用它省下数小时配置时间。注意项目文档可能不够详尽，需自行验证 TLS 证书和端口冲突，且部分协议对客户端版本有要求。",
-        "kind": "代理配置方案",
-        "pushedAt": "2026-09-11"
-      }
+      ]
     },
     {
       "date": "2026-11-18",
@@ -200,17 +121,7 @@
       "repo": "pingdotgg/t3code",
       "lenses": [
         "AI"
-      ],
-      "side": {
-        "repo": "yding-git/personal-edge-proxy",
-        "url": "https://github.com/yding-git/personal-edge-proxy",
-        "stars": 1218,
-        "language": "",
-        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
-        "why": "它把Xray、Hysteria2、REALITY Vision、WARP等组件整合成一套多入站多出站的个人代理配置，省去逐个搭建的麻烦。适合需要稳定科学上网、同时想保留国内直连或分流需求的个人用户。注意配置涉及多协议和静态路由，需先了解基础概念，且依赖较新版本，建议在干净环境测试后再替换现有方案。",
-        "kind": "代理工具配置集",
-        "pushedAt": "2026-09-11"
-      }
+      ]
     },
     {
       "date": "2026-11-17",
@@ -221,17 +132,7 @@
       "repo": "heygen-com/hyperframes",
       "lenses": [
         "AI"
-      ],
-      "side": {
-        "repo": "yding-git/personal-edge-proxy",
-        "url": "https://github.com/yding-git/personal-edge-proxy",
-        "stars": 1218,
-        "language": "",
-        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
-        "why": "它把Xray、Hysteria2、WARP等组合成可复用的个人代理配置，解决多入站多出站路由的编排难题。适合需要稳定科学上网、但不想折腾复杂配置的独立开发者或小团队。注意它依赖较新的协议特性，需确认客户端兼容，且配置模板需按自身网络环境调整。",
-        "kind": "网络代理配置模板",
-        "pushedAt": "2026-09-11"
-      }
+      ]
     },
     {
       "date": "2026-11-16",
@@ -242,17 +143,7 @@
       "repo": "AgriciDaniel/claude-seo",
       "lenses": [
         "AI"
-      ],
-      "side": {
-        "repo": "yding-git/personal-edge-proxy",
-        "url": "https://github.com/yding-git/personal-edge-proxy",
-        "stars": 1217,
-        "language": "",
-        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
-        "why": "这套配置把Xray、Hysteria2、REALITY Vision、WARP和静态SOCKS5路由整合成多入多出代理，适合需要稳定科学上网且有多条线路冗余的个人用户。现在就用，因为配置清晰，能避免自行拼装导致的兼容问题。注意需要熟悉VPS和代理协议，且要按自己的网络环境调整入站出站规则。",
-        "kind": "代理配置整合工具",
-        "pushedAt": "2026-09-11"
-      }
+      ]
     },
     {
       "date": "2026-11-15",
@@ -265,17 +156,7 @@
         "高考/考研",
         "AI",
         "投资"
-      ],
-      "side": {
-        "repo": "yding-git/personal-edge-proxy",
-        "url": "https://github.com/yding-git/personal-edge-proxy",
-        "stars": 1216,
-        "language": "",
-        "description": "A practical multi-inbound, multi-outbound personal proxy setup with Xray, Hysteria2, REALITY Vision, WARP and optional static SOCKS5 routing.",
-        "why": "这个仓库把Xray、Hysteria2、REALITY Vision、WARP和静态SOCKS5路由整合成一套可配置的多入口多出口代理方案。适合需要稳定访问境外服务、又不想依赖单一机场或公共节点的个人用户。部署前需自备VPS和域名，并熟悉基础网络配置，否则配置排错成本较高。",
-        "kind": "代理工具配置方案",
-        "pushedAt": "2026-09-11"
-      }
+      ]
     },
     {
       "date": "2026-11-14",
