@@ -53,6 +53,7 @@
 </footer>
 
 <script src="js/cloud-favorites.js"></script>
+<script src="js/ratings.js"></script>
 <script src="favorites.js"></script>
 <script src="register-sw.js"></script>
 <script>
@@ -138,7 +139,7 @@ function render(p) {
   // 正文排版统一由 favorites.js 的 renderPostHtml 产出，这里只补文章页独有的外壳，
   // 避免两处各写一份 esc/inline 后逐渐漂移
   const html = `<a class="back" href="index.html"><span aria-hidden="true">←</span> 回首页</a>`
-    + renderPostHtml(p, { afterTitle: '<div class="a-fav-slot" id="a-fav"></div>' });
+    + renderPostHtml(p, { afterTitle: '<div class="a-fav-slot" id="a-fav"></div><div class="a-rating-slot" id="a-rating"></div>' });
 
   document.getElementById('loading')?.remove();
   article.innerHTML = html;
@@ -146,6 +147,7 @@ function render(p) {
     label: '收藏这一期',
     onLabel: '已收藏 · 点击取消',
   });
+  if (p.date && window.D10Ratings) window.D10Ratings.mount(document.getElementById('a-rating'), p.date);
   if (p.date) mountIssueNav(p.date);
 }
 
