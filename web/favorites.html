@@ -6,7 +6,6 @@
 <title>我的收藏夹 · 万星日报</title>
 <meta name="description" content="万星日报收藏夹：收藏过的 GitHub 万星项目深读，全文永久保留，随时回看。">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0a3d6e">
 <meta name="robots" content="noindex">
@@ -37,13 +36,13 @@
 <main class="wrap article-wrap">
   <a class="back" href="index.html"><span aria-hidden="true">←</span> 回首页</a>
   <h1 class="a-title">我的收藏夹</h1>
-  <p class="fav-lead">不填令牌时，收藏只存在这台设备；点「云端同步」填一次令牌，收藏会存进你的私有仓，换设备或重装系统后也能取回。</p>
+  <p class="fav-lead">收藏会自动存到你自己的 GitHub 私有仓（填一次令牌即可，换设备/电脑重置后拉回）。不想登录也能用：收藏只存本机，或用下面的导出 / 导入搬一次。</p>
 
   <div class="fav-sync" id="fav-sync">
     <div class="fav-sync-btns">
+      <button type="button" class="fav-sync-btn" data-act="cloud">☁ 云端同步</button>
       <button type="button" class="fav-sync-btn" data-act="export">导出收藏</button>
       <button type="button" class="fav-sync-btn" data-act="import">导入收藏</button>
-      <button type="button" class="fav-sync-btn" data-act="cloud">云端同步</button>
     </div>
     <div class="fav-sync-body" hidden></div>
   </div>
@@ -62,7 +61,7 @@
   </div>
 </footer>
 
-<script src="cloud-favorites.js"></script>
+<script src="js/cloud-favorites.js"></script>
 <script src="favorites.js"></script>
 <script src="register-sw.js"></script>
 <script>
